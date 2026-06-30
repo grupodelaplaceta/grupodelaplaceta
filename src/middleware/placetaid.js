@@ -3,7 +3,7 @@
  * Permite validar usuarios contra el sistema PlacetaID centralizado
  */
 
-const PLACETAID_API_URL = process.env.PLACETAID_API_URL || 'http://localhost:3000/api';
+const PLACETAID_API_URL = process.env.PLACETAID_API_URL || (process.env.VERCEL ? 'https://id.laplaceta.org/api' : 'http://localhost:3000/api');
 const PLACETAID_CLIENT_ID = process.env.PLACETAID_CLIENT_ID || 'gdlp-crm';
 
 /**

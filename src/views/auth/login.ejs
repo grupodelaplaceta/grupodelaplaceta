@@ -100,18 +100,19 @@
     function demoLogin(tipo) {
       const creds = tipo === 'admin'
         ? { alias: 'admin', password: 'admin123' }
-        : { alias: 'demo', password: 'Demo1234!' };
+        : { alias: '11111111D', password: 'Demo1234!' };
 
       document.getElementById('loginButtons').style.display = 'none';
       document.getElementById('loginLoading').classList.add('active');
       document.getElementById('loginLoading').querySelector('p').textContent = 'Iniciando sesión como ' + (tipo === 'admin' ? 'Administrador...' : 'Ciudadano...');
 
-      fetch('/api/auth/login', {
+      fetch('/api/placetid/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(creds)
       }).then(r => r.json()).then(data => {
-        if (data.redirect) window.location.href = data.redirect;
+        if (data.success && data.redirect) window.location.href = data.redirect;
+        else if (data.token) window.location.href = '/';
         else window.location.href = '/';
       }).catch(function() {
         window.location.href = '/';
@@ -141,28 +142,6 @@
       }).catch(function() {
         window.location.href = '/';
       });
-    });
-  </script>
-</body>
-</html>
-          body: JSON.stringify(Object.fromEntries(formData))
-        });
-        const data = await res.json();
-        
-        if (data.success) {
-          window.location.href = data.redirect || '/admin/dashboard';
-        } else {
-          errorMsg.textContent = data.error || 'Error al iniciar sesión';
-          errorMsg.style.display = 'block';
-        }
-      } catch (err) {
-        errorMsg.textContent = 'Error de conexión';
-        errorMsg.style.display = 'block';
-      } finally {
-        btn.disabled = false;
-        btn.querySelector('.btn-text').style.display = 'inline';
-        btn.querySelector('.btn-loading').style.display = 'none';
-      }
     });
   </script>
 </body>
