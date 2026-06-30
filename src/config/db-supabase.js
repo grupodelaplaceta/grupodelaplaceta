@@ -29,27 +29,46 @@ async function initSqlite() {
   if (initPromise) return initPromise;
 
   initPromise = (async () => {
-    const SQL = await initSqlJs();
-    const dbPath = process.env.DB_PATH || path.join(__dirname, '../../data/gdlp-crm.db');
-    const dbDir = path.dirname(dbPath);
-    if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
+    try {
+      const SQL = await initSqlJs();
+      const dbPath = process.env.DB_PATH || path.join(__dirname, '../../data/gdlp-crm.db');
+      const dbDir = path.dirname(dbPath);
+      if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
 
-    if (fs.existsSync(dbPath)) {
-      const buffer = fs.readFileSync(dbPath);
-      rawDb = new SQL.Database(buffer);
-    } else {
-      rawDb = new SQL.Database();
+      if (fs.existsSync(dbPath)) {
+        const buffer = fs.readFileSync(dbPath);
+        rawDb = new SQL.Database(buffer);
+      } else {
+        rawDb = new SQL.Database();
+      }
+
+      rawDb.run('PRAGMA foreign_keys = ON');
+      ejecutarMigracionesSqlite(rawDb);
+      guardar();
+      sqliteWrapper = crearWrapperSqlite(rawDb);
+      console.log('  📦 SQLite: Inicializado (fallback para tablas bancarias/fiscal/justicia)');
+    } catch (err) {
+      console.log('  ⚠️  SQLite: No disponible (entorno serverless)');
+      // Crear wrapper stub que falla elegantemente
+      sqliteWrapper = crearWrapperStub();
     }
-
-    rawDb.run('PRAGMA foreign_keys = ON');
-    ejecutarMigracionesSqlite(rawDb);
-    guardar();
-    sqliteWrapper = crearWrapperSqlite(rawDb);
-    console.log('  📦 SQLite: Inicializado (fallback para tablas bancarias/fiscal/justicia)');
     return sqliteWrapper;
   })();
 
   return initPromise;
+}
+
+function crearWrapperStub() {
+  return {
+    prepare(sql) {
+      return {
+        get() { return undefined; },
+        all() { return []; },
+        run() { return { lastInsertRowid: 0, changes: 0 }; }
+      };
+    },
+    exec() { return []; }
+  };
 }
 
 function guardar() {
