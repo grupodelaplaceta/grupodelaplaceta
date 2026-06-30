@@ -154,7 +154,7 @@ async function completarSesion(res, tokenSesion, registroPlaceta, req) {
     console.error('Error completarSesion:', err);
     res.json({ success: true, token: tokenSesion, redirect: '/login', warning: 'Sesión obtenida pero no se pudo crear perfil local' });
   }
-});
+}
 
 // ── set-session: Establecer sesión desde token PlacetaID (callback popup) ─
 
