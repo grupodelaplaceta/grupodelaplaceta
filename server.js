@@ -240,6 +240,10 @@ async function startServer() {
   }
 }
 
-startServer();
+// Solo iniciar servidor HTTP si no estamos en Vercel serverless
+if (!process.env.VERCEL) {
+  startServer();
+}
 
+// Export para Vercel Serverless
 export default app;
