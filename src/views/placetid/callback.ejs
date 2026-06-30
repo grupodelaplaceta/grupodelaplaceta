@@ -25,8 +25,14 @@
   <script>
     (function() {
       const params = new URLSearchParams(window.location.search);
-      const token = params.get('tokenSesion') || params.get('token');
+      const token = params.get('token') || params.get('placetaid_token');
       const userStr = params.get('user');
+      const error = params.get('error');
+
+      if (error) {
+        document.querySelector('.callback-card p').textContent = 'Error: ' + decodeURIComponent(error);
+        return;
+      }
 
       if (token && userStr) {
         try {
@@ -38,10 +44,11 @@
           }).then(r => r.json()).then(function(data) {
             window.location.href = (data && data.redirect) ? data.redirect : '/';
           }).catch(function() {
-            window.location.href = '/login?token=' + encodeURIComponent(token) + '&user=' + encodeURIComponent(userStr);
+            window.location.href = '/login';
           });
         } catch(e) {
           document.querySelector('.callback-card p').textContent = 'Error al procesar autenticación';
+          console.error(e);
         }
       } else {
         document.querySelector('.callback-card p').textContent = 'No se recibieron datos de autenticación';
