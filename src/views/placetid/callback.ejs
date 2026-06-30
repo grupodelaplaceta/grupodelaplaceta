@@ -25,24 +25,24 @@
   <script>
     (function() {
       const params = new URLSearchParams(window.location.search);
-      const token = params.get('token') || params.get('placetaid_token');
-      const usuarioStr = params.get('user');
+      const token = params.get('tokenSesion') || params.get('token');
+      const userStr = params.get('user');
 
-      if (token && usuarioStr && window.opener) {
+      if (token && userStr) {
         try {
-          const usuario = JSON.parse(decodeURIComponent(usuarioStr));
-          window.opener.postMessage({
-            tipo: 'placetaid-login',
-            token: token,
-            usuario: usuario
-          }, window.location.origin);
-          setTimeout(function() { window.close(); }, 500);
+          const usuario = JSON.parse(decodeURIComponent(userStr));
+          fetch('/api/placetid/set-session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token, usuario })
+          }).then(r => r.json()).then(function(data) {
+            window.location.href = (data && data.redirect) ? data.redirect : '/';
+          }).catch(function() {
+            window.location.href = '/login?token=' + encodeURIComponent(token) + '&user=' + encodeURIComponent(userStr);
+          });
         } catch(e) {
           document.querySelector('.callback-card p').textContent = 'Error al procesar autenticación';
         }
-      } else if (token && usuarioStr) {
-        // No hay opener (ventana directa) - redirigir al login con parámetros
-        window.location.href = '/login?token=' + encodeURIComponent(token) + '&user=' + encodeURIComponent(usuarioStr);
       } else {
         document.querySelector('.callback-card p').textContent = 'No se recibieron datos de autenticación';
       }

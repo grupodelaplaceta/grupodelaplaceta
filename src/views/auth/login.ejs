@@ -34,7 +34,7 @@
     <p class="pl-sub">Inicia sesión con tu identidad en La Placeta</p>
 
     <div id="loginButtons">
-      <button class="pl-btn" onclick="abrirPlacetaID()">🔑 Continuar con PlacetaID</button>
+      <button class="pl-btn" onclick="irAPlacetaID()">🔑 Continuar con PlacetaID</button>
 
       <div style="margin-top:20px;padding-top:16px;border-top:1px solid #eee">
         <p style="font-size:12px;color:#aaa;margin-bottom:10px">Acceso rápido (demo)</p>
@@ -57,44 +57,13 @@
   </div>
 
   <script>
-    let popup = null;
-    let popupTimer = null;
-
-    function abrirPlacetaID() {
-      const callback = encodeURIComponent(window.location.origin + '/placetid/callback');
-      const state = encodeURIComponent(window.location.origin);
-      const url = 'https://id.laplaceta.org/?from=' + callback + '&state=' + state + '&platform=web';
-
-      // Abrir como popup
-      const w = 480, h = 700;
-      const x = (screen.width - w) / 2;
-      const y = (screen.height - h) / 2;
-      popup = window.open(url, 'PlacetaID', 'width=' + w + ',height=' + h + ',left=' + x + ',top=' + y + ',resizable=yes,scrollbars=yes');
-
-      if (!popup || popup.closed) {
-        // Fallback: redirigir si el popup fue bloqueado
-        window.location.href = url;
-        return;
-      }
-
-      document.getElementById('loginButtons').style.display = 'none';
-      document.getElementById('loginLoading').classList.add('active');
-
-      // Esperar a que el popup se cierre o redirija al callback
-      popupTimer = setInterval(function() {
-        if (popup.closed) {
-          clearInterval(popupTimer);
-          document.getElementById('loginButtons').style.display = 'block';
-          document.getElementById('loginLoading').classList.remove('active');
-        }
-      }, 500);
-    }
-
-    function cancelarPopup() {
-      if (popup && !popup.closed) popup.close();
-      clearInterval(popupTimer);
-      document.getElementById('loginButtons').style.display = 'block';
-      document.getElementById('loginLoading').classList.remove('active');
+    function irAPlacetaID() {
+      const url = new URL('https://id.laplaceta.org/');
+      url.searchParams.set('client_id', 'ccb611655030bdadf7218418dc195dcb');
+      url.searchParams.set('redirect_uri', window.location.origin + '/placetid/callback');
+      url.searchParams.set('platform', 'web');
+      url.searchParams.set('state', crypto.randomUUID());
+      window.location.href = url.toString();
     }
 
     function demoLogin(tipo) {
@@ -119,30 +88,31 @@
       });
     }
 
-    // Escuchar mensajes del callback (postMessage)
-    window.addEventListener('message', function(event) {
-      if (event.origin !== window.location.origin) return;
-      if (!event.data || !event.data.tipo || event.data.tipo !== 'placetaid-login') return;
-
-      const { token, usuario } = event.data;
-      if (!token || !usuario) return;
-
-      if (popup && !popup.closed) popup.close();
-      clearInterval(popupTimer);
-
-      document.querySelector('.plogin-card').innerHTML = '<div class="plogin-logo">🔑</div><h1>Conectando...</h1><p class="pl-sub">Estableciendo sesión en el CRM</p><div class="plogin-loading active"><div class="spinner"></div></div>';
-
-      fetch('/api/placetid/set-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, usuario })
-      }).then(r => r.json()).then(data => {
-        if (data && data.redirect) window.location.href = data.redirect;
-        else window.location.href = '/';
-      }).catch(function() {
-        window.location.href = '/';
-      });
-    });
+    // Si llegamos con token en URL (redirect desde PlacetaID)
+    (function() {
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get('tokenSesion') || params.get('token');
+      const userStr = params.get('user');
+      if (token && userStr) {
+        document.getElementById('loginButtons').style.display = 'none';
+        document.getElementById('loginLoading').classList.add('active');
+        document.getElementById('loginLoading').querySelector('p').textContent = 'Procesando autenticación...';
+        try {
+          const usuario = JSON.parse(decodeURIComponent(userStr));
+          fetch('/api/placetid/set-session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token, usuario })
+          }).then(r => r.json()).then(data => {
+            window.location.href = (data && data.redirect) ? data.redirect : '/';
+          }).catch(function() {
+            window.location.href = '/';
+          });
+        } catch(e) {
+          window.location.href = '/';
+        }
+      }
+    })();
   </script>
 </body>
 </html>
