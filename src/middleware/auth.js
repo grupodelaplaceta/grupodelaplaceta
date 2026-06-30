@@ -1,6 +1,14 @@
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'gdlp-crm-jwt-secret-2026';
+// Generar secreto seguro si no está configurado (sin hardcodeo)
+const getJWTSecret = () => {
+  const env = process.env.JWT_SECRET;
+  if (env && env !== 'cambiar_esto_por_un_jwt_secreto' && env.length >= 16) return env;
+  console.warn('  ⚠️  JWT_SECRET no configurado. Usando secreto temporal (cambiar en .env)');
+  return crypto.randomBytes(32).toString('hex');
+};
+const JWT_SECRET = getJWTSecret();
 
 /**
  * Middleware de autenticación para API REST (JWT Bearer token)

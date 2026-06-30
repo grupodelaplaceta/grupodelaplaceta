@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import path from 'path';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import ejsLayouts from 'express-ejs-layouts';
 import { initializeDatabase, getDb, sbFindSolicitante, sbListSolicitantes, sbFindDocumentoFirmadoByUrl } from './src/config/db-supabase.js';
@@ -37,26 +38,38 @@ const PORT = process.env.PORT || 3001;
 // (la BD se inicializa al arrancar en la función startServer)
 
 // ── Configuración de Sesión ─────────────────────────────────────────────────
+const sessionSecret = process.env.SESSION_SECRET;
+if (!sessionSecret || sessionSecret === 'cambiar_esto_por_un_secreto_seguro' || sessionSecret.length < 16) {
+  console.warn('  ⚠️  SESSION_SECRET débil o no configurado. Usar secreto seguro en .env');
+}
 const sessionConfig = {
-  secret: process.env.SESSION_SECRET || 'gdlp-crm-secret',
+  secret: sessionSecret || crypto.randomBytes(32).toString('hex'),
   resave: false,
   saveUninitialized: false,
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
+    sameSite: 'lax',
     maxAge: 24 * 60 * 60 * 1000 // 24 horas
   }
 };
 
 // ── Middleware Global ─────────────────────────────────────────────────────────
-app.use(helmet({ contentSecurityPolicy: false }));
-app.use(cors());
+app.use(helmet({
+  contentSecurityPolicy: false, // Desactivado por las vistas EJS con inline scripts
+  crossOriginEmbedderPolicy: false
+}));
+
+// CORS restrictivo en producción
+const corsOrigins = process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : ['http://localhost:3001', 'http://localhost:3000', 'https://id.laplaceta.org'];
+app.use(cors({ origin: corsOrigins, credentials: true }));
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(session(sessionConfig));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Rate limiting
+// Rate limiting general API
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 200,
@@ -64,6 +77,17 @@ const limiter = rateLimit({
   legacyHeaders: false
 });
 app.use('/api/', limiter);
+
+// Rate limiting específico para auth (login/register)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiados intentos. Intenta de nuevo más tarde.' }
+});
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
 
 // ── Motor de Plantillas EJS con Layouts ─────────────────────────────────────
 app.set('view engine', 'ejs');

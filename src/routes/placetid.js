@@ -108,45 +108,49 @@ router.post('/token', async (req, res) => {
     await sbCreateOAuthToken({ token: accessToken, client_id, usuario_id: authCode.usuario_id, expira_en: expira });
     const usuario = await sbFindSolicitanteById(authCode.usuario_id);
 
-  res.json({
-    access_token: accessToken,
-    token_type: 'Bearer',
-    expires_in: 3600,
-    usuario: {
-      id: usuario.id,
-      alias: usuario.alias,
-      dip: usuario.dip,
-      placeid: usuario.placeid,
-      rol: usuario.rol,
-      franja_edad: usuario.franja_edad
-    }
-  });
+    res.json({
+      access_token: accessToken,
+      token_type: 'Bearer',
+      expires_in: 3600,
+      usuario: {
+        id: usuario.id,
+        alias: usuario.alias,
+        dip: usuario.dip,
+        placeid: usuario.placeid,
+        rol: usuario.rol,
+        franja_edad: usuario.franja_edad
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ── Verificar token ─────────────────────────────────────────────────────────
 
-router.get('/verify', (req, res) => {
+router.get('/verify', async (req, res) => {
   const auth = req.headers['authorization'];
   if (!auth || !auth.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Token requerido' });
   }
-
-  const token = auth.split(' ')[1];
-  const db = getDb();
-  const tk = db.prepare("SELECT * FROM oauth_tokens WHERE token = ? AND activo = 1 AND expira_en > datetime('now')").get(token);
-
-  if (!tk) {
-    return res.status(401).json({ error: 'Token inválido o expirado' });
+  try {
+    const token = auth.split(' ')[1];
+    // Buscar token en Supabase
+    const { supabase } = await import('../config/supabase.js');
+    const { data: tk, error } = await supabase.from('oauth_tokens')
+      .select('*,solicitantes!oauth_tokens_usuario_id_fkey(id,alias,dip,placeid,rol,franja_edad),oauth_clients!oauth_tokens_client_id_fkey(nombre)')
+      .eq('token', token).eq('activo', 1).limit(1).single();
+    if (error || !tk) {
+      return res.status(401).json({ error: 'Token inválido o expirado' });
+    }
+    res.json({
+      autenticado: true,
+      usuario: tk.solicitantes,
+      aplicacion: tk.oauth_clients?.nombre || 'Desconocida'
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-
-  const usuario = db.prepare('SELECT id, alias, dip, placeid, rol, franja_edad FROM solicitantes WHERE id = ?').get(tk.usuario_id);
-  const client = db.prepare('SELECT nombre FROM oauth_clients WHERE client_id = ?').get(tk.client_id);
-
-  res.json({
-    autenticado: true,
-    usuario,
-    aplicacion: client?.nombre || 'Desconocida'
-  });
 });
 
 export default router;

@@ -177,6 +177,17 @@ export async function sbUpdateSolicitante(id, data) {
   return true;
 }
 
+export async function sbListSolicitantes(filters = {}) {
+  const sb = checkSupabase();
+  let query = sb.from('solicitantes').select('*');
+  if (filters.estado) query = query.eq('estado', filters.estado);
+  if (filters.rol) query = query.eq('rol', filters.rol);
+  query = query.order('creado_en', { ascending: false });
+  const { data, error } = await query;
+  if (error) throw new Error(`Supabase list solicitantes: ${error.message}`);
+  return data || [];
+}
+
 // ── SOLICITUDES DIP ─────────────────────────────────────────────────────────
 
 export async function sbFindSolicitudDip(dip) {
