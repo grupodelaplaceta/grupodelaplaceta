@@ -1,0 +1,221 @@
+import 'dotenv/config';
+import express from 'express';
+import session from 'express-session';
+import helmet from 'helmet';
+import cors from 'cors';
+import rateLimit from 'express-rate-limit';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import ejsLayouts from 'express-ejs-layouts';
+import { initializeDatabase, getDb, sbFindSolicitante, sbListSolicitantes, sbFindDocumentoFirmadoByUrl } from './src/config/db-supabase.js';
+import { supabase, testConnection } from './src/config/supabase.js';
+
+// Importar rutas
+import authRoutes from './src/routes/auth.js';
+import identidadRoutes from './src/routes/identidad.js';
+import bancarioRoutes from './src/routes/bancario.js';
+import fiscalRoutes from './src/routes/fiscal.js';
+import ocioRoutes from './src/routes/ocio.js';
+import recursosRoutes from './src/routes/recursos.js';
+import justiciaRoutes from './src/routes/justicia.js';
+import rgpdRoutes from './src/routes/rgpd.js';
+import pdfRoutes from './src/routes/pdf.js';
+import adminRoutes from './src/routes/admin.js';
+import firmaRoutes from './src/routes/firma.js';
+import publicoRoutes from './src/routes/publico.js';
+import placetidRoutes from './src/routes/placetid.js';
+import contenidosRoutes from './src/routes/contenidos.js';
+import voleybridgeRoutes from './src/routes/voleybridge.js';
+import placetaidAuthRoutes from './src/routes/placetaid-auth.js';
+import fotosRoutes from './src/routes/fotos.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const app = express();
+const PORT = process.env.PORT || 3001;
+
+// ── Inicializar BD (se hace en startServer) ─────────────────────────────────
+// (la BD se inicializa al arrancar en la función startServer)
+
+// ── Configuración de Sesión ─────────────────────────────────────────────────
+const sessionConfig = {
+  secret: process.env.SESSION_SECRET || 'gdlp-crm-secret',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000 // 24 horas
+  }
+};
+
+// ── Middleware Global ─────────────────────────────────────────────────────────
+app.use(helmet({ contentSecurityPolicy: false }));
+app.use(cors());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true }));
+app.use(session(sessionConfig));
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false
+});
+app.use('/api/', limiter);
+
+// ── Motor de Plantillas EJS con Layouts ─────────────────────────────────────
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'src/views'));
+app.use(ejsLayouts);
+app.set('layout', 'layouts/main');
+
+// Middleware para disponibilizar variables globales en vistas
+app.use((req, res, next) => {
+  res.locals.usuario = req.session.usuario || null;
+  res.locals.pathActual = req.path;
+  res.locals.anoActual = 2026;
+  next();
+});
+
+// ── Rutas API ────────────────────────────────────────────────────────────────
+app.use('/api/auth', authRoutes);
+app.use('/api/identidad', identidadRoutes);
+app.use('/api/bancario', bancarioRoutes);
+app.use('/api/fiscal', fiscalRoutes);
+app.use('/api/ocio', ocioRoutes);
+app.use('/api/recursos', recursosRoutes);
+app.use('/api/justicia', justiciaRoutes);
+app.use('/api/rgpd', rgpdRoutes);
+app.use('/api/pdf', pdfRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/firma', firmaRoutes);
+app.use('/api/placetid', placetidRoutes);
+app.use('/api/contenidos', contenidosRoutes);
+app.use('/api/voley', voleybridgeRoutes);
+app.use('/api/placetid', placetaidAuthRoutes);
+app.use('/api/fotos', fotosRoutes);
+
+// ── PlacetaID Login (popup) ──────────────────────────────────────────────────
+app.get('/placetid/login', (req, res) => {
+  res.render('placetid/login', {
+    titulo: 'PlacetaID - Iniciar Sesión',
+    callbackUrl: req.query.from || '',
+    appName: 'Administración GDLP',
+    layout: false
+  });
+});
+app.get('/placetid/callback', (req, res) => {
+  res.render('placetid/callback', { titulo: 'PlacetaID - Autenticación', layout: false });
+});
+
+// ── Rutas Públicas (Web) ─────────────────────────────────────────────────────
+app.use('/', publicoRoutes);
+
+// ── Rutas Admin Web ──────────────────────────────────────────────────────────
+
+// Auth (sin layout - páginas independientes)
+app.get('/login', (req, res) => res.render('auth/login', { titulo: 'PlacetaID - Iniciar Sesión', layout: false }));
+app.get('/registro', (req, res) => res.render('auth/registro', { titulo: 'PlacetaID - Registro', layout: false }));
+app.get('/oauth/authorize', (req, res) => res.render('public/oauth/login', { titulo: 'PlacetaID - Autorizar', client_id: req.query.client_id, redirect_uri: req.query.redirect_uri, state: req.query.state || '', client_nombre: '', client_logo: '', layout: false }));
+
+// Admin panel
+app.get('/admin', verificarAuth, (req, res) => {
+  res.redirect('/admin/dashboard');
+});
+app.get('/admin/dashboard', verificarAuth, async (req, res) => {
+  // Supabase: stats de usuarios (CRM)
+  let totalUsuarios = 0, activos = 0, pendientes = 0;
+  try {
+    const todos = await sbListSolicitantes();
+    totalUsuarios = todos.length;
+    activos = todos.filter(u => u.estado === 'activo').length;
+    pendientes = todos.filter(u => u.estado === 'pendiente').length;
+  } catch (e) { /* fallback silencioso */ }
+
+  // SQLite: stats bancarias/fiscal/justicia
+  const db = getDb();
+  const totalCuentas = db.prepare('SELECT COUNT(*) as total FROM cuentas_bancarias').get();
+  const masaMonetaria = db.prepare("SELECT COALESCE(SUM(saldo),0) as total FROM cuentas_bancarias WHERE tipo_cuenta NOT IN ('Tesoro','Administracion')").get();
+  const expedientesAbiertos = db.prepare("SELECT COUNT(*) as total FROM expedientes_disciplinarios WHERE estado NOT IN ('firme','archivado')").get();
+  res.render('admin/dashboard', {
+    titulo: 'Panel de Administración - GDLP CRM',
+    totalUsuarios,
+    activos,
+    pendientes,
+    totalCuentas: totalCuentas?.total || 0,
+    masaMonetaria: masaMonetaria?.total || 0,
+    expedientesAbiertos: expedientesAbiertos?.total || 0
+  });
+});
+
+// Módulos
+app.get('/admin/identidad', verificarAuth, (req, res) => res.render('identidad/gestion', { titulo: 'Gestión de Identidad' }));
+app.get('/admin/bancario', verificarAuth, (req, res) => res.render('bancario/gestion', { titulo: 'Gestión Bancaria' }));
+app.get('/admin/fiscal', verificarAuth, (req, res) => res.render('fiscal/gestion', { titulo: 'Gestión Fiscal' }));
+app.get('/admin/ocio', verificarAuth, (req, res) => res.render('ocio/gestion', { titulo: 'Gestión de Ocio y Loterías' }));
+app.get('/admin/recursos', verificarAuth, (req, res) => res.render('recursos/gestion', { titulo: 'Gestión de Recursos Digitales' }));
+app.get('/admin/justicia', verificarAuth, (req, res) => res.render('justicia/gestion', { titulo: 'Gestión de Justicia' }));
+app.get('/admin/rgpd', verificarAuth, (req, res) => res.render('rgpd/gestion', { titulo: 'Protección de Datos - RGPD' }));
+app.get('/admin/pdf', verificarAuth, (req, res) => res.render('pdf/gestion', { titulo: 'Generación de Documentos' }));
+app.get('/admin/firmas', verificarAuth, (req, res) => res.render('pdf/firmas', { titulo: 'Documentos para Firmar' }));
+app.get('/admin/contenidos', verificarAuth, (req, res) => res.render('admin/contenidos', { titulo: 'Gestión de Contenidos' }));
+app.get('/admin/voley-club', verificarAuth, (req, res) => res.render('admin/voley-club', { titulo: 'Voley Club - Gestión' }));
+
+// URLs públicas de firma
+app.get('/firmar/:token', async (req, res) => {
+  let doc = null;
+  try { doc = await sbFindDocumentoFirmadoByUrl(req.params.token); } catch (e) {}
+  if (!doc || doc.estado !== 'pendiente') {
+    return res.status(404).render('pdf/firma-error', { titulo: 'Documento no encontrado', error: 'El enlace de firma no es válido o ya fue procesado.' });
+  }
+  res.render('pdf/firma-publica', { titulo: 'Firma de Documento - GDLP', documento: doc });
+});
+
+// ── Helper de autenticación ──────────────────────────────────────────────────
+function verificarAuth(req, res, next) {
+  if (!req.session.usuario) return res.redirect('/login');
+  next();
+}
+
+// ── Error 404 ────────────────────────────────────────────────────────────────
+app.use((req, res) => {
+  res.status(404).render('parciales/error', { titulo: '404 - No encontrado', error: 'La página solicitada no existe.' });
+});
+
+// ── Iniciar Servidor (asíncrono) ────────────────────────────────────────────
+async function startServer() {
+  try {
+    await initializeDatabase();
+
+    // Inicializar Supabase (no crítico si falla)
+    try {
+      const ok = await testConnection();
+      if (ok) console.log('  📦 Supabase: Conectado');
+      else console.log('  ⚠️  Supabase: No disponible');
+    } catch(e) {
+      console.log('  ⚠️  Supabase: No disponible');
+    }
+
+    app.listen(PORT, () => {
+      console.log(`
+╔══════════════════════════════════════════════════════╗
+║         GDLP CRM - Sistema de Gestión               ║
+║    Grupo de La Placeta - Normativa v5.0              ║
+║                                                      ║
+║  Servidor: http://localhost:${PORT}                    ║
+║  Admin:   http://localhost:${PORT}/admin               ║
+║  Firma:   http://localhost:${PORT}/firmar/<token>      ║
+╚══════════════════════════════════════════════════════╝
+      `);
+    });
+  } catch (err) {
+    console.error('❌ Error al iniciar el servidor:', err);
+    process.exit(1);
+  }
+}
+
+startServer();
+
+export default app;

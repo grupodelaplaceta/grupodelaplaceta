@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= titulo %> | GDLP CRM</title>
+  <link rel="stylesheet" href="/css/crm.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏛️</text></svg>">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="/admin/dashboard" class="nav-brand">
+        <span class="nav-logo">🏛️</span>
+        <span class="nav-title">GDLP CRM</span>
+        <span class="nav-subtitle">Grupo de La Placeta</span>
+      </a>
+      <% if (usuario) { %>
+      <div class="nav-menu">
+        <a href="/admin/dashboard" class="nav-link <%= pathActual.startsWith('/admin/dashboard') ? 'active' : '' %>">Dashboard</a>
+        <a href="/admin/identidad" class="nav-link <%= pathActual.startsWith('/admin/identidad') ? 'active' : '' %>">Identidad</a>
+        <a href="/admin/bancario" class="nav-link <%= pathActual.startsWith('/admin/bancario') ? 'active' : '' %>">Bancario</a>
+        <a href="/admin/fiscal" class="nav-link <%= pathActual.startsWith('/admin/fiscal') ? 'active' : '' %>">Fiscal</a>
+        <a href="/admin/ocio" class="nav-link <%= pathActual.startsWith('/admin/ocio') ? 'active' : '' %>">Ocio</a>
+        <a href="/admin/recursos" class="nav-link <%= pathActual.startsWith('/admin/recursos') ? 'active' : '' %>">Recursos</a>
+        <a href="/admin/justicia" class="nav-link <%= pathActual.startsWith('/admin/justicia') ? 'active' : '' %>">Justicia</a>
+        <a href="/admin/rgpd" class="nav-link <%= pathActual.startsWith('/admin/rgpd') ? 'active' : '' %>">RGPD</a>
+        <a href="/admin/pdf" class="nav-link <%= pathActual.startsWith('/admin/pdf') ? 'active' : '' %>">PDF</a>
+        <a href="/admin/firmas" class="nav-link <%= pathActual.startsWith('/admin/firmas') ? 'active' : '' %>">Firmas</a>
+      </div>
+      <div class="nav-user">
+        <span class="user-badge"><%= usuario.alias %></span>
+        <span class="user-rol"><%= usuario.rol %></span>
+        <form action="/api/auth/logout" method="POST" style="display:inline">
+          <button type="submit" class="btn-logout">Salir</button>
+        </form>
+      </div>
+      <% } %>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <%- body %>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-content">
+      <span>Grupo de La Placeta · Normativa Institucional Unificada v5.0</span>
+      <span>Año <%= anoActual %> · Sistema CRM v1.0</span>
+    </div>
+  </footer>
+
+  <script src="/js/crm.js"></script>
+</body>
+</html>

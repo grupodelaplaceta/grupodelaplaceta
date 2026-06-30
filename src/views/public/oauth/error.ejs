@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= typeof titulo !== 'undefined' ? titulo : 'Error' %> | GDLP CRM</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Outfit', system-ui, sans-serif; background: linear-gradient(135deg, #1c005f, #3f00d8); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+    .error-card { background: #fff; border-radius: 20px; padding: 40px 36px; width: 400px; max-width: 94vw; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,.3); }
+    .error-card h1 { font-size: 22px; font-weight: 800; color: #d03131; margin-bottom: 12px; }
+    .error-card p { font-size: 14px; color: #666; line-height: 1.6; margin-bottom: 20px; }
+    .error-card a { display: inline-block; padding: 10px 24px; border-radius: 10px; background: #3f00d8; color: #fff; text-decoration: none; font-weight: 600; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="error-card">
+    <h1>⚠️ <%= typeof titulo !== 'undefined' ? titulo : 'Error' %></h1>
+    <p><%= typeof error !== 'undefined' ? error : 'Ha ocurrido un error inesperado.' %></p>
+    <a href="javascript:window.close()">Cerrar ventana</a>
+  </div>
+</body>
+</html>

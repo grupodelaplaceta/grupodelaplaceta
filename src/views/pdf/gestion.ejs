@@ -1,0 +1,215 @@
+<h1>Generación de Documentos PDF</h1>
+<p class="dashboard-date">Catálogo de Modelos Documentales - Normativa v5.0</p>
+
+<div class="section">
+  <h2>Generar Documento</h2>
+  <div class="stats-grid">
+    <div class="stat-card">
+      <form id="pdfForm" style="width:100%">
+        <div class="form-group">
+          <label>Código de Modelo</label>
+          <select id="codigoModelo" style="width:100%;padding:10px;border:2px solid var(--border);border-radius:var(--radius)" onchange="actualizarCampos()">
+            <option value="GDLP-JUS-001">GDLP-JUS-001: Inicio Expediente</option>
+            <option value="GDLP-JUS-003" selected>GDLP-JUS-003: Resolución Sancionadora</option>
+            <option value="GDLP-JUS-004">GDLP-JUS-004: Decreto de Expulsión</option>
+            <option value="GDLP-HAC-010">GDLP-HAC-010: Requerimiento Descubierto</option>
+            <option value="GDLP-SEC-020">GDLP-SEC-020: Certificado de Baja</option>
+            <option value="GDLP-SEC-021">GDLP-SEC-021: Certificado ARCO</option>
+          </select>
+        </div>
+        <div id="camposDinamicos">
+          <div class="form-group">
+            <label>ID del Expediente</label>
+            <input type="text" id="campo_ID_EXPEDIENTE" placeholder="Ej: EXP-2026-0001">
+          </div>
+          <div class="form-group">
+            <label>Alias del Infractor</label>
+            <input type="text" id="campo_ALIAS_INFRACTOR" placeholder="Alias del usuario">
+          </div>
+          <div class="form-group">
+            <label>Nº DIP</label>
+            <input type="text" id="campo_DIP_NÚMERO" placeholder="00000000A">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Cuantía Multa (Pz)</label>
+              <input type="text" id="campo_CUANTÍA_MULTA_PZ" value="500">
+            </div>
+            <div class="form-group">
+              <label>Días Suspensión</label>
+              <input type="text" id="campo_DÍAS_SUSPENSIÓN" value="15">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Fecha Límite Apelación</label>
+            <input type="text" id="campo_FECHA_LÍMITE_APELACIÓN" placeholder="dd/mm/aaaa">
+          </div>
+          <div class="form-group">
+            <label>Gravedad de la Infracción</label>
+            <select id="campo_GRAVEDAD_INFRACCION" style="width:100%;padding:10px;border:2px solid var(--border);border-radius:var(--radius)">
+              <option value="Leve">Leve</option>
+              <option value="Grave" selected>Grave</option>
+              <option value="Muy Grave">Muy Grave</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Conducta Típica</label>
+            <textarea id="campo_CONDUCTA_TIPICA_NORMATIVA" rows="2" style="width:100%;padding:10px;border:2px solid var(--border);border-radius:var(--radius)" placeholder="Descripción de la conducta según normativa..."></textarea>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">📄 Generar PDF</button>
+      </form>
+    </div>
+    <div class="stat-card">
+      <h3 style="margin-bottom:12px">📚 Modelos Disponibles</h3>
+      <div id="listaModelos" style="font-size:13px">
+        <p class="loading-cell">Cargando modelos...</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h2>Documentos Generados</h2>
+  <div class="table-container">
+    <table class="data-table">
+      <thead>
+        <tr><th>Código</th><th>Título</th><th>Estado</th><th>Firmado por</th><th>Fecha</th></tr>
+      </thead>
+      <tbody id="documentosTable">
+        <tr><td colspan="5" class="loading-cell">Cargando...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  function actualizarCampos() {
+    const codigo = document.getElementById('codigoModelo').value;
+    const container = document.getElementById('camposDinamicos');
+    
+    const camposBase = `
+      <div class="form-group"><label>ID del Expediente</label><input type="text" id="campo_ID_EXPEDIENTE" placeholder="Ej: EXP-2026-0001"></div>
+      <div class="form-group"><label>Alias / Nombre</label><input type="text" id="campo_ALIAS_INFRACTOR" placeholder="Alias del usuario"></div>
+    `;
+    
+    let camposExtra = '';
+    switch(codigo) {
+      case 'GDLP-JUS-001':
+        camposExtra = `
+          <div class="form-group"><label>DIP Número</label><input type="text" id="campo_DIP_NÚMERO"></div>
+          <div class="form-group"><label>Tipo de Infracción</label><select id="campo_TIPO_INFRACCION" style="width:100%;padding:10px;border:2px solid var(--border);border-radius:var(--radius)"><option>Leve</option><option>Grave</option><option>Muy_Grave</option></select></div>
+          <div class="form-group"><label>Descripción de Hechos</label><textarea id="campo_DESCRIPCIÓN_HECHOS" rows="3" style="width:100%;padding:10px;border:2px solid var(--border);border-radius:var(--radius)"></textarea></div>`;
+        break;
+      case 'GDLP-JUS-003':
+        camposExtra = `
+          <div class="form-group"><label>Nº DIP</label><input type="text" id="campo_DIP_NÚMERO" placeholder="00000000A"></div>
+          <div class="form-row"><div class="form-group"><label>Cuantía Multa (Pz)</label><input type="text" id="campo_CUANTÍA_MULTA_PZ" value="500"></div><div class="form-group"><label>Días Suspensión</label><input type="text" id="campo_DÍAS_SUSPENSIÓN" value="15"></div></div>
+          <div class="form-group"><label>Fecha Límite Apelación</label><input type="text" id="campo_FECHA_LÍMITE_APELACIÓN"></div>
+          <div class="form-group"><label>Gravedad</label><select id="campo_GRAVEDAD_INFRACCION" style="width:100%;padding:10px;border:2px solid var(--border);border-radius:var(--radius)"><option>Leve</option><option selected>Grave</option><option>Muy Grave</option></select></div>
+          <div class="form-group"><label>Conducta Típica</label><textarea id="campo_CONDUCTA_TIPICA_NORMATIVA" rows="2" style="width:100%;padding:10px;border:2px solid var(--border);border-radius:var(--radius)"></textarea></div>`;
+        break;
+      case 'GDLP-JUS-004':
+        camposExtra = `
+          <div class="form-group"><label>Saldo a Confiscar (Pz)</label><input type="text" id="campo_SALDO_CONFISCADO"></div>
+          <div class="form-group"><label>Hash de Quema</label><input type="text" id="campo_HASH_QUEMA_MONEDA" value="0x00000_QUEMA"></div>`;
+        break;
+      case 'GDLP-HAC-010':
+        camposExtra = `
+          <div class="form-group"><label>Saldo Negativo</label><input type="text" id="campo_SALDO_NEGATIVO"></div>
+          <div class="form-group"><label>Sanción Aplicada</label><input type="text" id="campo_SANCIÓN_APLICADA_PZ" value="25000"></div>`;
+        break;
+      case 'GDLP-SEC-020':
+        camposExtra = `
+          <div class="form-group"><label>Alias del Ciudadano</label><input type="text" id="campo_ALIAS_CIUDADANO"></div>
+          <div class="form-group"><label>DIP Revocado</label><input type="text" id="campo_DIP_REVOCADO"></div>
+          <div class="form-group"><label>Saldo Liquidado</label><input type="text" id="campo_SALDO_LIQUIDADO_RETORNADO"></div>`;
+        break;
+      case 'GDLP-SEC-021':
+        camposExtra = `
+          <div class="form-group"><label>Nombre Real Afectado</label><input type="text" id="campo_NOMBRE_REAL_AFECTADO"></div>
+          <div class="form-group"><label>Hash Anonimización</label><input type="text" id="campo_HASH_ANONIMIZACION"></div>`;
+        break;
+    }
+    container.innerHTML = camposBase + camposExtra;
+  }
+
+  document.getElementById('pdfForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const codigo = document.getElementById('codigoModelo').value;
+    
+    // Recoger todos los campos del formulario
+    const inputs = document.querySelectorAll('#camposDinamicos input, #camposDinamicos textarea, #camposDinamicos select');
+    const datos = { FECHA_SISTEMA: new Date().toLocaleDateString('es-ES') };
+    inputs.forEach(inp => {
+      const id = inp.id;
+      if (id && id.startsWith('campo_')) {
+        datos[id.replace('campo_', '')] = inp.value;
+      }
+    });
+
+    try {
+      const res = await fetch(`/api/pdf/generar/${codigo}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(datos)
+      });
+      
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${codigo}-${datos.ID_EXPEDIENTE || Date.now()}.pdf`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+        mostrarMensaje('success', 'PDF generado y descargado');
+        
+        // Crear documento para firma
+        await apiFetch('/api/firma/crear', {
+          method: 'POST',
+          body: JSON.stringify({ codigoModelo: codigo, titulo: `${codigo}: ${datos.ALIAS_INFRACTOR || datos.ID_EXPEDIENTE || 'Documento'}` })
+        });
+      } else {
+        const err = await res.json();
+        mostrarMensaje('error', err.error || 'Error generando PDF');
+      }
+    } catch (e) { mostrarMensaje('error', 'Error de conexión'); }
+  });
+
+  async function cargarModelos() {
+    try {
+      const modelos = await apiFetch('/api/pdf/modelos');
+      const container = document.getElementById('listaModelos');
+      container.innerHTML = modelos.map(m => `
+        <div style="padding:8px 0;border-bottom:1px solid var(--border)">
+          <strong style="color:var(--accent)">${m.codigo}</strong><br>
+          <span style="color:var(--text-light);font-size:12px">${m.titulo}</span>
+        </div>
+      `).join('');
+    } catch (e) {}
+  }
+
+  async function cargarDocumentos() {
+    try {
+      const docs = await apiFetch('/api/firma/documentos');
+      const tbody = document.getElementById('documentosTable');
+      if (docs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="loading-cell">No hay documentos</td></tr>';
+        return;
+      }
+      tbody.innerHTML = docs.slice(0, 20).map(d => `
+        <tr>
+          <td><span class="badge">${d.codigo_modelo}</span></td>
+          <td class="cell-truncate">${d.titulo_documento}</td>
+          <td><span class="badge badge-${d.estado}">${d.estado}</span></td>
+          <td>${d.firmante_alias || '—'}</td>
+          <td>${formatFecha(d.creado_en)}</td>
+        </tr>
+      `).join('');
+    } catch (e) {}
+  }
+
+  cargarModelos();
+  cargarDocumentos();
+</script>

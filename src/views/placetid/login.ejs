@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PlacetaID | Iniciar sesión</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Outfit', system-ui, sans-serif; background: linear-gradient(135deg, #1c005f, #3f00d8); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+    .pid-card { background: #fff; border-radius: 24px; padding: 44px 40px; width: 420px; max-width: 92vw; box-shadow: 0 25px 80px rgba(0,0,0,.35); text-align: center; }
+    .pid-logo { width: 72px; height: 72px; border-radius: 50%; background: linear-gradient(135deg, #3f00d8, #1c005f); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 32px; color: #fff; }
+    .pid-card h1 { font-size: 22px; font-weight: 800; color: #1c005f; margin-bottom: 4px; }
+    .pid-card .pid-sub { font-size: 13px; color: #888; margin-bottom: 6px; }
+    .pid-card .pid-app { background: #f5f3f7; border-radius: 12px; padding: 10px 14px; margin-bottom: 20px; font-size: 13px; color: #555; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .pid-card .pid-app strong { color: #1c005f; }
+    .pid-error { background: #fde8e8; color: #d03131; padding: 10px 14px; border-radius: 10px; font-size: 13px; margin-bottom: 14px; display: none; text-align: left; }
+    .pid-form { display: flex; flex-direction: column; gap: 14px; }
+    .pid-form input { width: 100%; padding: 13px 16px; border: 2px solid #e0e0e0; border-radius: 12px; font-size: 15px; font-family: 'Outfit',sans-serif; outline: none; transition: border-color .2s; background: #fafafa; }
+    .pid-form input:focus { border-color: #3f00d8; background: #fff; }
+    .pid-form button { padding: 14px; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; font-family: 'Outfit',sans-serif; cursor: pointer; background: #3f00d8; color: #fff; transition: all .2s; }
+    .pid-form button:hover { background: #1c005f; transform: translateY(-1px); }
+    .pid-form button:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+    .pid-footer { margin-top: 16px; font-size: 11px; color: #bbb; }
+    .pid-step2 { display: none; }
+  </style>
+</head>
+<body>
+  <div class="pid-card">
+    <div class="pid-logo">🔑</div>
+    <h1>PlacetaID</h1>
+    <p class="pid-sub">Tu identidad en La Placeta</p>
+
+    <div class="pid-app" id="pidAppInfo">
+      <span>🔗 <strong><%= appName || 'Administración GDLP' %></strong> solicita tu identidad</span>
+    </div>
+
+    <div class="pid-error" id="pidError"></div>
+
+    <!-- FASE 1: DIP + Password -->
+    <div class="pid-form" id="pidStep1">
+      <input type="text" id="pidUser" placeholder="DIP o Alias" autocomplete="username" autofocus>
+      <input type="password" id="pidPass" placeholder="Contraseña" autocomplete="current-password">
+      <button onclick="pidFase1()" id="pidBtn1">Iniciar sesión</button>
+    </div>
+
+    <!-- FASE 2: Código 2FA (simulado) -->
+    <div class="pid-form" id="pidStep2" style="display:none">
+      <p style="font-size:13px;color:#666;margin-bottom:4px">Introduce el código de verificación</p>
+      <input type="text" id="pid2fa" placeholder="Código 2FA (0000)" maxlength="4" style="text-align:center;font-size:22px;letter-spacing:6px;font-weight:700">
+      <button onclick="pidFase2()" id="pidBtn2">Verificar</button>
+    </div>
+
+    <div class="pid-footer">PlacetaID · Grupo de La Placeta</div>
+  </div>
+
+  <script>
+    let pidToken = null;
+    const params = new URLSearchParams(window.location.search);
+    const from = params.get('from') || '<%= callbackUrl || "" %>';
+
+    function mostrarError(msg) {
+      const el = document.getElementById('pidError');
+      el.textContent = msg; el.style.display = 'block';
+    }
+
+    async function pidFase1() {
+      const user = document.getElementById('pidUser').value.trim();
+      const pass = document.getElementById('pidPass').value;
+      if (!user || !pass) { mostrarError('Completa todos los campos'); return; }
+
+      const btn = document.getElementById('pidBtn1');
+      btn.disabled = true; btn.textContent = 'Verificando...';
+      document.getElementById('pidError').style.display = 'none';
+
+      try {
+        const r = await fetch('/api/placetid/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ alias: user, password: pass })
+        });
+        const res = await r.json();
+        if (res.error) { mostrarError(res.error); btn.disabled = false; btn.textContent = 'Iniciar sesión'; return; }
+
+        if (res.tokenFase2) {
+          // 2FA requerido
+          pidToken = res.tokenFase2;
+          document.getElementById('pidStep1').style.display = 'none';
+          document.getElementById('pidStep2').style.display = 'flex';
+          document.getElementById('pid2fa').focus();
+        } else if (res.token) {
+          // Login completo
+          pidCompletar(res.token, res.usuario);
+        }
+      } catch(e) { mostrarError('Error de conexión'); }
+      btn.disabled = false; btn.textContent = 'Iniciar sesión';
+    }
+
+    async function pidFase2() {
+      const codigo = document.getElementById('pid2fa').value.trim();
+      if (!codigo) { mostrarError('Introduce el código'); return; }
+
+      const btn = document.getElementById('pidBtn2');
+      btn.disabled = true; btn.textContent = 'Verificando...';
+      document.getElementById('pidError').style.display = 'none';
+
+      try {
+        const r = await fetch('/api/placetid/fase2', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: pidToken, codigo })
+        });
+        const res = await r.json();
+        if (res.error) { mostrarError(res.error); btn.disabled = false; btn.textContent = 'Verificar'; return; }
+        pidCompletar(res.token, res.usuario);
+      } catch(e) { mostrarError('Error de conexión'); }
+      btn.disabled = false; btn.textContent = 'Verificar';
+    }
+
+    function pidCompletar(token, usuario) {
+      // Redirigir al callback con token y usuario
+      if (from) {
+        const sep = from.includes('?') ? '&' : '?';
+        window.location.href = from + sep + 'token=' + encodeURIComponent(token) + '&user=' + encodeURIComponent(JSON.stringify(usuario));
+      } else {
+        // Login directo - establecer sesión
+        fetch('/api/placetid/set-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token })
+        }).then(r => r.json()).then(res => {
+          if (res.redirect) window.location.href = res.redirect;
+        });
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,143 @@
+<h1>Gestión de Identidad y Registro</h1>
+<p class="dashboard-date">Módulo 1: PlacetaID, DIP y Control de Acceso</p>
+
+<div class="section">
+  <h2>Solicitudes Pendientes de Alta</h2>
+  <div class="table-container">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Alias</th>
+          <th>Nombre Real</th>
+          <th>Email</th>
+          <th>Edad</th>
+          <th>Franja</th>
+          <th>Aval</th>
+          <th>Fecha Solicitud</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="pendientesTable">
+        <tr><td colspan="8" class="loading-cell">Cargando solicitudes...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="section">
+  <h2>Buscar Usuarios</h2>
+  <div class="quick-actions" style="margin-bottom:16px">
+    <input type="text" id="searchUser" placeholder="Buscar por alias, DIP o email..." style="padding:10px 14px;border:2px solid var(--border);border-radius:var(--radius);font-size:14px;flex:1">
+    <button class="btn btn-primary" onclick="buscarUsuarios()">Buscar</button>
+  </div>
+  <div class="table-container">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Alias</th>
+          <th>DIP</th>
+          <th>Franja</th>
+          <th>Estado</th>
+          <th>Rol</th>
+          <th>Cuenta</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="usuariosTable">
+        <tr><td colspan="7" class="loading-cell">Cargando usuarios...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  async function cargarPendientes() {
+    try {
+      const data = await apiFetch('/api/identidad/pendientes');
+      const tbody = document.getElementById('pendientesTable');
+      if (data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="loading-cell">No hay solicitudes pendientes</td></tr>';
+        return;
+      }
+      tbody.innerHTML = data.map(u => `
+        <tr>
+          <td><strong>${u.alias}</strong></td>
+          <td>${u.nombre_real || '—'}</td>
+          <td>${u.email || '—'}</td>
+          <td>${u.edad} años</td>
+          <td><span class="badge badge-${u.franja_edad}">${u.franja_edad?.replace('_', ' ')}</span></td>
+          <td>${u.tutor_alias || '—'}</td>
+          <td>${formatFecha(u.creado_en)}</td>
+          <td>
+            <button class="btn btn-success btn-sm" onclick="aprobar(${u.id})">Aprobar</button>
+            <button class="btn btn-danger btn-sm" onclick="rechazar(${u.id})">Rechazar</button>
+          </td>
+        </tr>
+      `).join('');
+    } catch (e) {
+      document.getElementById('pendientesTable').innerHTML = '<tr><td colspan="8" class="error-cell">Error al cargar</td></tr>';
+    }
+  }
+
+  async function aprobar(id) {
+    if (!confirm('¿Aprobar esta solicitud de ingreso?')) return;
+    try {
+      const result = await apiFetch(`/api/identidad/aprobar/${id}`, { method: 'POST' });
+      mostrarMensaje('success', result.message);
+      cargarPendientes();
+    } catch (e) { mostrarMensaje('error', e.message); }
+  }
+
+  async function rechazar(id) {
+    const motivo = prompt('Motivo del rechazo:');
+    if (motivo === null) return;
+    try {
+      const result = await apiFetch(`/api/identidad/rechazar/${id}`, {
+        method: 'POST',
+        body: JSON.stringify({ motivo: motivo || 'Sin motivo especificado' })
+      });
+      mostrarMensaje('success', result.message);
+      cargarPendientes();
+    } catch (e) { mostrarMensaje('error', e.message); }
+  }
+
+  async function cargarUsuarios() {
+    try {
+      const data = await apiFetch('/api/identidad/usuarios');
+      const tbody = document.getElementById('usuariosTable');
+      if (data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">No hay usuarios</td></tr>';
+        return;
+      }
+      tbody.innerHTML = data.map(u => `
+        <tr>
+          <td><strong>${u.alias}</strong></td>
+          <td>${u.dip || '—'}</td>
+          <td><span class="badge">${u.franja_edad?.replace('_', ' ') || '—'}</span></td>
+          <td><span class="badge badge-${u.estado}">${u.estado}</span></td>
+          <td>${u.rol}</td>
+          <td>${u.ultimo_acceso ? formatFecha(u.ultimo_acceso) : 'Nunca'}</td>
+          <td>
+            <button class="btn btn-outline btn-sm" onclick="generarDIP(${u.id})">🔄 DIP</button>
+          </td>
+        </tr>
+      `).join('');
+    } catch (e) {
+      document.getElementById('usuariosTable').innerHTML = '<tr><td colspan="7" class="error-cell">Error al cargar</td></tr>';
+    }
+  }
+
+  async function generarDIP(id) {
+    try {
+      const result = await apiFetch(`/api/identidad/generar-dip/${id}`, { method: 'POST' });
+      mostrarMensaje('success', `DIP actualizado: ${result.franja_edad}`);
+    } catch (e) { mostrarMensaje('error', e.message); }
+  }
+
+  function buscarUsuarios() {
+    cargarUsuarios();
+  }
+
+  cargarPendientes();
+  cargarUsuarios();
+</script>

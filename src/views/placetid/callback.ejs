@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PlacetaID - Autenticación</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Outfit', system-ui, sans-serif; background: #1c005f; min-height: 100vh; display: flex; align-items: center; justify-content: center; color: #fff; }
+    .callback-card { text-align: center; padding: 40px; }
+    .spinner { width: 40px; height: 40px; border: 4px solid rgba(255,255,255,.2); border-top-color: #fff; border-radius: 50%; animation: spin .8s linear infinite; margin: 0 auto 16px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .callback-card p { font-size: 15px; opacity: .8; }
+  </style>
+</head>
+<body>
+  <div class="callback-card">
+    <div class="spinner"></div>
+    <p>Completando autenticación...</p>
+  </div>
+
+  <script>
+    (function() {
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get('token') || params.get('placetaid_token');
+      const usuarioStr = params.get('user');
+
+      if (token && usuarioStr && window.opener) {
+        try {
+          const usuario = JSON.parse(decodeURIComponent(usuarioStr));
+          window.opener.postMessage({
+            tipo: 'placetaid-login',
+            token: token,
+            usuario: usuario
+          }, window.location.origin);
+          setTimeout(function() { window.close(); }, 500);
+        } catch(e) {
+          document.querySelector('.callback-card p').textContent = 'Error al procesar autenticación';
+        }
+      } else if (token && usuarioStr) {
+        // No hay opener (ventana directa) - redirigir al login con parámetros
+        window.location.href = '/login?token=' + encodeURIComponent(token) + '&user=' + encodeURIComponent(usuarioStr);
+      } else {
+        document.querySelector('.callback-card p').textContent = 'No se recibieron datos de autenticación';
+      }
+    })();
+  </script>
+</body>
+</html>

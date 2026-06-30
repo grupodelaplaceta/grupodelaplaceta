@@ -1,0 +1,40 @@
+<section class="hero" style="padding:50px 24px">
+  <h1>Recuperar Código</h1>
+  <p>Recupera el código de vinculación de un menor usando tu DNI.</p>
+</section>
+
+<section class="section">
+  <div class="section-inner tramite-form">
+    <div class="form-card">
+      <h2>🔍 Buscar Códigos</h2>
+      <p>Introduce tu DNI para recuperar los códigos de vinculación registrados.</p>
+
+      <% if (typeof error !== 'undefined' && error) { %>
+      <div class="alert alert-error"><%= error %></div>
+      <% } %>
+
+      <form method="POST" action="/tramites/recuperar-codigo">
+        <div class="form-group">
+          <label>DNI del Tutor *</label>
+          <input type="text" name="dni_tutor" required placeholder="12345678A" value="<%= typeof dni !== 'undefined' ? dni : '' %>">
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Buscar Códigos</button>
+      </form>
+
+      <% if (typeof resultado !== 'undefined' && resultado && resultado.length > 0) { %>
+      <div style="margin-top:24px">
+        <h3 style="margin-bottom:12px">Códigos encontrados</h3>
+        <% resultado.forEach(function(r) { %>
+        <div style="padding:14px;background:var(--accent-soft);border-radius:12px;margin-bottom:8px">
+          <strong>Menor:</strong> <%= r.nombre_menor %><br>
+          <strong>Código:</strong> <span style="font-size:18px;font-weight:700;color:var(--accent)"><%= r.codigo_vinculacion %></span><br>
+          <span style="font-size:12px;color:var(--muted)">Registrado: <%= new Date(r.creado_en + 'Z').toLocaleDateString('es-ES') %></span>
+        </div>
+        <% }); %>
+      </div>
+      <% } else if (typeof resultado !== 'undefined' && dni) { %>
+      <div class="alert alert-info" style="margin-top:20px">No se encontraron códigos registrados con ese DNI.</div>
+      <% } %>
+    </div>
+  </div>
+</section>

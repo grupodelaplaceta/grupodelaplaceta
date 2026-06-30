@@ -1,0 +1,73 @@
+<section class="hero-sm">
+  <h1>🏛️ Junta Directiva</h1>
+  <p>Gobierno y administración de la Asociación Grupo de La Placeta</p>
+</section>
+
+<section class="section">
+  <div class="section-inner">
+    <div class="hex-wrap">
+      <div class="hex-item gold" style="cursor:pointer" onclick="mostrarInfo('mision')"><span class="h-icon">🎯</span>Misión</div>
+      <div class="hex-item" style="cursor:pointer" onclick="mostrarInfo('vision')"><span class="h-icon">🔭</span>Visión</div>
+      <div class="hex-item gold" style="cursor:pointer" onclick="mostrarInfo('valores')"><span class="h-icon">💎</span>Valores</div>
+      <div class="hex-item" style="cursor:pointer" onclick="mostrarInfo('gobierno')"><span class="h-icon">🏛️</span>Gobierno</div>
+      <div class="hex-item gold" style="cursor:pointer" onclick="mostrarInfo('transparencia')"><span class="h-icon">🔍</span>Transparencia</div>
+    </div>
+    <p style="margin-top:16px;color:var(--tm);text-align:center;max-width:700px;margin:16px auto 0">
+      Haz clic en cada hexágono para conocer más. La Junta Directiva es el órgano de gobierno de la Asociación Grupo de La Placeta.
+    </p>
+  </div>
+</section>
+
+<!-- Modal de información -->
+<div class="modal-overlay" id="infoModal" onclick="if(event.target===this)cerrarInfo()">
+  <div class="modal-box" style="max-width:500px">
+    <button class="modal-close" onclick="cerrarInfo()">✕</button>
+    <div id="infoContent"></div>
+  </div>
+</div>
+
+<script>
+var infoData = {
+  mision: { icon: '🎯', titulo: 'Nuestra Misión', desc: 'La misión del Grupo de La Placeta es crear, desarrollar y mantener un ecosistema virtual seguro y colaborativo basado en la simulación y el juego de rol de carácter organizativo y administrativo. Nos dedicamos a fomentar de manera integral la creatividad, la participación activa y el aprendizaje colectivo en la toma de decisiones, garantizando en todo momento un entorno estrictamente lúdico, inclusivo, respetuoso y ajeno a la circulación de dinero real o fines lucrativos.' },
+  vision: { icon: '🔭', titulo: 'Nuestra Visión', desc: 'Consolidarnos como un modelo de referencia líder y ejemplar en la gestión y simulación de estructuras organizativas virtuales y juegos de rol a nivel institucional. Aspiramos a proyectar un entorno digital maduro, auto-sostenible y dinámico que evolucione a través de la innovación en sus herramientas normativas y digitales, promoviendo una comunidad unida que sirva de espacio formativo y de entretenimiento de alta calidad para todos sus integrantes.' },
+  valores: { icon: '💎', titulo: 'Nuestros Valores', desc: 'Los pilares éticos y de conducta que rigen de forma transversal a toda nuestra organización y sus miembros son:\n\n• Cooperación y Colectividad: Priorizamos el trabajo en equipo, la ayuda mutua y la consecución de objetivos comunes sobre el beneficio individual.\n• Respeto e Inclusión: Garantizamos un entorno seguro, diverso y libre de discriminación, donde se respete la dignidad de todas las personas.\n• Responsabilidad Normativa: Nos comprometemos con el cumplimiento estricto de las reglas internas y el respeto escrupuloso del ordenamiento jurídico aplicable.\n• Integridad y Simulación Ética: Actuamos bajo principios de buena fe, asegurando que las dinámicas organizativas virtuales se ejecuten con deportividad, honestidad y rectitud.' },
+  gobierno: { icon: '🏛️', titulo: 'Estructura de Gobierno', desc: 'El modelo de gobernanza, dirección y representación del Grupo de La Placeta se fundamenta en un sistema deliberativo, ejecutivo y de control ejercido de manera colegiada por la Junta de la Asociación y por aquellas personas del ecosistema que se encuentren debidamente autorizadas, titulares de un cargo formal y con derecho a voto.\n\nEste cuerpo de gobierno institucional está integrado de forma paritaria por los miembros fundadores y administradores: Mikel Alegre Marcos (Presidente), Salma El Harrak El Younossi (Vocal de Comunicaciones) y Unai García Almazán (Secretario), ostentando cada uno de ellos titularidad real, representación formal y un porcentaje equitativo de voto directo en las decisiones estratégicas de la entidad.\n\nA través de este órgano, se centraliza de manera exclusiva la potestad reglamentaria, la dirección estratégica, la gestión de facultades bancarias y la resolución de conflictos internos, garantizando un proceso de toma de decisiones participativo, ordenado y democrático.' },
+  transparencia: { icon: '🔍', titulo: 'Transparencia', desc: 'La transparencia constituye un principio de obligado cumplimiento en la gestión del Grupo de La Placeta. La organización se compromete a mantener una comunicación clara, veraz y de libre acceso para sus miembros respecto a la normativa institucional aplicable, la estructura de sus procesos y las resoluciones de la Junta. Asimismo, se garantiza la total claridad en las operaciones simuladas y el estricto cumplimiento de las políticas de protección de datos personales, asegurando un entorno previsible, auditable y libre de arbitrariedades.' }
+};
+function mostrarInfo(clave) {
+  var d = infoData[clave];
+  if (!d) return;
+  var descHtml = d.desc.replace(/\n/g, '<br>').replace(/• /g, '<span style="display:inline-block;width:14px;height:14px;background:var(--go);-webkit-mask:url(/img/exagono.png) center/contain no-repeat;mask:url(/img/exagono.png) center/contain no-repeat;vertical-align:middle;margin-right:6px;flex-shrink:0"></span>');
+  document.getElementById('infoContent').innerHTML =
+    '<div style="text-align:center;padding:4px 0">' +
+      '<div style="font-size:52px;margin-bottom:8px;line-height:1">' + d.icon + '</div>' +
+      '<h2 style="font-size:20px;font-weight:800;color:var(--p);margin-bottom:16px;letter-spacing:-.3px">' + d.titulo + '</h2>' +
+      '<div style="font-size:14px;color:var(--t);line-height:1.8;text-align:left;max-height:55vh;overflow-y:auto;padding:0 4px 8px">' +
+        descHtml +
+      '</div>' +
+    '</div>';
+  document.getElementById('infoModal').classList.add('open');
+}
+function cerrarInfo() { document.getElementById('infoModal').classList.remove('open'); }
+</script>
+
+<section class="section section-dark">
+  <div class="section-inner">
+    <h2>📬 Últimas <span class="g">Comunicaciones</span></h2>
+    <p class="section-subtitle">Quejas y sugerencias recibidas a través del canal oficial.</p>
+    <% if (!quejas || quejas.length === 0) { %>
+    <div class="alert alert-i" style="background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.2);color:var(--w);border-radius:12px;padding:20px;text-align:center">No hay comunicaciones públicas en este momento.</div>
+    <% } else { %>
+    <% quejas.slice(0,5).forEach(function(q) { %>
+    <div style="background:rgba(255,255,255,0.08);border-radius:12px;padding:14px 18px;margin-bottom:6px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+        <strong style="color:var(--w)"><%= q.nombre %></strong>
+        <span style="font-size:11px;color:rgba(255,255,255,0.5)"><%= new Date(q.creado_en+'Z').toLocaleDateString('es-ES',{day:'numeric',month:'short'}) %></span>
+      </div>
+      <p style="font-size:13px;color:rgba(255,255,255,0.7);line-height:1.5"><%= q.mensaje.substring(0,200) %><%= q.mensaje.length>200?'...':'' %></p>
+      <span class="tag <%= q.tipo==='queja'?'tag-legal':'tag-eco' %>" style="margin-top:4px;display:inline-block"><%= q.tipo %></span>
+    </div>
+    <% }); %>
+    <% } %>
+  </div>
+</section>

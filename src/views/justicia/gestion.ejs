@@ -1,0 +1,202 @@
+<h1>Gestión de Justicia y Expedientes</h1>
+<p class="dashboard-date">Módulo 6: Denuncias, Expedientes Disciplinarios y Sanciones</p>
+
+<div class="section">
+  <h2>Denuncias Pendientes</h2>
+  <div class="table-container">
+    <table class="data-table">
+      <thead>
+        <tr><th>ID</th><th>Denunciante</th><th>Denunciado</th><th>Tipo</th><th>Descripción</th><th>Estado</th><th>Fecha</th><th>Acción</th></tr>
+      </thead>
+      <tbody id="denunciasTable">
+        <tr><td colspan="8" class="loading-cell">Cargando denuncias...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="section">
+  <h2>Expedientes Disciplinarios</h2>
+  <div class="table-container">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Código</th><th>Infractor</th><th>Tipo</th><th>Gravedad</th><th>Estado</th><th>Inicio</th><th>Límite Apelación</th><th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="expedientesTable">
+        <tr><td colspan="8" class="loading-cell">Cargando expedientes...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="section">
+  <h2>Iniciar Expediente desde Denuncia</h2>
+  <div class="stats-grid">
+    <div class="stat-card">
+      <form id="iniciarExpedienteForm" style="width:100%">
+        <div class="form-group">
+          <label>ID de Denuncia</label>
+          <input type="number" name="denuncia_id" required placeholder="ID de la denuncia">
+        </div>
+        <div class="form-group">
+          <label>Tipo de Infracción</label>
+          <select name="tipo_infraccion" style="width:100%;padding:10px;border:2px solid var(--border);border-radius:var(--radius)">
+            <option value="Leve">Leve</option>
+            <option value="Grave">Grave</option>
+            <option value="Muy_Grave">Muy Grave</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Descripción de Hechos</label>
+          <textarea name="descripcion_hechos" rows="3" style="width:100%;padding:10px;border:2px solid var(--border);border-radius:var(--radius)"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Iniciar Expediente</button>
+      </form>
+    </div>
+    <div class="stat-card">
+      <h3 style="margin-bottom:12px">⚡ Acciones Rápidas</h3>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button class="btn btn-warning btn-block" onclick="consultarPrescripciones()">⏰ Ver Prescripciones</button>
+        <button class="btn btn-outline btn-block" onclick="cargarDenuncias();cargarExpedientes()">🔄 Refrescar Datos</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let expedientesCache = [];
+
+  async function cargarDenuncias() {
+    try {
+      const data = await apiFetch('/api/justicia/denuncias');
+      const tbody = document.getElementById('denunciasTable');
+      if (data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="loading-cell">No hay denuncias registradas</td></tr>';
+        return;
+      }
+      tbody.innerHTML = data.map(d => `
+        <tr>
+          <td>${d.id}</td>
+          <td>${d.denunciante_alias}</td>
+          <td>${d.denunciado_alias}</td>
+          <td><span class="badge">${d.tipo}</span></td>
+          <td class="cell-truncate">${d.descripcion?.substring(0, 80) || '—'}</td>
+          <td><span class="badge badge-${d.estado}">${d.estado}</span></td>
+          <td>${formatFecha(d.creado_en)}</td>
+          <td>
+            ${d.estado === 'pendiente' ? `<button class="btn btn-success btn-sm" onclick="iniciarExpediente(${d.id})">Iniciar</button>` : '—'}
+          </td>
+        </tr>
+      `).join('');
+    } catch (e) {
+      document.getElementById('denunciasTable').innerHTML = '<tr><td colspan="8" class="error-cell">Error</td></tr>';
+    }
+  }
+
+  async function cargarExpedientes() {
+    try {
+      const data = await apiFetch('/api/justicia/expedientes');
+      expedientesCache = data;
+      const tbody = document.getElementById('expedientesTable');
+      if (data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="loading-cell">No hay expedientes</td></tr>';
+        return;
+      }
+      tbody.innerHTML = data.map(e => `
+        <tr>
+          <td><strong>${e.codigo_expediente}</strong></td>
+          <td>${e.infractor_alias}</td>
+          <td>${e.tipo_infraccion?.replace('_', ' ')}</td>
+          <td><span class="badge badge-${e.gravedad}">${e.gravedad}</span></td>
+          <td><span class="badge">${e.estado}</span></td>
+          <td>${formatFecha(e.fecha_inicio)}</td>
+          <td>${e.fecha_limite_apelacion ? formatFecha(e.fecha_limite_apelacion) : '—'}</td>
+          <td>
+            ${e.estado === 'instruccion' ? `<button class="btn btn-warning btn-sm" onclick="notificarCargos(${e.id})">📨 Notificar</button>` : ''}
+            ${e.estado === 'alegaciones' ? `<button class="btn btn-primary btn-sm" onclick="resolver(${e.id})">⚖️ Resolver</button>` : ''}
+            ${e.estado === 'apelacion' ? `<button class="btn btn-danger btn-sm" onclick="ejecutarSentencia(${e.id})">✅ Ejecutar</button>` : ''}
+          </td>
+        </tr>
+      `).join('');
+    } catch (e) {
+      document.getElementById('expedientesTable').innerHTML = '<tr><td colspan="8" class="error-cell">Error</td></tr>';
+    }
+  }
+
+  async function iniciarExpediente(denunciaId) {
+    const tipo = prompt('Tipo de infracción (Leve, Grave, Muy_Grave):');
+    if (!tipo || !['Leve','Grave','Muy_Grave'].includes(tipo)) return;
+    try {
+      const result = await apiFetch(`/api/justicia/iniciar-expediente/${denunciaId}`, {
+        method: 'POST',
+        body: JSON.stringify({ tipo_infraccion: tipo, descripcion_hechos: prompt('Descripción de los hechos:') || '' })
+      });
+      mostrarMensaje('success', result.message);
+      cargarDenuncias();
+      cargarExpedientes();
+    } catch (e) { mostrarMensaje('error', e.message); }
+  }
+
+  async function notificarCargos(id) {
+    try {
+      const result = await apiFetch(`/api/justicia/notificar-cargos/${id}`, { method: 'POST' });
+      mostrarMensaje('success', result.message);
+      cargarExpedientes();
+    } catch (e) { mostrarMensaje('error', e.message); }
+  }
+
+  async function resolver(id) {
+    const multa = prompt('Cuantía de la multa (Pz):') || '0';
+    const suspension = prompt('Días de suspensión:') || '0';
+    const tipo = prompt('Tipo de sanción (multa, suspension, expulsion):') || 'multa';
+    try {
+      const result = await apiFetch(`/api/justicia/resolver/${id}`, {
+        method: 'POST',
+        body: JSON.stringify({
+          sancion_tipo: tipo,
+          cuantia_multa: parseFloat(multa),
+          suspension_dias: parseInt(suspension),
+          hechos_probados: prompt('Hechos probados:') || ''
+        })
+      });
+      mostrarMensaje('success', result.message);
+      cargarExpedientes();
+    } catch (e) { mostrarMensaje('error', e.message); }
+  }
+
+  async function ejecutarSentencia(id) {
+    if (!confirm('¿Ejecutar sentencia firme? Esta acción es irreversible.')) return;
+    try {
+      const result = await apiFetch(`/api/justicia/ejecutar-sentencia/${id}`, { method: 'POST' });
+      mostrarMensaje('success', result.message);
+      cargarExpedientes();
+    } catch (e) { mostrarMensaje('error', e.message); }
+  }
+
+  async function consultarPrescripciones() {
+    const ahora = new Date();
+    const quinceDias = new Date(ahora - 15 * 24 * 60 * 60 * 1000);
+    const tresMeses = new Date(ahora - 90 * 24 * 60 * 60 * 1000);
+    const unAno = new Date(ahora - 365 * 24 * 60 * 60 * 1000);
+    mostrarMensaje('info', `Infracciones leves: prescriben antes del ${quinceDias.toLocaleDateString('es-ES')}. Graves: antes del ${tresMeses.toLocaleDateString('es-ES')}. Muy graves: antes del ${unAno.toLocaleDateString('es-ES')}.`);
+  }
+
+  document.getElementById('iniciarExpedienteForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(e.target));
+    try {
+      const result = await apiFetch(`/api/justicia/iniciar-expediente/${data.denuncia_id}`, {
+        method: 'POST',
+        body: JSON.stringify({ tipo_infraccion: data.tipo_infraccion, descripcion_hechos: data.descripcion_hechos })
+      });
+      mostrarMensaje('success', result.message);
+      cargarDenuncias();
+      cargarExpedientes();
+    } catch (e) { mostrarMensaje('error', e.message); }
+  });
+
+  cargarDenuncias();
+  cargarExpedientes();
+</script>

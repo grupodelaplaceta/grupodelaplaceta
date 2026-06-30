@@ -1,0 +1,134 @@
+<h1>Protección de Datos (RGPD / LOPDGDD)</h1>
+<p class="dashboard-date">Módulo 7: Cumplimiento Real de Privacidad</p>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <h3 style="margin-bottom:12px">🔒 Registro de Tratamientos (RAT)</h3>
+    <div class="table-container">
+      <table class="data-table">
+        <thead><tr><th>Finalidad</th><th>Datos</th><th>Conservación</th><th>Base Legal</th></tr></thead>
+        <tbody id="ratTable">
+          <tr><td colspan="4" class="loading-cell">Cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="stat-card">
+    <h3 style="margin-bottom:12px">📋 Solicitudes ARCO+</h3>
+    <p id="arcoStats" style="font-size:13px;color:var(--text-light)">Cargando estadísticas...</p>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-top:12px">
+      <span>✏️ Acceso: <strong id="arcoAcceso">—</strong></span>
+      <span>🔄 Rectificación: <strong id="arcoRect">—</strong></span>
+      <span>🗑️ Supresión: <strong id="arcoSupresion">—</strong></span>
+      <span>🚫 Oposición: <strong id="arcoOposicion">—</strong></span>
+      <span>⏸️ Limitación: <strong id="arcoLimitacion">—</strong></span>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h2>Solicitudes ARCO Pendientes</h2>
+  <div class="table-container">
+    <table class="data-table">
+      <thead>
+        <tr><th>ID</th><th>Usuario</th><th>Derecho</th><th>Estado</th><th>Detalle</th><th>Fecha</th><th>Acción</th></tr>
+      </thead>
+      <tbody id="arcoTable">
+        <tr><td colspan="7" class="loading-cell">Cargando...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="section">
+  <h2>Consentimientos</h2>
+  <div class="table-container">
+    <table class="data-table">
+      <thead>
+        <tr><th>Usuario</th><th>Tipo</th><th>Aceptado</th><th>Fecha</th><th>IP</th></tr>
+      </thead>
+      <tbody id="consentimientosTable">
+        <tr><td colspan="5" class="loading-cell">Cargando...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="section">
+  <h2>Exportar / Compartir Datos entre Áreas</h2>
+  <div class="stats-grid">
+    <div class="stat-card">
+      <form id="exportForm" style="width:100%">
+        <div class="form-group">
+          <label>Área Destino</label>
+          <input type="text" name="area_destino" required placeholder="Ej: Departamento de Justicia">
+        </div>
+        <div class="form-group">
+          <label>Justificación del Tratamiento *</label>
+          <textarea name="justificacion" rows="3" required style="width:100%;padding:10px;border:2px solid var(--border);border-radius:var(--radius)" placeholder="Detalle la finalidad del tratamiento..."></textarea>
+        </div>
+        <div class="form-group">
+          <label>Documento de Aprobación de la Junta *</label>
+          <textarea name="documento_aprobacion" rows="2" required style="width:100%;padding:10px;border:2px solid var(--border);border-radius:var(--radius)" placeholder="Pegue aquí el documento de aprobación firmado..."></textarea>
+        </div>
+        <button type="submit" class="btn btn-warning btn-block">Solicitar Exportación</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  async function cargarRAT() {
+    try {
+      const data = await apiFetch('/api/rgpd/tratamientos');
+      const tbody = document.getElementById('ratTable');
+      tbody.innerHTML = data.map(t => `
+        <tr>
+          <td>${t.finalidad}</td>
+          <td class="cell-truncate">${t.datos_recogidos || '—'}</td>
+          <td>${t.periodo_conservacion || '—'}</td>
+          <td>${t.base_legal || '—'}</td>
+        </tr>
+      `).join('');
+    } catch (e) {
+      document.getElementById('ratTable').innerHTML = '<tr><td colspan="4" class="error-cell">Error</td></tr>';
+    }
+  }
+
+  async function cargarStatsARCO() {
+    try {
+      const stats = await apiFetch('/api/admin/dashboard');
+      const arco = stats.rgpd.solicitudesARCO;
+      document.getElementById('arcoAcceso').textContent = arco.porDerecho.acceso;
+      document.getElementById('arcoRect').textContent = arco.porDerecho.rectificacion;
+      document.getElementById('arcoSupresion').textContent = arco.porDerecho.supresion;
+      document.getElementById('arcoOposicion').textContent = arco.porDerecho.oposicion;
+      document.getElementById('arcoLimitacion').textContent = arco.porDerecho.limitacion;
+      document.getElementById('arcoStats').textContent = `Total: ${arco.total} · Pendientes: ${arco.pendientes} · Completadas: ${arco.completadas}`;
+    } catch (e) {}
+  }
+
+  async function cargarSolicitudesARCO() {
+    try {
+      const tbody = document.getElementById('arcoTable');
+      tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">Cargando...</td></tr>';
+    } catch (e) {}
+  }
+
+  document.getElementById('exportForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(e.target));
+    try {
+      const result = await apiFetch('/api/rgpd/exportar-datos', { method: 'POST', body: JSON.stringify(data) });
+      if (result.success) {
+        mostrarMensaje('success', result.message);
+      } else {
+        mostrarMensaje('error', 'Requisitos incumplidos. Revisa los campos obligatorios.');
+      }
+    } catch (e) { mostrarMensaje('error', e.message); }
+  });
+
+  cargarRAT();
+  cargarStatsARCO();
+  cargarSolicitudesARCO();
+</script>

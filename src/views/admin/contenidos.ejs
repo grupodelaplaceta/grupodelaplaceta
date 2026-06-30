@@ -1,0 +1,155 @@
+<section class="hero-sm">
+  <h1>📝 Gestión de Contenidos</h1>
+  <p>Crea y administra páginas, avisos y contenido dinámico</p>
+</section>
+
+<section class="section">
+  <div class="section-inner">
+    <div style="display:flex;gap:14px;margin-bottom:24px;flex-wrap:wrap">
+      <button class="btn btn-go" onclick="mostrarForm()">➕ Nuevo contenido</button>
+    </div>
+
+    <div id="formContainer" style="display:none;background:var(--s);border-radius:var(--r-lg);padding:28px;margin-bottom:24px">
+      <h2 style="margin-bottom:16px" id="formTitle">Nuevo contenido</h2>
+      <input type="hidden" id="editId">
+      <div class="form-group">
+        <label>Título</label>
+        <input type="text" id="inputTitulo" required oninput="generarSlug()" placeholder="Título del contenido">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Slug (URL)</label>
+          <input type="text" id="inputSlug" required placeholder="mi-pagina">
+        </div>
+        <div class="form-group">
+          <label>Tipo</label>
+          <select id="inputTipo">
+            <option value="pagina">Página</option>
+            <option value="aviso">Aviso</option>
+            <option value="noticia">Noticia</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Meta descripción (SEO)</label>
+        <input type="text" id="inputMeta" placeholder="Breve descripción para buscadores">
+      </div>
+      <div class="form-group">
+        <label>Contenido (Markdown/HTML)</label>
+        <textarea id="inputContenido" rows="12" style="font-family:monospace;font-size:13px"></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Estado</label>
+          <select id="inputEstado">
+            <option value="publicado">Publicado</option>
+            <option value="borrador">Borrador</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:8px">
+        <button class="btn btn-go" onclick="guardar()">💾 Guardar</button>
+        <button class="btn btn-ol" style="color:var(--t);border-color:var(--l)" onclick="cancelarForm()">Cancelar</button>
+      </div>
+    </div>
+
+    <div id="listaContenidos">
+      <p style="color:var(--tm)">Cargando contenidos...</p>
+    </div>
+  </div>
+</section>
+
+<script>
+let contenidos = [];
+
+function generarSlug() {
+  const t = document.getElementById('inputTitulo').value;
+  const s = document.getElementById('inputSlug');
+  if (!s.dataset.manual) s.value = t.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+}
+
+document.getElementById('inputSlug').addEventListener('input', function() { this.dataset.manual = '1'; });
+
+function mostrarForm(datos) {
+  document.getElementById('formContainer').style.display = 'block';
+  if (datos) {
+    document.getElementById('formTitle').textContent = 'Editar contenido';
+    document.getElementById('editId').value = datos.id;
+    document.getElementById('inputTitulo').value = datos.titulo;
+    document.getElementById('inputSlug').value = datos.slug;
+    document.getElementById('inputTipo').value = datos.tipo;
+    document.getElementById('inputMeta').value = datos.meta_desc || '';
+    document.getElementById('inputContenido').value = datos.contenido;
+    document.getElementById('inputEstado').value = datos.estado;
+  } else {
+    document.getElementById('formTitle').textContent = 'Nuevo contenido';
+    document.getElementById('editId').value = '';
+    document.getElementById('inputTitulo').value = '';
+    document.getElementById('inputSlug').value = '';
+    document.getElementById('inputSlug').dataset.manual = '';
+    document.getElementById('inputTipo').value = 'pagina';
+    document.getElementById('inputMeta').value = '';
+    document.getElementById('inputContenido').value = '';
+    document.getElementById('inputEstado').value = 'publicado';
+  }
+  document.getElementById('formContainer').scrollIntoView({behavior:'smooth'});
+}
+
+function cancelarForm() {
+  document.getElementById('formContainer').style.display = 'none';
+}
+
+async function cargar() {
+  try {
+    const r = await fetch('/api/contenidos');
+    contenidos = await r.json();
+    const div = document.getElementById('listaContenidos');
+    if (!contenidos.length) {
+      div.innerHTML = '<p style="color:var(--tm)">No hay contenidos aún. Crea el primero.</p>';
+      return;
+    }
+    div.innerHTML = '<table class="tbl"><thead><tr><th>Título</th><th>Tipo</th><th>Estado</th><th>Slug</th><th>Fecha</th><th>Acciones</th></tr></thead><tbody>' +
+      contenidos.map(c => `<tr>
+        <td><strong>${c.titulo}</strong></td>
+        <td>${c.tipo}</td>
+        <td><span style="color:${c.estado === 'publicado' ? 'var(--g)' : 'var(--go)'}">${c.estado}</span></td>
+        <td><code>/${c.slug}</code></td>
+        <td style="font-size:12px;color:var(--tm)">${new Date(c.creado_en).toLocaleDateString('es-ES')}</td>
+        <td style="display:flex;gap:6px">
+          <button class="btn btn-sm" style="background:var(--p);color:var(--w)" onclick='mostrarForm(${JSON.stringify(c).replace(/'/g,"&#39;")})'>✏️</button>
+          <button class="btn btn-sm" style="background:var(--r);color:var(--w)" onclick="eliminar(${c.id})">🗑️</button>
+        </td>
+      </tr>`).join('') + '</tbody></table>';
+  } catch(e) {
+    document.getElementById('listaContenidos').innerHTML = '<p style="color:var(--r)">Error al cargar contenidos.</p>';
+  }
+}
+
+async function guardar() {
+  const id = document.getElementById('editId').value;
+  const datos = {
+    titulo: document.getElementById('inputTitulo').value,
+    slug: document.getElementById('inputSlug').value,
+    contenido: document.getElementById('inputContenido').value,
+    tipo: document.getElementById('inputTipo').value,
+    meta_desc: document.getElementById('inputMeta').value,
+    estado: document.getElementById('inputEstado').value,
+  };
+  try {
+    const url = id ? `/api/contenidos/${id}` : '/api/contenidos';
+    const method = id ? 'PUT' : 'POST';
+    const r = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(datos) });
+    const res = await r.json();
+    if (res.success) { cancelarForm(); cargar(); }
+    else alert('Error: ' + (res.error || 'Desconocido'));
+  } catch(e) { alert('Error de red'); }
+}
+
+async function eliminar(id) {
+  if (!confirm('¿Eliminar este contenido?')) return;
+  await fetch(`/api/contenidos/${id}`, { method: 'DELETE' });
+  cargar();
+}
+
+cargar();
+</script>

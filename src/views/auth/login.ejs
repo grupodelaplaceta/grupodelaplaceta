@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= titulo %> | GDLP CRM</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Outfit', system-ui, sans-serif; background: linear-gradient(135deg, #1c005f, #3f00d8); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+    .plogin-card { background: #fff; border-radius: 24px; padding: 48px 40px 40px; width: 400px; max-width: 92vw; text-align: center; box-shadow: 0 25px 80px rgba(0,0,0,.35); position: relative; }
+    .plogin-logo { width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, #3f00d8, #1c005f); display: flex; align-items: center; justify-content: center; margin: 0 auto 18px; font-size: 36px; color: #fff; }
+    .plogin-card h1 { font-size: 24px; font-weight: 900; color: #1c005f; }
+    .plogin-card .pl-sub { font-size: 14px; color: #888; margin-bottom: 24px; }
+    .plogin-card .pl-btn { display: block; width: 100%; padding: 16px; border: none; border-radius: 14px; font-size: 16px; font-weight: 700; font-family: 'Outfit',sans-serif; cursor: pointer; background: #3f00d8; color: #fff; transition: all .2s; text-decoration: none; }
+    .plogin-card .pl-btn:hover { background: #1c005f; transform: translateY(-2px); box-shadow: 0 8px 30px rgba(63,0,216,.3); }
+    .plogin-card .pl-btn:disabled { opacity: .5; transform: none; cursor: not-allowed; }
+    .plogin-card .pl-reg { display: block; margin-top: 16px; font-size: 13px; color: #888; }
+    .plogin-card .pl-reg a { color: #3f00d8; text-decoration: none; font-weight: 600; }
+    .plogin-card .pl-reg a:hover { text-decoration: underline; }
+    .plogin-footer { margin-top: 24px; font-size: 11px; color: #ccc; }
+    .plogin-loading { display: none; }
+    .plogin-loading.active { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 20px 0; }
+    .spinner { width: 40px; height: 40px; border: 4px solid #e0e0e0; border-top-color: #3f00d8; border-radius: 50%; animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="plogin-card" id="loginCard">
+    <div class="plogin-logo">🔑</div>
+    <h1>PlacetaID</h1>
+    <p class="pl-sub">Inicia sesión con tu identidad en La Placeta</p>
+
+    <div id="loginButtons">
+      <button class="pl-btn" onclick="abrirPlacetaID()">🔑 Continuar con PlacetaID</button>
+
+      <div style="margin-top:20px;padding-top:16px;border-top:1px solid #eee">
+        <p style="font-size:12px;color:#aaa;margin-bottom:10px">Acceso rápido (demo)</p>
+        <div style="display:flex;gap:8px">
+          <button class="pl-btn" style="padding:10px;font-size:13px;background:#d7a02d;color:#000" onclick="demoLogin('ciudadano')">👤 Demo Ciudadano</button>
+          <button class="pl-btn" style="padding:10px;font-size:13px;background:#1c005f" onclick="demoLogin('admin')">⚙️ Demo Admin</button>
+        </div>
+      </div>
+
+      <span class="pl-reg">¿No tienes cuenta? <a href="/registro">Solicitar DIP</a></span>
+    </div>
+
+    <div class="plogin-loading" id="loginLoading">
+      <div class="spinner"></div>
+      <p style="font-size:14px;color:#666">Esperando autenticación en PlacetaID...</p>
+      <button class="pl-btn" style="padding:10px;font-size:13px" onclick="cancelarPopup()">Cancelar</button>
+    </div>
+
+    <div class="plogin-footer">Grupo de La Placeta · CRM v1.0</div>
+  </div>
+
+  <script>
+    let popup = null;
+    let popupTimer = null;
+
+    function abrirPlacetaID() {
+      const callback = encodeURIComponent(window.location.origin + '/placetid/callback');
+      const state = encodeURIComponent(window.location.origin);
+      const url = 'https://id.laplaceta.org/?from=' + callback + '&state=' + state + '&platform=web';
+
+      // Abrir como popup
+      const w = 480, h = 700;
+      const x = (screen.width - w) / 2;
+      const y = (screen.height - h) / 2;
+      popup = window.open(url, 'PlacetaID', 'width=' + w + ',height=' + h + ',left=' + x + ',top=' + y + ',resizable=yes,scrollbars=yes');
+
+      if (!popup || popup.closed) {
+        // Fallback: redirigir si el popup fue bloqueado
+        window.location.href = url;
+        return;
+      }
+
+      document.getElementById('loginButtons').style.display = 'none';
+      document.getElementById('loginLoading').classList.add('active');
+
+      // Esperar a que el popup se cierre o redirija al callback
+      popupTimer = setInterval(function() {
+        if (popup.closed) {
+          clearInterval(popupTimer);
+          document.getElementById('loginButtons').style.display = 'block';
+          document.getElementById('loginLoading').classList.remove('active');
+        }
+      }, 500);
+    }
+
+    function cancelarPopup() {
+      if (popup && !popup.closed) popup.close();
+      clearInterval(popupTimer);
+      document.getElementById('loginButtons').style.display = 'block';
+      document.getElementById('loginLoading').classList.remove('active');
+    }
+
+    function demoLogin(tipo) {
+      const creds = tipo === 'admin'
+        ? { alias: 'admin', password: 'admin123' }
+        : { alias: 'demo', password: 'Demo1234!' };
+
+      document.getElementById('loginButtons').style.display = 'none';
+      document.getElementById('loginLoading').classList.add('active');
+      document.getElementById('loginLoading').querySelector('p').textContent = 'Iniciando sesión como ' + (tipo === 'admin' ? 'Administrador...' : 'Ciudadano...');
+
+      fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(creds)
+      }).then(r => r.json()).then(data => {
+        if (data.redirect) window.location.href = data.redirect;
+        else window.location.href = '/';
+      }).catch(function() {
+        window.location.href = '/';
+      });
+    }
+
+    // Escuchar mensajes del callback (postMessage)
+    window.addEventListener('message', function(event) {
+      if (event.origin !== window.location.origin) return;
+      if (!event.data || !event.data.tipo || event.data.tipo !== 'placetaid-login') return;
+
+      const { token, usuario } = event.data;
+      if (!token || !usuario) return;
+
+      if (popup && !popup.closed) popup.close();
+      clearInterval(popupTimer);
+
+      document.querySelector('.plogin-card').innerHTML = '<div class="plogin-logo">🔑</div><h1>Conectando...</h1><p class="pl-sub">Estableciendo sesión en el CRM</p><div class="plogin-loading active"><div class="spinner"></div></div>';
+
+      fetch('/api/placetid/set-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, usuario })
+      }).then(r => r.json()).then(data => {
+        if (data && data.redirect) window.location.href = data.redirect;
+        else window.location.href = '/';
+      }).catch(function() {
+        window.location.href = '/';
+      });
+    });
+  </script>
+</body>
+</html>
+          body: JSON.stringify(Object.fromEntries(formData))
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+          window.location.href = data.redirect || '/admin/dashboard';
+        } else {
+          errorMsg.textContent = data.error || 'Error al iniciar sesión';
+          errorMsg.style.display = 'block';
+        }
+      } catch (err) {
+        errorMsg.textContent = 'Error de conexión';
+        errorMsg.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btn.querySelector('.btn-text').style.display = 'inline';
+        btn.querySelector('.btn-loading').style.display = 'none';
+      }
+    });
+  </script>
+</body>
+</html>

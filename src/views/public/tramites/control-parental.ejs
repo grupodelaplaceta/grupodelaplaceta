@@ -1,0 +1,131 @@
+<section class="hero-small">
+  <h1>👨‍👩‍👧‍👦 Control Parental</h1>
+  <p>Registro oficial de tutor legal para acceso de menores al ecosistema simulado</p>
+</section>
+
+<section class="section">
+  <div class="section-inner tramite-form">
+
+    <div class="legal-notice legal-real">
+      <span class="legal-notice-icon">⚖️</span>
+      <div>
+        <strong>Este es un trámite legal real.</strong> Al completar este formulario, estás realizando una gestión oficial ante la Asociación Grupo de La Placeta, sujeta a la Ley Orgánica de Protección de Datos (LOPDGDD 3/2018) y al Reglamento General de Protección de Datos (RGPD UE 2016/679). Los datos recogidos serán tratados con la máxima confidencialidad y únicamente para la finalidad de vinculación tutelar.
+      </div>
+    </div>
+
+    <div class="form-card">
+      <h2>📋 Datos del Registro<small class="sub">Ley 1/2002 Reguladora del Derecho de Asociación</small></h2>
+      <p>Completa los datos del tutor legal y del menor. Todos los campos marcados con * son obligatorios. Al finalizar, recibirás un código de vinculación único que deberás conservar.</p>
+
+      <% if (typeof error !== 'undefined' && error) { %>
+      <div class="alert alert-error"><%= error %></div>
+      <% } %>
+
+      <% if (resultado) { %>
+      <div class="alert alert-success">
+        <strong>✅ Registro completado correctamente</strong><br>
+        <strong>Menor:</strong> <%= resultado.nombre_menor %><br><br>
+        <div style="background:var(--accent-soft);border-radius:12px;padding:16px;text-align:center;margin:12px 0">
+          <div style="font-size:12px;color:var(--text-light);margin-bottom:4px">CÓDIGO DE VINCULACIÓN</div>
+          <div style="font-size:28px;font-weight:900;color:var(--accent);letter-spacing:4px;font-family:monospace"><%= resultado.codigo %></div>
+        </div>
+        <p style="font-size:12px"><strong>Importante:</strong> Guarda este código. Es necesario para registrar al menor en el ecosistema y no podrá ser recuperado si no recuerdas el DNI del tutor.</p>
+      </div>
+      <a href="/tramites" class="btn btn-primary btn-block">Volver a Trámites</a>
+      <% } else { %>
+      <form method="POST" action="/tramites/control-parental" id="cpForm" onsubmit="return validarFormularioCP()">
+
+        <h3 style="margin-bottom:16px;font-size:18px;font-weight:700">👤 Datos del Tutor Legal</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Nombre Completo *</label>
+            <input type="text" name="nombre_tutor" id="cp_nombre_t" required placeholder="Nombre y apellidos del tutor">
+          </div>
+          <div class="form-group">
+            <label>DNI / NIE *</label>
+            <input type="text" name="dni_tutor" id="cp_dni" required placeholder="12345678A" pattern="^[0-9]{8}[A-Z]$" title="8 dígitos + letra mayúscula (ej: 12345678A)">
+            <span class="form-hint">Formato: 8 dígitos + letra mayúscula (sin espacios ni guiones)</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Correo Electrónico *</label>
+          <input type="email" name="email_tutor" id="cp_email" required placeholder="tutor@email.com">
+          <span class="form-hint">Dirección de correo válida donde recibir notificaciones</span>
+        </div>
+        <div class="form-group">
+          <label>Teléfono de Contacto</label>
+          <input type="tel" name="telefono_tutor" placeholder="612 345 678">
+        </div>
+
+        <div class="section-divider">Datos del menor</div>
+
+        <h3 style="margin:8px 0 16px;font-size:18px;font-weight:700">👶 Datos del Menor</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Nombre del Menor *</label>
+            <input type="text" name="nombre_menor" id="cp_nombre_m" required placeholder="Nombre y apellidos del menor">
+          </div>
+          <div class="form-group">
+            <label>Fecha de Nacimiento *</label>
+            <input type="date" name="fecha_nac_menor" id="cp_fecha" required max="2026-06-28">
+            <span class="form-hint">Debe ser menor de 16 años para este trámite</span>
+          </div>
+        </div>
+
+        <div class="section-divider">Aceptación legal</div>
+
+        <div class="checkbox-group">
+          <div class="checkbox-item">
+            <input type="checkbox" id="cp_cond1" required>
+            <label for="cp_cond1"><strong>Declaración responsable:</strong> Declaro bajo mi responsabilidad que soy el tutor legal del menor indicado, con plena capacidad jurídica, y autorizo expresamente su participación en el ecosistema virtual "La Placeta" gestionado por la Asociación Grupo de La Placeta.</label>
+          </div>
+          <div class="checkbox-item">
+            <input type="checkbox" id="cp_cond2" required>
+            <label for="cp_cond2"><strong>Protección de datos:</strong> He leído y acepto la <a href="/privacidad" target="_blank">Política de Privacidad</a> y consiento el tratamiento de mis datos personales y los del menor conforme al RGPD y la LOPDGDD, con la finalidad exclusiva de gestionar la vinculación tutelar en el ecosistema.</label>
+          </div>
+          <div class="checkbox-item">
+            <input type="checkbox" id="cp_cond3" required>
+            <label for="cp_cond3"><strong>Aceptación de la normativa:</strong> Acepto la Normativa Institucional Unificada v5.0 y los Estatutos de la Asociación Grupo de La Placeta, así como las condiciones específicas del ecosistema simulado para menores de edad.</label>
+          </div>
+          <div class="checkbox-item">
+            <input type="checkbox" id="cp_cond4" required>
+            <label for="cp_cond4"><strong>Comunicación de datos:</strong> Consiento que los datos facilitados sean comunicados al Departamento de Identidad de La Placeta únicamente para los fines de verificación y registro. No se realizarán cesiones a terceros fuera de los supuestos previstos por la ley.</label>
+          </div>
+        </div>
+
+        <p style="font-size:11px;color:var(--text-light);margin-bottom:20px;line-height:1.5">
+          ⚠️ De acuerdo con el artículo 7 del RGPD, el consentimiento del tutor legal es necesario para el tratamiento de datos de menores de 16 años. Puede ejercer sus derechos de acceso, rectificación, supresión, oposición y limitación escribiendo a <a href="mailto:dpd@grupodelaplaceta.org" style="color:var(--accent)">dpd@grupodelaplaceta.org</a>.
+        </p>
+
+        <button type="submit" class="btn btn-primary btn-block" id="cp_submit">Generar Código de Vinculación</button>
+      </form>
+      <% } %>
+    </div>
+  </div>
+</section>
+
+<script>
+function validarFormularioCP() {
+  const dni = document.getElementById('cp_dni').value.trim();
+  const dniRegex = /^[0-9]{8}[A-Z]$/;
+  if (!dniRegex.test(dni)) {
+    document.getElementById('cp_dni').classList.add('error');
+    document.querySelector('#cp_dni + .form-hint')?.classList.add('error-hint');
+    document.getElementById('cp_dni').focus();
+    return false;
+  }
+  document.getElementById('cp_dni').classList.remove('error');
+  document.querySelector('#cp_dni + .form-hint')?.classList.remove('error-hint');
+
+  const checks = document.querySelectorAll('#cpForm .checkbox-item input[type="checkbox"]');
+  for (const c of checks) {
+    if (!c.checked) {
+      c.closest('.checkbox-item').style.borderColor = 'var(--red)';
+      c.focus();
+      return false;
+    }
+    c.closest('.checkbox-item').style.borderColor = '';
+  }
+  return true;
+}
+</script>

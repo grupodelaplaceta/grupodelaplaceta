@@ -1,0 +1,144 @@
+<h1>Documentos Pendientes de Firma</h1>
+<p class="dashboard-date">Sistema de Firma Digital vía URL Pública</p>
+
+<div class="section">
+  <h2>Crear Nuevo Documento para Firma</h2>
+  <div class="stats-grid">
+    <div class="stat-card">
+      <form id="crearDocumentoForm" style="width:100%">
+        <div class="form-group">
+          <label>Código de Modelo</label>
+          <select name="codigoModelo" style="width:100%;padding:10px;border:2px solid var(--border);border-radius:var(--radius)">
+            <option value="GDLP-JUS-001">GDLP-JUS-001: Inicio Expediente</option>
+            <option value="GDLP-JUS-002">GDLP-JUS-002: Medidas Cautelares</option>
+            <option value="GDLP-JUS-003">GDLP-JUS-003: Resolución Sancionadora</option>
+            <option value="GDLP-JUS-004">GDLP-JUS-004: Decreto de Expulsión</option>
+            <option value="GDLP-HAC-010">GDLP-HAC-010: Requerimiento Descubierto</option>
+            <option value="GDLP-SEC-020">GDLP-SEC-020: Certificado de Baja</option>
+            <option value="GDLP-SEC-021">GDLP-SEC-021: Certificado ARCO</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Título del Documento</label>
+          <input type="text" name="titulo" required placeholder="Ej: Resolución EXP-2026-0001">
+        </div>
+        <div class="form-group">
+          <label>Contenido / Resumen</label>
+          <textarea name="contenido" rows="3" style="width:100%;padding:10px;border:2px solid var(--border);border-radius:var(--radius)" placeholder="Breve descripción del contenido del documento..."></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Crear Documento para Firma</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h2>Documentos Pendientes</h2>
+  <div class="table-container">
+    <table class="data-table">
+      <thead>
+        <tr><th>Código</th><th>Título</th><th>URL de Firma</th><th>Creado</th><th>Estado</th><th>Acción</th></tr>
+      </thead>
+      <tbody id="firmasPendientes">
+        <tr><td colspan="6" class="loading-cell">Cargando...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="section">
+  <h2>Documentos Firmados</h2>
+  <div class="table-container">
+    <table class="data-table">
+      <thead>
+        <tr><th>Código</th><th>Título</th><th>Firmado por</th><th>Fecha Firma</th><th>Hash Firma</th><th>Verificar</th></tr>
+      </thead>
+      <tbody id="firmasCompletadas">
+        <tr><td colspan="6" class="loading-cell">Cargando...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  document.getElementById('crearDocumentoForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(e.target));
+    try {
+      const result = await apiFetch('/api/firma/crear', { method: 'POST', body: JSON.stringify(data) });
+      mostrarMensaje('success', 'Documento creado');
+      mostrarMensaje('info', `URL de firma: ${window.location.origin}/firmar/${result.url_firma}`);
+      // Mostrar URL para copiar
+      const url = `${window.location.origin}/firmar/${result.url_firma}`;
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(url);
+        mostrarMensaje('success', 'URL copiada al portapapeles');
+      }
+      e.target.reset();
+      cargarDocumentos();
+    } catch (e) { mostrarMensaje('error', e.message); }
+  });
+
+  async function cargarDocumentos() {
+    try {
+      const docs = await apiFetch('/api/firma/documentos');
+      
+      const pendientes = docs.filter(d => d.estado === 'pendiente');
+      const tbodyPend = document.getElementById('firmasPendientes');
+      if (pendientes.length === 0) {
+        tbodyPend.innerHTML = '<tr><td colspan="6" class="loading-cell">No hay documentos pendientes</td></tr>';
+      } else {
+        tbodyPend.innerHTML = pendientes.map(d => {
+          const url = `${window.location.origin}/firmar/${d.url_firma}`;
+          return `<tr>
+            <td><span class="badge">${d.codigo_modelo}</span></td>
+            <td class="cell-truncate">${d.titulo_documento}</td>
+            <td><a href="${url}" target="_blank" style="font-size:11px;color:var(--accent)">🔗 Firmar</a></td>
+            <td>${formatFecha(d.creado_en)}</td>
+            <td><span class="badge badge-pendiente" style="background:var(--warning);color:white">pendiente</span></td>
+            <td><button class="btn btn-success btn-sm" onclick="firmarComoAdmin(${d.id},'${d.url_firma}')">✍️ Firmar</button></td>
+          </tr>`;
+        }).join('');
+      }
+
+      const firmados = docs.filter(d => d.estado === 'firmado');
+      const tbodyFirm = document.getElementById('firmasCompletadas');
+      if (firmados.length === 0) {
+        tbodyFirm.innerHTML = '<tr><td colspan="6" class="loading-cell">No hay documentos firmados</td></tr>';
+      } else {
+        tbodyFirm.innerHTML = firmados.map(d => `
+          <tr>
+            <td><span class="badge">${d.codigo_modelo}</span></td>
+            <td class="cell-truncate">${d.titulo_documento}</td>
+            <td>${d.firmante_alias || '—'}</td>
+            <td>${d.fecha_firma ? formatFecha(d.fecha_firma) : '—'}</td>
+            <td style="font-size:11px;font-family:monospace">${d.firma_hash?.substring(0, 16) || '—'}...</td>
+            <td><button class="btn btn-outline btn-sm" onclick="verificar(${d.id})">🔍</button></td>
+          </tr>
+        `).join('');
+      }
+    } catch (e) {}
+  }
+
+  async function firmarComoAdmin(id, urlToken) {
+    if (!confirm('¿Firmar este documento como administrador?')) return;
+    try {
+      const result = await apiFetch(`/api/firma/firmar/${urlToken}`, { method: 'POST' });
+      mostrarMensaje('success', `Documento firmado por ${result.firmado_po}`);
+      cargarDocumentos();
+    } catch (e) { mostrarMensaje('error', e.message); }
+  }
+
+  async function verificar(id) {
+    try {
+      const result = await apiFetch(`/api/firma/verificar/${id}`);
+      if (result.valido) {
+        mostrarMensaje('success', `Documento VÁLIDO. Firmado por ${result.firma.firmado_por} el ${formatFecha(result.firma.fecha)}`);
+      } else {
+        mostrarMensaje('error', 'Documento NO válido o no encontrado');
+      }
+    } catch (e) { mostrarMensaje('error', e.message); }
+  }
+
+  cargarDocumentos();
+</script>

@@ -1,0 +1,98 @@
+<section class="section" style="padding:36px 24px">
+  <div class="section-inner">
+    <!-- Perfil -->
+    <div style="display:flex;align-items:center;gap:20px;margin-bottom:28px;flex-wrap:wrap">
+      <div class="hex-item gold" style="width:80px;height:90px;font-size:7px;flex-shrink:0">
+        <span class="h-icon">👤</span><%= usuario.alias %>
+      </div>
+      <div style="flex:1;min-width:200px">
+        <h1 style="font-size:26px;font-weight:900;letter-spacing:-.5px">Mi Área</h1>
+        <p style="color:var(--tm);font-size:14px;margin-top:2px">
+          <strong><%= usuario.alias %></strong> ·
+          DIP: <strong><%= usuario.dip %></strong> ·
+          PLID: <strong><%= usuario.placeid %></strong>
+        </p>
+        <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
+          <span style="background:var(--p);color:#fff;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600"><%= usuario.franja_edad ? usuario.franja_edad.replace(/_/g,' ') : '—' %></span>
+          <span style="background:<%= usuario.estado === 'activo' ? 'var(--g)' : 'var(--go)' %>;color:#fff;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;text-transform:capitalize"><%= usuario.estado %></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tarjetas de acceso -->
+    <div class="dash-grid">
+      <a href="/ciudadano/documentos" class="dash-card">
+        <div class="dash-icon">📄</div>
+        <h3>Mis Documentos</h3>
+        <p><%= docs.length %> documentos</p>
+      </a>
+      <a href="/ciudadano/notificaciones" class="dash-card">
+        <div class="dash-icon">🔔</div>
+        <h3>Notificaciones</h3>
+        <p><%= notifs.length %> actividades</p>
+      </a>
+      <a href="/ciudadano/firmas" class="dash-card">
+        <div class="dash-icon">✍️</div>
+        <h3>Firmas</h3>
+        <p>Pendientes y firmados</p>
+      </a>
+      <a href="/tramites" class="dash-card">
+        <div class="dash-icon">📋</div>
+        <h3>Trámites</h3>
+        <p>Nuevo trámite</p>
+      </a>
+    </div>
+
+    <!-- Últimos documentos de trámites -->
+    <h2 style="font-size:18px;font-weight:700;margin-bottom:14px;margin-top:28px">📁 Últimos Trámites</h2>
+    <div id="ultimosTramites"><p style="color:var(--tm)">Cargando...</p></div>
+
+    <!-- Actividad Reciente -->
+    <h2 style="font-size:18px;font-weight:700;margin-bottom:14px;margin-top:28px">🔔 Actividad Reciente</h2>
+    <% if (notifs.length === 0) { %>
+    <div class="alert alert-i">No hay actividad reciente.</div>
+    <% } else { %>
+    <div class="notif-list">
+      <% notifs.slice(0, 8).forEach(function(n) { %>
+      <div class="notif-item">
+        <span class="notif-icon"><%= n.accion === 'login' ? '🔑' : n.accion === 'logout' ? '🚪' : n.accion === 'registro' ? '📝' : '📌' %></span>
+        <div class="notif-ct">
+          <strong><%= n.accion.replace(/_/g, ' ') %></strong>
+          <span><%= n.detalle ? n.detalle.substring(0, 140) : '—' %></span>
+        </div>
+        <span class="notif-t"><%= new Date(n.creado_en + 'Z').toLocaleDateString('es-ES', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) %></span>
+      </div>
+      <% }); %>
+    </div>
+    <% } %>
+  </div>
+</section>
+
+<script>
+(async function() {
+  try {
+    var r = await fetch('/api/tramites/mis-documentos');
+    var docs = await r.json();
+    var div = document.getElementById('ultimosTramites');
+    if (!docs || !docs.length) {
+      div.innerHTML = '<p style="color:var(--tm)">No has realizado trámites aún. <a href="/tramites" style="color:var(--p)">Ir a trámites</a></p>';
+      return;
+    }
+    var iconos = { dip:'🪪', placetid:'🔑', queja:'💬', 'control-parental':'👨‍👩‍👧‍👦', entidad:'🏢' };
+    var nombres = { dip:'Solicitud DIP', placetid:'Activación PlacetaID', queja:'Queja/Sugerencia', 'control-parental':'Control Parental', entidad:'Alta Entidad' };
+    div.innerHTML = '<div style="display:grid;gap:8px">' + docs.slice(0, 5).map(function(d) {
+      var icono = iconos[d.tipo] || '📄';
+      var nombre = nombres[d.tipo] || d.tipo;
+      var fecha = new Date(d.creado_en + 'Z').toLocaleDateString('es-ES');
+      return '<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--bg);border-radius:10px">' +
+        '<span style="font-size:22px">' + icono + '</span>' +
+        '<div style="flex:1"><strong>' + nombre + '</strong><br><span style="font-size:12px;color:var(--tm)">' + fecha + (d.referencia ? ' · ' + d.referencia : '') + '</span></div>' +
+        (d.pdf_url ? '<a href="' + d.pdf_url + '" target="_blank" class="btn btn-sm" style="background:var(--p);color:#fff;text-decoration:none;border-radius:8px;padding:5px 12px;font-size:12px">📄 PDF</a>' : '') +
+        '</div>';
+    }).join('') + '</div>';
+    if (docs.length > 5) div.innerHTML += '<p style="text-align:center;margin-top:8px"><a href="/ciudadano/documentos" style="color:var(--p);font-size:13px">Ver todos (' + docs.length + ')</a></p>';
+  } catch(e) {
+    document.getElementById('ultimosTramites').innerHTML = '<p style="color:var(--r)">Error al cargar</p>';
+  }
+})();
+</script>

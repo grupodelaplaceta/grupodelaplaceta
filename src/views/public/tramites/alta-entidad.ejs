@@ -1,0 +1,68 @@
+<section class="hero" style="padding:50px 24px">
+  <h1>Alta de Entidad</h1>
+  <p>Registra tu empresa o asociación en La Placeta</p>
+</section>
+
+<section class="section">
+  <div class="section-inner tramite-form">
+    <div class="form-card">
+      <h2>🏢 Registro de Entidad (EIP)</h2>
+      <p>Registra una empresa o asociación dentro del ecosistema. Obtendrás un EIP (Entidad Identificada de La Placeta).</p>
+
+      <% if (typeof error !== 'undefined' && error) { %>
+      <div class="alert alert-error"><%= error %></div>
+      <% } %>
+
+      <% if (typeof resultado !== 'undefined' && resultado) { %>
+      <div class="alert alert-success">
+        <strong>✅ Solicitud registrada</strong><br><br>
+        <strong>EIP:</strong> <%= resultado.eip %><br>
+        <strong><%= resultado.message %></strong>
+      </div>
+      <a href="/tramites" class="btn btn-primary btn-block">Volver a Trámites</a>
+      <% } else { %>
+      <form method="POST" action="/tramites/alta-entidad">
+        <div class="form-group">
+          <label>Nombre de la Entidad *</label>
+          <input type="text" name="nombre_entidad" required placeholder="Nombre oficial">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Tipo *</label>
+            <select name="tipo" required>
+              <option value="empresa">Empresa</option>
+              <option value="asociacion">Asociación</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>CIF (opcional)</label>
+            <input type="text" name="cif" placeholder="B12345678">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>DIP del Representante *</label>
+          <input type="text" name="representante_dip" required placeholder="DIP de un ciudadano activo" value="<%= typeof usuario !== 'undefined' && usuario ? usuario.dip : '' %>">
+          <span class="form-hint">El representante debe ser un ciudadano con PlacetaID activo</span>
+        </div>
+        <div class="form-group">
+          <label>Email de la Entidad *</label>
+          <input type="email" name="email" required placeholder="entidad@ejemplo.com">
+        </div>
+        <div class="form-group">
+          <label>Descripción</label>
+          <textarea name="descripcion" rows="3" placeholder="Actividad principal de la entidad..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="checkbox-label" style="display:flex;gap:10px;font-weight:400;font-size:13px">
+            <input type="checkbox" required>
+            <span>Acepto los términos y condiciones del registro de entidades, las responsabilidades fiscales simuladas y la normativa del ecosistema.</span>
+          </label>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">Solicitar Alta de Entidad</button>
+      </form>
+      <% } %>
+    </div>
+  </div>
+</section>

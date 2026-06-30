@@ -1,0 +1,163 @@
+<section class="hero-sm">
+  <h1>📋 Trámites</h1>
+  <p>Gestiona tus trámites legales y del ecosistema. Todos los documentos se archivan y están disponibles para descarga.</p>
+</section>
+
+<section class="section section-alt">
+  <div class="section-inner">
+    <div class="aviso aviso-real">
+      <span class="aviso-icon">⚖️</span>
+      <div><strong>Trámite legal real.</strong> Los marcados como <strong>"Asociación"</strong> son gestiones oficiales reales sujetas a la normativa española (LOPDGDD, RGPD, Ley 1/2002).</div>
+    </div>
+    <h2>Trámites <span class="a">Legales</span></h2>
+    <p class="section-subtitle">Gestiones oficiales de la Asociación con plena validez jurídica real.</p>
+    <div class="tramite-grid">
+      <a class="tramite-card" onclick="abrirModal('control-parental')">
+        <div class="tramite-icon">👨‍👩‍👧‍👦</div>
+        <h3>Control Parental</h3>
+        <p>Registro oficial de tutor legal para menores de 16. Genera código de vinculación.</p>
+        <span class="tag tag-legal">⚖️ Asociación</span>
+      </a>
+      <a class="tramite-card" onclick="abrirModal('recuperar-codigo')">
+        <div class="tramite-icon">🔍</div>
+        <h3>Recuperar Código</h3>
+        <p>Recupera el código de vinculación de un menor usando tu DNI.</p>
+        <span class="tag tag-legal">⚖️ Asociación</span>
+      </a>
+      <a class="tramite-card" onclick="abrirModal('quejas')">
+        <div class="tramite-icon">💬</div>
+        <h3>Quejas y Sugerencias</h3>
+        <p>Canal oficial con la Junta Directiva. Registro y respuesta en plazo legal.</p>
+        <span class="tag tag-legal">⚖️ Asociación</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-inner">
+    <div class="aviso aviso-sim">
+      <span class="aviso-icon">🎭</span>
+      <div><strong>Entorno simulado.</strong> Los marcados como <strong>"Ecosistema"</strong> pertenecen al país ficticio de La Placeta. Sin validez jurídica real.</div>
+    </div>
+    <h2>Trámites del <span class="a">Ecosistema</span></h2>
+    <p class="section-subtitle">Gestiona tu identidad dentro del país ficticio de La Placeta.</p>
+    <div class="tramite-grid">
+      <a class="tramite-card" onclick="abrirModal('alta-dip')">
+        <div class="tramite-icon">🪪</div>
+        <h3>Alta DIP</h3>
+        <p>Solicita tu Documento de Identidad de La Placeta. Recibirás un PDF con los datos.</p>
+        <span class="tag tag-eco">🎭 Ecosistema</span>
+      </a>
+      <a class="tramite-card" onclick="abrirModal('alta-placetid')">
+        <div class="tramite-icon">🔑</div>
+        <h3>Alta PlacetaID</h3>
+        <p>Activa tu identidad digital con un DIP provisional. PDF de activación incluido.</p>
+        <span class="tag tag-eco">🎭 Ecosistema</span>
+      </a>
+      <a class="tramite-card" onclick="abrirModal('alta-entidad')">
+        <div class="tramite-icon">🏢</div>
+        <h3>Alta Entidad (EIP)</h3>
+        <p>Registra tu empresa simulada y obtén tu EIP. PDF de registro disponible.</p>
+        <span class="tag tag-eco">🎭 Ecosistema</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<% if (typeof usuario !== 'undefined' && usuario) { %>
+<section class="section section-dark">
+  <div class="section-inner">
+    <h2>📁 Mis <span class="g">Documentos</span></h2>
+    <p class="section-subtitle">Tus trámites realizados y documentos descargables.</p>
+    <div id="misDocs">
+      <p style="color:rgba(255,255,255,.5);text-align:center;padding:20px">Cargando documentos...</p>
+    </div>
+  </div>
+</section>
+
+<script>
+(async function() {
+  try {
+    const r = await fetch('/api/tramites/mis-documentos');
+    const docs = await r.json();
+    const div = document.getElementById('misDocs');
+    if (!docs.length) {
+      div.innerHTML = '<p style="color:rgba(255,255,255,.5);text-align:center;padding:20px">No has realizado ningún trámite aún.</p>';
+      return;
+    }
+    div.innerHTML = '<div style="display:grid;gap:10px">' + docs.map(d => {
+      const fecha = new Date(d.creado_en + 'Z').toLocaleDateString('es-ES');
+      const icono = d.tipo === 'dip' ? '🪪' : d.tipo === 'placetid' ? '🔑' : d.tipo === 'queja' ? '💬' : d.tipo === 'control-parental' ? '👨‍👩‍👧‍👦' : d.tipo === 'entidad' ? '🏢' : '📄';
+      const nombre = d.tipo === 'dip' ? 'Solicitud DIP' : d.tipo === 'placetid' ? 'Activación PlacetaID' : d.tipo === 'queja' ? 'Queja/Sugerencia' : d.tipo === 'control-parental' ? 'Control Parental' : d.tipo === 'entidad' ? 'Alta Entidad' : 'Trámite';
+      return '<div style="background:rgba(255,255,255,.08);border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:14px">' +
+        '<span style="font-size:24px">' + icono + '</span>' +
+        '<div style="flex:1"><strong>' + nombre + '</strong><br><span style="font-size:12px;opacity:.6">' + fecha + (d.referencia ? ' · ' + d.referencia : '') + '</span></div>' +
+        (d.pdf_url ? '<a href="' + d.pdf_url + '" target="_blank" class="btn btn-sm btn-go" style="text-decoration:none">📄 PDF</a>' : '') +
+        '</div>';
+    }).join('') + '</div>';
+  } catch(e) {
+    document.getElementById('misDocs').innerHTML = '<p style="color:rgba(255,255,255,.5);text-align:center;padding:20px">Error al cargar documentos.</p>';
+  }
+})();
+</script>
+</section>
+<% } %>
+
+<!-- Modal container -->
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)cerrarModal()">
+  <div class="modal-box" id="modalBox">
+    <button class="modal-close" onclick="cerrarModal()">✕</button>
+    <div id="modalContent"><div style="text-align:center;padding:20px;color:var(--tm)">Cargando...</div></div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+function abrirModal(tramite) {
+  document.getElementById('modalOverlay').classList.add('open');
+  document.getElementById('modalContent').innerHTML = '<div style="text-align:center;padding:30px;color:var(--tm)">⏳ Cargando formulario...</div>';
+  fetch('/api/tramites/form/' + tramite)
+    .then(r => r.text())
+    .then(html => {
+      document.getElementById('modalContent').innerHTML = html;
+      document.querySelectorAll('.cbox input').forEach(cb => {
+        cb.addEventListener('change', function() {
+          this.closest('.cbox').classList.toggle('checked', this.checked);
+        });
+      });
+    })
+    .catch(() => document.getElementById('modalContent').innerHTML = '<div class="alert alert-e">Error al cargar el formulario.</div>');
+}
+function cerrarModal() { document.getElementById('modalOverlay').classList.remove('open'); }
+function mostrarToast(tipo, texto) {
+  const c = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = 'toast toast-' + tipo;
+  t.textContent = texto;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 5000);
+}
+async function enviarForm(tramite, form) {
+  const btn = form.querySelector('button[type="submit"]');
+  btn.disabled = true; btn.textContent = 'Enviando...';
+  const fd = new FormData(form);
+  try {
+    const res = await fetch('/api/tramites/submit/' + tramite, { method: 'POST', body: new URLSearchParams(fd), headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
+    const data = await res.json();
+    if (data.ok) {
+      let html = '<div class="alert alert-s" style="margin-top:10px">' + data.msg + '</div>' + (data.html || '');
+      if (data.pdf_url) html += '<div style="text-align:center;margin-top:14px"><a href="' + data.pdf_url + '" target="_blank" class="btn btn-go">📄 Descargar PDF</a></div>';
+      document.getElementById('modalContent').innerHTML = html;
+      mostrarToast('s', '✅ ' + data.msg);
+      // Recargar lista de documentos si está visible
+      setTimeout(function() { location.reload(); }, 2000);
+    } else {
+      mostrarToast('e', '❌ ' + (data.error || 'Error'));
+    }
+  } catch(e) { mostrarToast('e', '❌ Error de conexión'); }
+  btn.disabled = false; btn.textContent = 'Enviar';
+  return false;
+}
+</script>

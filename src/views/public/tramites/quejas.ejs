@@ -1,0 +1,74 @@
+<section class="hero-small">
+  <h1>💬 Quejas y Sugerencias</h1>
+  <p>Canal oficial de comunicación con la Junta Directiva de la Asociación</p>
+</section>
+
+<section class="section">
+  <div class="section-inner tramite-form">
+
+    <div class="legal-notice legal-real">
+      <span class="legal-notice-icon">⚖️</span>
+      <div>
+        <strong>Trámite legal real.</strong> Este formulario constituye un canal oficial de comunicación con la Asociación Grupo de La Placeta, regulado por la Ley 1/2002 Reguladora del Derecho de Asociación. Las quejas serán registradas, numeradas y respondidas en un plazo máximo de 30 días hábiles conforme a nuestros estatutos.
+      </div>
+    </div>
+
+    <div class="form-card">
+      <h2>Envíanos tu mensaje</h2>
+      <p>Todas las comunicaciones serán tratadas con confidencialidad y revisadas por la Junta Directiva.</p>
+
+      <% if (typeof error !== 'undefined' && error) { %>
+      <div class="alert alert-error"><%= error %></div>
+      <% } %>
+
+      <% if (typeof resultado !== 'undefined' && resultado) { %>
+      <div class="alert alert-success">
+        <strong>✅ Mensaje recibido</strong><br>
+        <%= resultado.message %><br><br>
+        <span style="font-size:12px">Nº de registro: <strong><%= resultado.numero || '—' %></strong></span>
+      </div>
+      <a href="/tramites" class="btn btn-primary btn-block">Volver a Trámites</a>
+      <% } else { %>
+      <form method="POST" action="/tramites/quejas" id="quejasForm">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Nombre Completo *</label>
+            <input type="text" name="nombre" required placeholder="Tu nombre" value="<%= typeof usuario !== 'undefined' && usuario ? usuario.alias : '' %>">
+          </div>
+          <div class="form-group">
+            <label>Email de contacto</label>
+            <input type="email" name="email" placeholder="opcional@email.com" value="">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Tipo de comunicación *</label>
+          <select name="tipo" required>
+            <option value="">Selecciona un tipo...</option>
+            <option value="sugerencia">💡 Sugerencia</option>
+            <option value="queja">⚖️ Queja formal</option>
+            <option value="incidencia">🔧 Incidencia técnica</option>
+            <option value="consulta">❓ Consulta</option>
+            <option value="otro">📌 Otro</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Mensaje *</label>
+          <textarea name="mensaje" rows="6" required placeholder="Describe detalladamente tu queja, sugerencia o consulta..." style="min-height:140px"></textarea>
+          <span class="form-hint">Máximo 2000 caracteres</span>
+        </div>
+
+        <div class="section-divider">Protección de datos</div>
+
+        <div class="checkbox-group">
+          <div class="checkbox-item">
+            <input type="checkbox" id="q_privacidad" required>
+            <label for="q_privacidad">He leído y acepto la <a href="/privacidad" target="_blank">Política de Privacidad</a>. Consiento el tratamiento de mis datos para la gestión de esta comunicación. Responsable: Asociación Grupo de La Placeta. Puedo ejercer mis derechos ARCO+ escribiendo a <a href="mailto:dpd@grupodelaplaceta.org">dpd@grupodelaplaceta.org</a>.</label>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">Enviar comunicación</button>
+      </form>
+      <% } %>
+    </div>
+  </div>
+</section>

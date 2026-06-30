@@ -1,0 +1,35 @@
+<section class="section" style="padding:40px 24px">
+  <div class="section-inner">
+    <div class="ciudadano-header">
+      <h1>Notificaciones</h1>
+      <p class="ciudadano-meta">Historial de actividad en tu cuenta.</p>
+    </div>
+
+    <% if (notifs.length === 0) { %>
+    <div class="alert alert-info">No hay notificaciones.</div>
+    <% } else { %>
+    <div class="notif-list">
+      <% notifs.forEach(function(n) { %>
+      <div class="notif-item">
+        <span class="notif-icon">
+          <%= n.accion === 'login' ? '🔑' : n.accion === 'logout' ? '🚪' :
+             n.accion === 'registro' ? '📝' : n.accion.includes('denuncia') ? '⚖️' :
+             n.accion.includes('firmar') ? '✍️' : n.accion.includes('transferencia') ? '💸' :
+             n.accion.includes('generar') ? '📄' : n.accion.includes('anoni') ? '🔒' :
+             n.accion.includes('sancion') ? '⛔' : n.accion.includes('expuls') ? '🚫' : '📌' %>
+        </span>
+        <div class="notif-content">
+          <strong><%= n.accion.replace(/_/g, ' ') %></strong>
+          <span><%= n.detalle || '—' %></span>
+        </div>
+        <span class="notif-time"><%= new Date(n.creado_en + 'Z').toLocaleDateString('es-ES', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) %></span>
+      </div>
+      <% }); %>
+    </div>
+    <% } %>
+
+    <div style="margin-top:24px">
+      <a href="/ciudadano" class="btn btn-outline-light" style="color:var(--accent);border-color:var(--line)">← Volver a Mi Área</a>
+    </div>
+  </div>
+</section>

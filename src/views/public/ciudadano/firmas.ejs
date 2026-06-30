@@ -1,0 +1,48 @@
+<section class="section" style="padding:40px 24px">
+  <div class="section-inner">
+    <div class="ciudadano-header">
+      <h1>Firmas Digitales</h1>
+      <p class="ciudadano-meta">Documentos pendientes y firmados.</p>
+    </div>
+
+    <h2 style="font-size:20px;font-weight:700;margin-bottom:16px">⏳ Pendientes de Firma</h2>
+    <% if (pendientes.length === 0) { %>
+    <div class="alert alert-info">No hay documentos pendientes de firma.</div>
+    <% } else { %>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:32px">
+      <% pendientes.forEach(function(d) { %>
+      <div style="display:flex;align-items:center;gap:14px;padding:16px 20px;background:var(--surface);border-radius:var(--radius);border:1px solid var(--line)">
+        <span style="font-size:22px">📜</span>
+        <div style="flex:1">
+          <strong style="font-size:14px"><%= d.titulo_documento %></strong>
+          <span style="display:block;font-size:12px;color:var(--text-light)"><%= d.codigo_modelo %> · <%= new Date(d.creado_en + 'Z').toLocaleDateString('es-ES') %></span>
+        </div>
+        <a href="/firmar/<%= d.url_firma %>" class="btn btn-primary btn-sm">Firmar</a>
+      </div>
+      <% }); %>
+    </div>
+    <% } %>
+
+    <h2 style="font-size:20px;font-weight:700;margin-bottom:16px">✅ Firmados</h2>
+    <% if (firmados.length === 0) { %>
+    <div class="alert alert-info">No hay documentos firmados.</div>
+    <% } else { %>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <% firmados.forEach(function(d) { %>
+      <div style="display:flex;align-items:center;gap:14px;padding:14px 18px;background:var(--surface);border-radius:var(--radius);border:1px solid var(--line)">
+        <span style="font-size:20px">✅</span>
+        <div style="flex:1">
+          <strong style="font-size:14px"><%= d.titulo_documento %></strong>
+          <span style="display:block;font-size:12px;color:var(--text-light)">Firmado: <%= new Date(d.fecha_firma + 'Z').toLocaleDateString('es-ES', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) %></span>
+        </div>
+        <span class="status-badge status-completado" style="font-size:11px">Firmado</span>
+      </div>
+      <% }); %>
+    </div>
+    <% } %>
+
+    <div style="margin-top:24px">
+      <a href="/ciudadano" class="btn btn-outline-light" style="color:var(--accent);border-color:var(--line)">← Volver a Mi Área</a>
+    </div>
+  </div>
+</section>

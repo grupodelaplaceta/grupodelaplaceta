@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= typeof titulo !== 'undefined' ? titulo : 'PlacetaID' %> | GDLP CRM</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Outfit', system-ui, sans-serif; background: linear-gradient(135deg, #1c005f, #3f00d8); min-height: 100vh; display: flex; align-items: center; justify-content: center; color: #111; }
+    .popup-card { background: #fff; border-radius: 20px; padding: 40px 36px; width: 400px; max-width: 94vw; box-shadow: 0 20px 60px rgba(0,0,0,.3); }
+    .popup-logo { text-align: center; margin-bottom: 20px; }
+    .popup-logo img { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; }
+    .popup-logo h2 { font-size: 18px; font-weight: 800; margin-top: 8px; color: #1c005f; }
+    .popup-logo p { font-size: 13px; color: #666; margin-top: 2px; }
+    .popup-info { background: #f5f3f7; border-radius: 12px; padding: 12px 16px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .popup-info span { font-size: 13px; color: #444; }
+    .popup-info strong { color: #1c005f; }
+    .popup-form { display: flex; flex-direction: column; gap: 14px; }
+    .popup-form input { width: 100%; padding: 12px 14px; border: 2px solid #ddd; border-radius: 10px; font-size: 14px; font-family: 'Outfit', sans-serif; outline: none; transition: border-color .2s; }
+    .popup-form input:focus { border-color: #3f00d8; }
+    .popup-form button { padding: 12px; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; font-family: 'Outfit', sans-serif; cursor: pointer; background: #3f00d8; color: #fff; transition: background .2s; }
+    .popup-form button:hover { background: #1c005f; }
+    .popup-form button:disabled { opacity: .5; cursor: not-allowed; }
+    .error-msg { background: #fde8e8; color: #d03131; padding: 10px 14px; border-radius: 10px; font-size: 13px; }
+    .popup-footer { text-align: center; margin-top: 16px; font-size: 12px; color: #999; }
+  </style>
+</head>
+<body>
+  <div class="popup-card">
+    <div class="popup-logo">
+      <img src="<%= typeof client_logo !== 'undefined' && client_logo ? client_logo : 'https://i.postimg.cc/RZYKzdmX/Diseno-sin-titulo-76.png' %>" alt="Logo">
+      <h2>🔑 Iniciar sesión</h2>
+      <p>con tu PlacetaID</p>
+    </div>
+
+    <% if (typeof client_nombre !== 'undefined' && client_nombre) { %>
+    <div class="popup-info">
+      <span>🔗 <strong><%= client_nombre %></strong> solicita tu identidad</span>
+    </div>
+    <% } %>
+
+    <% if (typeof error !== 'undefined' && error) { %>
+    <div class="error-msg"><%= error %></div>
+    <% } %>
+
+    <form class="popup-form" method="POST" action="/api/placetid/authorize" id="loginForm">
+      <input type="hidden" name="client_id" value="<%= client_id %>">
+      <input type="hidden" name="redirect_uri" value="<%= redirect_uri %>">
+      <input type="hidden" name="state" value="<%= typeof state !== 'undefined' ? state : '' %>">
+      <input type="text" name="alias" placeholder="Tu alias en La Placeta" required autofocus>
+      <input type="password" name="password" placeholder="Contraseña" required>
+      <button type="submit" id="loginBtn">Iniciar sesión</button>
+    </form>
+
+    <div class="popup-footer">PlacetaID · Grupo de La Placeta</div>
+  </div>
+
+  <script>
+    document.getElementById('loginForm')?.addEventListener('submit', function(e) {
+      var btn = document.getElementById('loginBtn');
+      btn.disabled = true;
+      btn.textContent = 'Verificando...';
+    });
+  </script>
+</body>
+</html>

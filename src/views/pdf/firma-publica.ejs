@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= titulo %> | GDLP</title>
+  <link rel="stylesheet" href="/css/crm.css">
+  <style>
+    .firma-page {
+      min-height: 100vh;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .firma-card {
+      background: white;
+      border-radius: var(--radius-lg);
+      padding: 40px;
+      max-width: 600px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      text-align: center;
+    }
+    .firma-icon { font-size: 64px; margin-bottom: 16px; }
+    .firma-card h1 { font-size: 22px; color: var(--primary); margin-bottom: 8px; }
+    .firma-card h2 { font-size: 16px; color: var(--accent); margin-bottom: 24px; }
+    .firma-details { text-align: left; background: var(--bg); padding: 16px; border-radius: var(--radius); margin-bottom: 24px; }
+    .firma-details p { margin: 6px 0; font-size: 13px; }
+    .firma-details strong { color: var(--primary); }
+    .firma-actions { display: flex; gap: 12px; justify-content: center; }
+    .firma-footer { margin-top: 24px; font-size: 11px; color: var(--text-light); }
+  </style>
+</head>
+<body>
+  <div class="firma-page">
+    <div class="firma-card">
+      <div class="firma-icon">📜</div>
+      <h1>Firma Digital de Documento</h1>
+      <h2><%= documento.codigo_modelo %></h2>
+      
+      <div class="firma-details">
+        <p><strong>Título:</strong> <%= documento.titulo_documento %></p>
+        <p><strong>Código de Modelo:</strong> <%= documento.codigo_modelo %></p>
+        <p><strong>Hash del Contenido:</strong> <span style="font-family:monospace;font-size:11px"><%= documento.contenido_hash?.substring(0, 24) %>...</span></p>
+        <p><strong>Fecha de Emisión:</strong> <%= new Date(documento.creado_en + 'Z').toLocaleDateString('es-ES', { year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit' }) %></p>
+      </div>
+
+      <div id="mensajeFirma"></div>
+
+      <% if (usuario) { %>
+      <div class="firma-actions">
+        <button class="btn btn-success" onclick="firmar('<%= documento.url_firma %>')">✍️ Firmar Documento</button>
+        <button class="btn btn-danger" onclick="rechazar('<%= documento.url_firma %>')">❌ Rechazar</button>
+      </div>
+      <% } else { %>
+      <div class="firma-actions" style="flex-direction:column">
+        <p style="color:var(--text-light);margin-bottom:12px">Debes iniciar sesión para firmar este documento.</p>
+        <a href="/login" class="btn btn-primary">Iniciar Sesión con PlacetaID</a>
+      </div>
+      <% } %>
+
+      <div class="firma-footer">
+        <p>Asociación Grupo de La Placeta · Sistema de Firma Digital</p>
+        <p>Este documento tiene validez en el ecosistema virtual "La Placeta"</p>
+      </div>
+    </div>
+  </div>
+  <script src="/js/crm.js"></script>
+  <script>
+    async function firmar(token) {
+      document.getElementById('mensajeFirma').innerHTML = '<div class="alert alert-info">Procesando firma...</div>';
+      try {
+        const res = await fetch('/api/firma/firmar/' + token, { method: 'POST' });
+        const result = await res.json();
+        if (result.success) {
+          document.getElementById('mensajeFirma').innerHTML = 
+            `<div class="alert alert-success">
+              <strong>✅ Documento firmado exitosamente</strong><br>
+              Firmado por: ${result.firmado_por}<br>
+              Hash: ${result.hash_firma?.substring(0, 20)}...
+            </div>`;
+          document.querySelector('.firma-actions').style.display = 'none';
+        } else {
+          document.getElementById('mensajeFirma').innerHTML = `<div class="alert alert-error">${result.error}</div>`;
+        }
+      } catch (e) {
+        document.getElementById('mensajeFirma').innerHTML = '<div class="alert alert-error">Error de conexión</div>';
+      }
+    }
+
+    async function rechazar(token) {
+      if (!confirm('¿Rechazar este documento?')) return;
+      try {
+        const result = await apiFetch('/api/firma/rechazar/' + token, { method: 'POST', body: JSON.stringify({ motivo: prompt('Motivo del rechazo:') || '' }) });
+        document.getElementById('mensajeFirma').innerHTML = '<div class="alert alert-warning">Documento rechazado</div>';
+        document.querySelector('.firma-actions').style.display = 'none';
+      } catch (e) { document.getElementById('mensajeFirma').innerHTML = `<div class="alert alert-error">${e.message}</div>`; }
+    }
+  </script>
+</body>
+</html>

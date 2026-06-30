@@ -1,0 +1,109 @@
+<h1>Gestión de Ocio, Loterías e Inversiones</h1>
+<p class="dashboard-date">Módulo 4: Sorteos, Boletos y Fondos de Riesgo</p>
+
+<div class="section">
+  <h2>Crear Nuevo Sorteo</h2>
+  <div class="stats-grid">
+    <div class="stat-card">
+      <form id="crearSorteoForm" style="width:100%">
+        <div class="form-group">
+          <label>Título del Sorteo</label>
+          <input type="text" id="sorteoTitulo" required placeholder="Ej: Lotería de Verano">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Precio del Boleto (Pz)</label>
+            <input type="number" id="sorteoPrecio" value="10" min="1">
+          </div>
+          <div class="form-group">
+            <label>Premio (Pz)</label>
+            <input type="number" id="sorteoPremio" placeholder="80% de la bolsa (auto)">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Fecha del Sorteo</label>
+          <input type="date" id="sorteoFecha" required>
+        </div>
+        <div class="form-group">
+          <label>Descripción</label>
+          <textarea id="sorteoDesc" rows="2" style="width:100%;padding:10px;border:2px solid var(--border);border-radius:var(--radius)"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Crear Sorteo</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h2>Sorteos Activos</h2>
+  <div class="table-container">
+    <table class="data-table">
+      <thead>
+        <tr><th>Título</th><th>Precio Boleto</th><th>Premio</th><th>Fecha Sorteo</th><th>Boletos Vendidos</th><th>Acciones</th></tr>
+      </thead>
+      <tbody id="sorteosTable">
+        <tr><td colspan="6" class="loading-cell">Cargando sorteos...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  document.getElementById('crearSorteoForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      const data = {
+        titulo: document.getElementById('sorteoTitulo').value,
+        precio_boleto: parseFloat(document.getElementById('sorteoPrecio').value) || 10,
+        fecha_sorteo: document.getElementById('sorteoFecha').value,
+        descripcion: document.getElementById('sorteoDesc').value,
+        premio: parseFloat(document.getElementById('sorteoPremio').value) || null
+      };
+      const result = await apiFetch('/api/ocio/crear-sorteo', { method: 'POST', body: JSON.stringify(data) });
+      mostrarMensaje('success', result.message);
+      e.target.reset();
+      cargarSorteos();
+    } catch (e) { mostrarMensaje('error', e.message); }
+  });
+
+  async function cargarSorteos() {
+    try {
+      const sorteos = await apiFetch('/api/ocio/sorteos');
+      const tbody = document.getElementById('sorteosTable');
+      if (sorteos.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="loading-cell">No hay sorteos activos</td></tr>';
+        return;
+      }
+      for (const s of sorteos) {
+        const boletos = await apiFetch(`/api/ocio/sorteos`);
+        // Cargar conteo de boletos para cada sorteo
+      }
+      tbody.innerHTML = sorteos.map(s => `
+        <tr>
+          <td><strong>${s.titulo}</strong></td>
+          <td>${s.precio_boleto} Pz</td>
+          <td>${s.premio ? s.premio + ' Pz' : 'Variable'}</td>
+          <td>${formatFecha(s.fecha_sorteo)}</td>
+          <td>—</td>
+          <td>
+            <button class="btn btn-success btn-sm" onclick="celebrarSorteo(${s.id})">🎉 Celebrar</button>
+            <button class="btn btn-danger btn-sm" onclick="cancelarSorteo(${s.id})">Cancelar</button>
+          </td>
+        </tr>
+      `).join('');
+    } catch (e) {
+      document.getElementById('sorteosTable').innerHTML = '<tr><td colspan="6" class="error-cell">Error</td></tr>';
+    }
+  }
+
+  async function celebrarSorteo(id) {
+    if (!confirm('¿Celebrar este sorteo? Se seleccionará un ganador aleatorio.')) return;
+    try {
+      const result = await apiFetch(`/api/ocio/celebrar-sorteo/${id}`, { method: 'POST' });
+      mostrarMensaje('success', `Ganador: ${result.ganador?.boleto || 'seleccionado'}`);
+      cargarSorteos();
+    } catch (e) { mostrarMensaje('error', e.message); }
+  }
+
+  cargarSorteos();
+</script>

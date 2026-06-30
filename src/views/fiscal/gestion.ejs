@@ -1,0 +1,104 @@
+<h1>Gestión Fiscal y Tributaria</h1>
+<p class="dashboard-date">Módulo 3: IRM, Descubiertos, RBU y Tasas</p>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <h3 style="margin-bottom:16px">💸 IRM - Cierre Mensual</h3>
+    <p style="font-size:13px;color:var(--text-light);margin-bottom:12px">Ejecuta el Impuesto de Regulación Monetaria sobre todas las cuentas activas del mes anterior.</p>
+    <button class="btn btn-primary btn-block" onclick="ejecutarIRM()">Ejecutar Cierre Fiscal Mensual</button>
+  </div>
+  <div class="stat-card">
+    <h3 style="margin-bottom:16px">📊 Monitoreo de Descubiertos</h3>
+    <p style="font-size:13px;color:var(--text-light);margin-bottom:12px">Revisa cuentas en negativo y aplica sanciones según normativa (días 1-5 gracia, día 6 sanción).</p>
+    <button class="btn btn-warning btn-block" onclick="ejecutarMonitoreo()">Ejecutar Monitoreo</button>
+  </div>
+  <div class="stat-card">
+    <h3 style="margin-bottom:16px">📋 Registrar Saldo Diario</h3>
+    <p style="font-size:13px;color:var(--text-light);margin-bottom:12px">Registra el saldo actual de todas las cuentas para el historial diario (cálculo de PM).</p>
+    <button class="btn btn-outline btn-block" onclick="registrarSaldo()">Registrar Saldos</button>
+  </div>
+</div>
+
+<div class="section">
+  <h2>Resultados de la última ejecución</h2>
+  <div id="resultadosEjecucion" class="table-container">
+    <p style="padding:20px;color:var(--text-light)">Ejecuta una acción para ver resultados.</p>
+  </div>
+</div>
+
+<div class="section">
+  <h2>Multas Automáticas Pendientes</h2>
+  <div class="table-container">
+    <table class="data-table">
+      <thead>
+        <tr><th>ID</th><th>Usuario</th><th>Tipo</th><th>Importe</th><th>Estado</th><th>Fecha</th></tr>
+      </thead>
+      <tbody id="multasTable">
+        <tr><td colspan="6" class="loading-cell">Cargando...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  async function ejecutarIRM() {
+    if (!confirm('¿Ejecutar cierre fiscal IRM? Esta acción aplicará impuestos sobre cuentas con exceso de capital.')) return;
+    const btn = event.target;
+    btn.disabled = true;
+    btn.textContent = 'Ejecutando...';
+    try {
+      const result = await apiFetch('/api/fiscal/ejecutar-irm', { method: 'POST' });
+      mostrarMensaje('success', result.message);
+      const container = document.getElementById('resultadosEjecucion');
+      container.innerHTML = `<table class="data-table">
+        <thead><tr><th>Alias</th><th>Patrimonio Medio</th><th>IA</th><th>Tasa</th><th>IRM</th><th>Acción</th></tr></thead>
+        <tbody>${result.detalles.map(d => `
+          <tr>
+            <td>${d.alias}</td>
+            <td>${d.patrimonio_medio ? formatPz(d.patrimonio_medio) : formatPz(d.pm || 0)}</td>
+            <td>${d.indice_acumulacion?.toFixed(2) || d.ia?.toFixed(2) || '—'}</td>
+            <td>${d.tasa || '—'}</td>
+            <td>${d.irm ? formatPz(d.irm) : '0 Pz'}</td>
+            <td>${d.accion}</td>
+          </tr>
+        `).join('')}</tbody>
+      </table>`;
+    } catch (e) { mostrarMensaje('error', e.message); }
+    finally { btn.disabled = false; btn.textContent = 'Ejecutar Cierre Fiscal Mensual'; }
+  }
+
+  async function ejecutarMonitoreo() {
+    const btn = event.target;
+    btn.disabled = true;
+    btn.textContent = 'Monitoreando...';
+    try {
+      const result = await apiFetch('/api/fiscal/ejecutar-monitoreo', { method: 'POST' });
+      mostrarMensaje('success', `${result.procesados} cuentas procesadas`);
+      const container = document.getElementById('resultadosEjecucion');
+      container.innerHTML = `<table class="data-table">
+        <thead><tr><th>Alias</th><th>DIP</th><th>Días Negativo</th><th>Acción</th></tr></thead>
+        <tbody>${result.detalles.map(d => `
+          <tr><td>${d.alias}</td><td>${d.dip}</td><td>${d.dias_negativo}</td><td>${d.accion}</td></tr>
+        `).join('')}</tbody>
+      </table>`;
+      cargarMultas();
+    } catch (e) { mostrarMensaje('error', e.message); }
+    finally { btn.disabled = false; btn.textContent = 'Ejecutar Monitoreo'; }
+  }
+
+  async function registrarSaldo() {
+    try {
+      const result = await apiFetch('/api/fiscal/registrar-saldo-diario', { method: 'POST' });
+      mostrarMensaje('success', result.message);
+    } catch (e) { mostrarMensaje('error', e.message); }
+  }
+
+  async function cargarMultas() {
+    try {
+      const reporte = await apiFetch('/api/admin/dashboard');
+      // Mostrar multas pendientes en tabla
+    } catch (e) {}
+  }
+
+  cargarMultas();
+</script>

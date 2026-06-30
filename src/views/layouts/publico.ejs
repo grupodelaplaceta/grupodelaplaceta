@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= titulo %> | Grupo de La Placeta</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/publico.css">
+  <link rel="icon" href="/img/favicon.png" type="image/png">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a href="/" class="brand">
+        <img src="https://i.postimg.cc/RZYKzdmX/Diseno-sin-titulo-76.png" alt="Grupo de La Placeta" class="brand-logo">
+        <span class="brand-text">Grupo de La Placeta<small class="brand-sub">Asociación</small></span>
+      </a>
+      <nav class="topnav">
+        <a href="/" class="nav-item <%= pathActual === '/' ? 'active' : '' %>">Inicio</a>
+        <a href="/tramites" class="nav-item <%= pathActual.startsWith('/tramites') ? 'active' : '' %>">Trámites</a>
+        <a href="/junta" class="nav-item <%= pathActual === '/junta' ? 'active' : '' %>">Junta</a>
+        <a href="/proyectos" class="nav-item <%= pathActual === '/proyectos' ? 'active' : '' %>">Proyectos</a>
+        <% if (usuario) { %>
+        <a href="/ciudadano" class="nav-item <%= pathActual.startsWith('/ciudadano') ? 'active' : '' %>">Mi Área</a>
+        <a href="/api/auth/logout" class="nav-item nav-item-outline">Salir</a>
+        <% } else { %>
+        <a href="/login" class="nav-item nav-item-outline">Acceder</a>
+        <% } %>
+      </nav>
+      <button class="menu-toggle" onclick="document.querySelector('.topnav').classList.toggle('open')" aria-label="Menú">☰</button>
+    </div>
+  </header>
+  <main><%- body %></main>
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-grid">
+        <div class="footer-col">
+          <h4>Grupo de La Placeta</h4>
+          <p>Asociación española que fomenta la imaginación, asociación y trabajo en equipo creando un ecosistema ficticio.</p>
+        </div>
+        <div class="footer-col">
+          <h4>Trámites</h4>
+          <a href="/tramites">Todos los trámites</a>
+          <a href="/tramites" onclick="abrirModal('quejas')">Quejas y Sugerencias</a>
+          <a href="/tramites" onclick="abrirModal('control-parental')">Control Parental</a>
+        </div>
+        <div class="footer-col">
+          <h4>Junta Directiva</h4>
+          <a href="/junta">Gobierno y transparencia</a>
+        </div>
+        <div class="footer-col">
+          <h4>Más información</h4>
+          <a href="/junta">Junta Directiva</a>
+          <a href="/proyectos">Proyectos</a>
+          <a href="/tramites" onclick="abrirModal('quejas')">Contacto</a>
+        </div>
+      </div>
+      <div class="footer-bot">
+        <span>© 2026 Grupo de La Placeta</span>
+        <div class="footer-legal">
+          <a href="/aviso-legal">Aviso Legal</a>
+          <a href="/privacidad">Privacidad</a>
+          <a href="/cookies">Cookies</a>
+        </div>
+        <span>Hecho con ❤️ por la comunidad</span>
+      </div>
+    </div>
+  </footer>
+  <!-- Lightbox -->
+  <div class="lb-overlay" id="lbOverlay" onclick="if(event.target===this)cerrarLightbox()">
+    <button class="lb-close" onclick="cerrarLightbox()">✕</button>
+    <div id="lbContent"></div>
+  </div>
+  <script src="/js/crm.js"></script>
+  <script>
+  // Proteger imágenes
+  document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('img').forEach(function(i) {
+      i.setAttribute('draggable','false');
+      i.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+      i.addEventListener('mousedown', function(e) { if (e.button === 2) e.preventDefault(); });
+    });
+  });
+  function toggleLike(btn) {
+    var foto = btn.getAttribute('data-foto');
+    fetch('/api/fotos/like', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({foto_url:foto}) })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        btn.querySelector('.like-count').textContent = data.total;
+        btn.classList.toggle('liked', data.liked);
+      });
+  }
+  // Cargar likes al inicio
+  document.addEventListener('DOMContentLoaded', function() {
+    fetch('/api/fotos/likes').then(function(r) { return r.json(); }).then(function(likes) {
+      document.querySelectorAll('.like-btn').forEach(function(btn) {
+        var foto = btn.getAttribute('data-foto');
+        if (likes[foto]) btn.querySelector('.like-count').textContent = likes[foto];
+      });
+    });
+  });
+  function abrirLightbox(tipo, src) {
+    const c = document.getElementById('lbContent');
+    if (tipo === 'img') c.innerHTML = '<img src="'+src+'" alt="Vista ampliada" draggable="false" oncontextmenu="event.preventDefault()" onmousedown="event.preventDefault()" onclick="event.stopPropagation()">';
+    else if (tipo === 'yt') c.innerHTML = '<iframe src="https://www.youtube.com/embed/'+src+'?autoplay=1&rel=0" title="YouTube video player" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen onclick="event.stopPropagation()"></iframe>';
+    document.getElementById('lbOverlay').classList.add('open');
+  }
+  function cerrarLightbox() {
+    document.getElementById('lbOverlay').classList.remove('open');
+    document.getElementById('lbContent').innerHTML = '';
+  }
+  document.addEventListener('keydown', function(e) { if (e.key === 'Escape') cerrarLightbox(); });
+  </script>
+</body>
+</html>
