@@ -4,11 +4,11 @@ import { sbToggleLike, sbGetAllLikes, sbGetFotoLikes, sbListContenidos } from '.
 const router = Router();
 
 const GALERIA_IMAGENES = [
-  { url: 'https://i.postimg.cc/264s66Tb/vlcsnap-2026-02-06-00h42m54s541.png', alt: 'Vista ecosistema' },
-  { url: 'https://i.postimg.cc/Hndf7gP3/vlcsnap-2026-02-06-00h46m12s002.png', alt: 'Escenario' },
-  { url: 'https://i.postimg.cc/Wp7Rcdhr/vlcsnap-2026-02-06-00h46m42s029.png', alt: 'Entorno' },
+  { url: 'https://i.postimg.cc/8kK3wPN6/uve.jpg', alt: 'UVE' },
   { url: 'https://i.postimg.cc/fWv4QVJx/vlcsnap-2026-02-06-00h47m04s050.png', alt: 'Universo' },
-  { url: 'https://i.postimg.cc/8kK3wPN6/uve.jpg', alt: 'UVE' }
+  { url: 'https://i.postimg.cc/Wp7Rcdhr/vlcsnap-2026-02-06-00h46m42s029.png', alt: 'Entorno' },
+  { url: 'https://i.postimg.cc/Hndf7gP3/vlcsnap-2026-02-06-00h46m12s002.png', alt: 'Escenario' },
+  { url: 'https://i.postimg.cc/264s66Tb/vlcsnap-2026-02-06-00h42m54s541.png', alt: 'Vista ecosistema' }
 ];
 
 // ── Dar/quitar like a una foto ─────────────────────────────────────────────
