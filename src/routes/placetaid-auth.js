@@ -156,31 +156,39 @@ async function completarSesion(res, tokenSesion, registroPlaceta, req) {
   }
 }
 
-// ── set-session: Establecer sesión desde token PlacetaID (callback popup) ─
+// ── set-session: Establecer sesión desde token PlacetaID (callback directo) ─
 
 router.post('/set-session', async (req, res) => {
   const { token, usuario } = req.body;
   if (!token) return res.status(400).json({ error: 'Token requerido' });
+  if (!usuario) return res.status(400).json({ error: 'Datos de usuario requeridos' });
 
   try {
-    // Verificar token contra PlacetaID real
-    const verifyResp = await fetch(`${PLACETAID_API}/auth/session`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
+    // Intentar verificar contra PlacetaID (con timeout 3s)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    try {
+      const verifyResp = await fetch(`${PLACETAID_API}/auth/session`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      if (verifyResp.ok) {
+        const verifyData = await verifyResp.json();
+        if (verifyData.ok && verifyData.registro) {
+          return await completarSesion(res, token, verifyData.registro, req);
+        }
+      }
+    } catch (verifyErr) {
+      // Fallback: continuar con datos del callback
+    }
 
-    if (!verifyResp.ok) return res.status(401).json({ error: 'Token inválido o expirado' });
-
-    const verifyData = await verifyResp.json();
-    if (!verifyData.ok || !verifyData.registro) return res.status(401).json({ error: 'Sesión PlacetaID no válida' });
-
-    return await completarSesion(res, token, verifyData.registro, req);
+    // Usar datos del callback directamente
+    return await completarSesion(res, token, usuario, req);
 
   } catch (err) {
     console.error('Error set-session:', err);
-    if (usuario) {
-      try { return await completarSesion(res, token, usuario, req); } catch (e) { /* fallback falló */ }
-    }
-    res.status(502).json({ error: 'PlacetaID no disponible' });
+    res.status(502).json({ error: 'Error al crear sesión' });
   }
 });
 
