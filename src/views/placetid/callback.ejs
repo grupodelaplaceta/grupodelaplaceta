@@ -25,8 +25,9 @@
   <script>
     (function() {
       const params = new URLSearchParams(window.location.search);
-      const token = params.get('token') || params.get('placetaid_token');
-      const userStr = params.get('user');
+      const token = params.get('placetaid_token') || params.get('token') || params.get('access_token');
+      const userStr = params.get('user') || params.get('usuario');
+      const state = params.get('state');
       const error = params.get('error');
 
       if (error) {
@@ -40,7 +41,7 @@
           fetch('/api/placetid/set-session', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token, usuario })
+            body: JSON.stringify({ token, usuario, state })
           }).then(r => r.json()).then(function(data) {
             window.location.href = (data && data.redirect) ? data.redirect : '/';
           }).catch(function() {

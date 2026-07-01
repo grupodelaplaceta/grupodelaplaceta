@@ -10,6 +10,7 @@ import { fileURLToPath } from 'url';
 import ejsLayouts from 'express-ejs-layouts';
 import { initializeDatabase, getDb, sbFindSolicitante, sbListSolicitantes, sbFindDocumentoFirmadoByUrl } from './src/config/db-supabase.js';
 import { supabase, testConnection } from './src/config/supabase.js';
+import { buildPlacetaidAuthUrl } from './src/services/placetaidAuth.js';
 
 // Importar rutas
 import authRoutes from './src/routes/auth.js';
@@ -123,12 +124,16 @@ app.use('/api/fotos', fotosRoutes);
 
 // ── PlacetaID Login (popup) ──────────────────────────────────────────────────
 app.get('/placetid/login', (req, res) => {
-  res.render('placetid/login', {
-    titulo: 'PlacetaID - Iniciar Sesión',
-    callbackUrl: req.query.from || '',
-    appName: 'Administración GDLP',
-    layout: false
+  const placetaidConfig = getPlacetaidConfig(req);
+  const state = req.query.state || crypto.randomUUID();
+  const authUrl = buildPlacetaidAuthUrl({
+    authBaseUrl: placetaidConfig.authBaseUrl,
+    clientId: placetaidConfig.clientId,
+    redirectUri: req.query.redirect_uri || placetaidConfig.redirectUri,
+    state,
+    platform: req.query.platform || 'web'
   });
+  return res.redirect(authUrl);
 });
 app.get('/placetid/callback', (req, res) => {
   res.render('placetid/callback', { titulo: 'PlacetaID - Autenticación', layout: false });
@@ -140,7 +145,10 @@ app.use('/', publicoRoutes);
 function getPlacetaidConfig(req) {
   const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
   const host = req.get('host') || 'localhost:3001';
-  const apiUrl = process.env.PLACETAID_API_URL || (process.env.VERCEL ? 'https://id.laplaceta.org/api' : 'http://localhost:3000/api');
+  const defaultApiUrl = process.env.VERCEL ? 'https://id.laplaceta.org/api' : 'http://localhost:3000/api';
+  const apiUrl = process.env.PLACETAID_API_URL && process.env.PLACETAID_API_URL !== 'http://localhost:3000/api'
+    ? process.env.PLACETAID_API_URL
+    : defaultApiUrl;
   const authBaseUrl = process.env.PLACETAID_AUTH_URL || process.env.PLACETAID_BASE_URL || apiUrl.replace(/\/api$/, '');
   const clientId = process.env.PLACETAID_CLIENT_ID || 'gdlp-crm';
   const redirectUri = `${protocol}://${host}/placetid/callback`;
@@ -148,7 +156,14 @@ function getPlacetaidConfig(req) {
   return {
     authBaseUrl,
     clientId,
-    redirectUri
+    redirectUri,
+    authUrl: buildPlacetaidAuthUrl({
+      authBaseUrl,
+      clientId,
+      redirectUri,
+      state: req.query?.state || crypto.randomUUID(),
+      platform: req.query?.platform || 'web'
+    })
   };
 }
 

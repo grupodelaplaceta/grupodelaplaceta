@@ -11,7 +11,10 @@ import {
 
 const router = Router();
 
-const PLACETAID_API = process.env.PLACETAID_API_URL || (process.env.VERCEL ? 'https://id.laplaceta.org/api' : 'http://localhost:3000/api');
+const defaultPlacetaidApi = process.env.VERCEL ? 'https://id.laplaceta.org/api' : 'http://localhost:3000/api';
+const PLACETAID_API = process.env.PLACETAID_API_URL && process.env.PLACETAID_API_URL !== 'http://localhost:3000/api'
+  ? process.env.PLACETAID_API_URL
+  : defaultPlacetaidApi;
 const PLACETAID_CLIENT_ID = process.env.PLACETAID_CLIENT_ID || 'gdlp-crm';
 const PLACETAID_CLIENT_SECRET = process.env.PLACETAID_CLIENT_SECRET || 'gdlp-crm-dev-secret';
 
@@ -172,7 +175,7 @@ async function completarSesion(res, tokenSesion, registroPlaceta, req) {
 // ── set-session: Establecer sesión desde token PlacetaID (callback directo) ─
 
 router.post('/set-session', async (req, res) => {
-  const { token, usuario } = req.body;
+  const { token, usuario, state } = req.body;
   if (!token) return res.status(400).json({ error: 'Token requerido' });
   if (!usuario) return res.status(400).json({ error: 'Datos de usuario requeridos' });
 
@@ -200,6 +203,9 @@ router.post('/set-session', async (req, res) => {
     }
 
     // Usar datos del callback directamente
+    if (state) {
+      req.session.placetaidState = state;
+    }
     return await completarSesion(res, token, usuario, req);
 
   } catch (err) {
