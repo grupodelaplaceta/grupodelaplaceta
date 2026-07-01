@@ -137,10 +137,34 @@ app.get('/placetid/callback', (req, res) => {
 // ── Rutas Públicas (Web) ─────────────────────────────────────────────────────
 app.use('/', publicoRoutes);
 
+function getPlacetaidConfig(req) {
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+  const host = req.get('host') || 'localhost:3001';
+  const apiUrl = process.env.PLACETAID_API_URL || (process.env.VERCEL ? 'https://id.laplaceta.org/api' : 'http://localhost:3000/api');
+  const authBaseUrl = process.env.PLACETAID_AUTH_URL || process.env.PLACETAID_BASE_URL || apiUrl.replace(/\/api$/, '');
+  const clientId = process.env.PLACETAID_CLIENT_ID || 'gdlp-crm';
+  const redirectUri = `${protocol}://${host}/placetid/callback`;
+
+  return {
+    authBaseUrl,
+    clientId,
+    redirectUri
+  };
+}
+
 // ── Rutas Admin Web ──────────────────────────────────────────────────────────
 
 // Auth (sin layout - páginas independientes)
-app.get('/login', (req, res) => res.render('auth/login', { titulo: 'PlacetaID - Iniciar Sesión', layout: false }));
+app.get('/login', (req, res) => {
+  const placetaidConfig = getPlacetaidConfig(req);
+  return res.render('auth/login', {
+    titulo: 'PlacetaID - Iniciar Sesión',
+    layout: false,
+    placetaidAuthUrl: placetaidConfig.authBaseUrl,
+    placetaidClientId: placetaidConfig.clientId,
+    placetaidRedirectUri: placetaidConfig.redirectUri
+  });
+});
 app.get('/registro', (req, res) => res.render('auth/registro', { titulo: 'PlacetaID - Registro', layout: false }));
 app.get('/oauth/authorize', (req, res) => res.render('public/oauth/login', { titulo: 'PlacetaID - Autorizar', client_id: req.query.client_id, redirect_uri: req.query.redirect_uri, state: req.query.state || '', client_nombre: '', client_logo: '', layout: false }));
 

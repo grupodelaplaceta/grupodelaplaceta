@@ -57,10 +57,14 @@
   </div>
 
   <script>
+    const placetaidAuthUrl = '<%= placetaidAuthUrl %>';
+    const placetaidClientId = '<%= placetaidClientId %>';
+    const placetaidRedirectUri = '<%= placetaidRedirectUri %>';
+
     function irAPlacetaID() {
-      const url = new URL('https://id.laplaceta.org/');
-      url.searchParams.set('client_id', 'ccb611655030bdadf7218418dc195dcb');
-      url.searchParams.set('redirect_uri', window.location.origin + '/placetid/callback');
+      const url = new URL(placetaidAuthUrl || 'https://id.laplaceta.org');
+      url.searchParams.set('client_id', placetaidClientId || 'gdlp-crm');
+      url.searchParams.set('redirect_uri', placetaidRedirectUri || (window.location.origin + '/placetid/callback'));
       url.searchParams.set('platform', 'web');
       url.searchParams.set('state', crypto.randomUUID());
       window.location.href = url.toString();

@@ -12,6 +12,16 @@ import {
 const router = Router();
 
 const PLACETAID_API = process.env.PLACETAID_API_URL || (process.env.VERCEL ? 'https://id.laplaceta.org/api' : 'http://localhost:3000/api');
+const PLACETAID_CLIENT_ID = process.env.PLACETAID_CLIENT_ID || 'gdlp-crm';
+const PLACETAID_CLIENT_SECRET = process.env.PLACETAID_CLIENT_SECRET || 'gdlp-crm-dev-secret';
+
+function buildPlacetaidHeaders(extraHeaders = {}) {
+  return {
+    'Content-Type': 'application/json',
+    'X-API-Key': PLACETAID_CLIENT_ID,
+    ...extraHeaders
+  };
+}
 
 // ── Login: delega al PlacetaID real ──────────────────────────────────────
 
@@ -23,12 +33,15 @@ router.post('/login', async (req, res) => {
     // Llamar a FASE 1 del PlacetaID real
     const fase1Resp = await fetch(`${PLACETAID_API}/auth/fase1`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: buildPlacetaidHeaders(),
       body: JSON.stringify({
         dip: alias,
         password,
         servicio: 'GDLP CRM',
-        platform: 'web'
+        servicioUrl: `${req.protocol}://${req.get('host')}/placetid/callback`,
+        clientId: PLACETAID_CLIENT_ID,
+        platform: 'web',
+        state: req.body.state || null
       })
     });
 
@@ -74,7 +87,7 @@ router.post('/fase2', async (req, res) => {
 
     const fase2Resp = await fetch(`${PLACETAID_API}/auth/fase2`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: buildPlacetaidHeaders(),
       body: JSON.stringify({ tokenFase2, codigo2fa })
     });
 
@@ -169,7 +182,10 @@ router.post('/set-session', async (req, res) => {
     const timeoutId = setTimeout(() => controller.abort(), 3000);
     try {
       const verifyResp = await fetch(`${PLACETAID_API}/auth/session`, {
-        headers: { 'Authorization': `Bearer ${token}` },
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'X-API-Key': PLACETAID_CLIENT_ID
+        },
         signal: controller.signal
       });
       clearTimeout(timeoutId);
@@ -201,7 +217,10 @@ router.get('/verify', async (req, res) => {
   try {
     const token = auth.split(' ')[1];
     const verifyResp = await fetch(`${PLACETAID_API}/auth/session`, {
-      headers: { 'Authorization': `Bearer ${token}` }
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'X-API-Key': PLACETAID_CLIENT_ID
+      }
     });
 
     if (!verifyResp.ok) return res.status(401).json({ error: 'Token inválido o expirado' });
