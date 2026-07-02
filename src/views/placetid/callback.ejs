@@ -25,24 +25,31 @@
   <script>
     (function() {
       const params = new URLSearchParams(window.location.search);
-      const token = params.get('placetaid_token') || params.get('token') || params.get('access_token');
-      const userStr = params.get('user') || params.get('usuario');
-      const state = params.get('state');
-      const error = params.get('error');
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+      const token = params.get('placetaid_token') || params.get('token') || params.get('access_token') || hashParams.get('token') || hashParams.get('placetaid_token') || hashParams.get('access_token');
+      const userStr = params.get('user') || params.get('usuario') || params.get('userData') || hashParams.get('user') || hashParams.get('usuario') || hashParams.get('userData');
+      const state = params.get('state') || hashParams.get('state');
+      const error = params.get('error') || hashParams.get('error');
 
       if (error) {
         document.querySelector('.callback-card p').textContent = 'Error: ' + decodeURIComponent(error);
         return;
       }
 
-      if (token && userStr) {
+      if (token) {
         try {
-          const usuario = JSON.parse(decodeURIComponent(userStr));
+          const payload = { token, state };
+          if (userStr) {
+            payload.usuario = JSON.parse(decodeURIComponent(userStr));
+          }
           fetch('/api/placetid/set-session', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token, usuario, state })
+            body: JSON.stringify(payload)
           }).then(r => r.json()).then(function(data) {
+            if (window.opener && window.opener !== window) {
+              window.opener.postMessage({ tipo: 'placetaid-login', token, usuario: payload.usuario || null, state }, window.location.origin);
+            }
             window.location.href = (data && data.redirect) ? data.redirect : '/';
           }).catch(function() {
             window.location.href = '/login';

@@ -95,18 +95,22 @@
     // Si llegamos con token en URL (redirect desde PlacetaID)
     (function() {
       const params = new URLSearchParams(window.location.search);
-      const token = params.get('tokenSesion') || params.get('token');
-      const userStr = params.get('user');
-      if (token && userStr) {
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+      const token = params.get('tokenSesion') || params.get('token') || params.get('placetaid_token') || params.get('access_token') || hashParams.get('token') || hashParams.get('placetaid_token') || hashParams.get('access_token');
+      const userStr = params.get('user') || params.get('usuario') || params.get('userData') || hashParams.get('user') || hashParams.get('usuario') || hashParams.get('userData');
+      if (token) {
         document.getElementById('loginButtons').style.display = 'none';
         document.getElementById('loginLoading').classList.add('active');
         document.getElementById('loginLoading').querySelector('p').textContent = 'Procesando autenticación...';
         try {
-          const usuario = JSON.parse(decodeURIComponent(userStr));
+          const payload = { token, state: params.get('state') || hashParams.get('state') };
+          if (userStr) {
+            payload.usuario = JSON.parse(decodeURIComponent(userStr));
+          }
           fetch('/api/placetid/set-session', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token, usuario })
+            body: JSON.stringify(payload)
           }).then(r => r.json()).then(data => {
             window.location.href = (data && data.redirect) ? data.redirect : '/';
           }).catch(function() {
