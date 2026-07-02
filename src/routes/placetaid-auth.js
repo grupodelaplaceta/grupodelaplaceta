@@ -8,6 +8,7 @@ import {
   sbFindSolicitanteByDip, sbCreateSolicitante,
   sbCreateLog
 } from '../config/db-supabase.js';
+import { buildPlacetaidSessionData } from '../services/placetaidAuth.js';
 
 const router = Router();
 
@@ -116,49 +117,51 @@ router.post('/fase2', async (req, res) => {
 
 async function completarSesion(res, tokenSesion, registroPlaceta, req) {
   try {
-    // Buscar o crear usuario local en Supabase
-    let localUser = await sbFindSolicitanteByDip(registroPlaceta.dip);
+    let localUser = null;
+    let sessionData = buildPlacetaidSessionData(registroPlaceta);
 
-    if (!localUser) {
-      const alias = registroPlaceta.nombre?.toLowerCase()?.replace(/\s/g, '') ||
-                    `user${registroPlaceta.dip}`;
-      const nombreReal = registroPlaceta.nombreCompleto ||
-                         `${registroPlaceta.nombre || ''} ${registroPlaceta.apellidos || ''}`.trim() ||
-                         alias;
-      const placeid = registroPlaceta.placeid || `PLID-${registroPlaceta.dip}`;
-      const esAdmin = registroPlaceta.rol === 'administrador';
+    try {
+      localUser = await sbFindSolicitanteByDip(registroPlaceta.dip);
+      if (!localUser) {
+        localUser = await sbCreateSolicitante({
+          alias: sessionData.alias,
+          nombre_real: registroPlaceta.nombreCompleto || `${registroPlaceta.nombre || ''} ${registroPlaceta.apellidos || ''}`.trim() || sessionData.alias,
+          email: registroPlaceta.correo || `${sessionData.alias}@laplaceta.org`,
+          dip: registroPlaceta.dip,
+          placeid: sessionData.placeid,
+          rol: sessionData.rol,
+          estado: 'activo',
+          franja_edad: sessionData.franja_edad,
+          password_hash: ''
+        });
+      }
 
-      localUser = await sbCreateSolicitante({
-        alias,
-        nombre_real: nombreReal,
-        email: registroPlaceta.correo || `${alias}@laplaceta.org`,
-        dip: registroPlaceta.dip,
-        placeid,
-        rol: esAdmin ? 'administrador' : 'miembro',
-        estado: 'activo',
-        franja_edad: (registroPlaceta.edad || 0) >= 18 ? 'Alta_Plena' : 'Tutelada_Senior',
-        password_hash: ''
-      });
+      sessionData = {
+        id: localUser.id,
+        alias: localUser.alias,
+        dip: localUser.dip,
+        placeid: localUser.placeid,
+        rol: localUser.rol,
+        franja_edad: localUser.franja_edad,
+        cargo: localUser.cargo,
+        estado: localUser.estado
+      };
+    } catch (dbErr) {
+      console.warn('Supabase no disponible para perfil local, usando sesión mínima:', dbErr.message);
+      sessionData.id = sessionData.id || `placetaid-${registroPlaceta.dip || 'local'}`;
     }
-
-    const sessionData = {
-      id: localUser.id,
-      alias: localUser.alias,
-      dip: localUser.dip,
-      placeid: localUser.placeid,
-      rol: localUser.rol,
-      franja_edad: localUser.franja_edad,
-      cargo: localUser.cargo,
-      estado: localUser.estado
-    };
 
     req.session.usuario = sessionData;
     req.session.placetaidToken = tokenSesion;
 
     const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
-    await sbCreateLog({ usuario_id: localUser.id, accion: 'login_placetaid', detalle: `Login via PlacetaID: ${registroPlaceta.dip}`, ip }).catch(() => {});
+    try {
+      await sbCreateLog({ usuario_id: sessionData.id, accion: 'login_placetaid', detalle: `Login via PlacetaID: ${registroPlaceta.dip}`, ip });
+    } catch (logErr) {
+      console.warn('No se pudo registrar el log:', logErr.message);
+    }
 
-    const esAdmin = localUser.rol === 'administrador' || localUser.rol === 'admin';
+    const esAdmin = sessionData.rol === 'administrador' || sessionData.rol === 'admin';
     res.json({
       success: true,
       redirect: esAdmin ? '/admin/dashboard' : '/ciudadano',
