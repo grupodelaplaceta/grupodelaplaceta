@@ -33,7 +33,8 @@ router.post('/login', async (req, res) => {
     if (!validPassword || !usuario) {
       try {
         const db = getDb();
-        const sqliteUser = db.prepare('SELECT * FROM solicitantes WHERE alias = ?').get(alias);
+        let sqliteUser = db.prepare('SELECT * FROM solicitantes WHERE alias = ?').get(alias);
+        if (!sqliteUser) sqliteUser = db.prepare('SELECT * FROM solicitantes WHERE dip = ?').get(alias);
         if (sqliteUser) {
           try { validPassword = await bcrypt.compare(password, sqliteUser.password_hash); } catch (e) { validPassword = false; }
           if (validPassword) usuario = sqliteUser;
@@ -47,10 +48,6 @@ router.post('/login', async (req, res) => {
     if (usuario.estado === 'expulsado') return res.status(403).json({ error: 'Cuenta expulsada. Contacte a la Junta Directiva.' });
     if (usuario.estado === 'suspendido') return res.status(403).json({ error: 'Cuenta suspendida temporalmente.' });
     if (usuario.estado === 'baja') return res.status(403).json({ error: 'Cuenta dada de baja.' });
-
-    // Verificar contraseña
-    const valid = await bcrypt.compare(password, usuario.password_hash);
-    if (!valid) return res.status(401).json({ error: 'Credenciales inválidas' });
 
     // Actualizar último acceso
     const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';

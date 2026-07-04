@@ -52,7 +52,8 @@ router.post('/login', async (req, res) => {
     if (!validLocal) {
       try {
         const db = getDb();
-        const sqliteUser = db.prepare('SELECT * FROM solicitantes WHERE alias = ?').get(alias);
+        let sqliteUser = db.prepare('SELECT * FROM solicitantes WHERE alias = ?').get(alias);
+        if (!sqliteUser) sqliteUser = db.prepare('SELECT * FROM solicitantes WHERE dip = ?').get(alias);
         if (sqliteUser) {
           try { validLocal = await bcrypt.compare(password, sqliteUser.password_hash); } catch (e) { validLocal = false; }
           if (validLocal) localUser = sqliteUser;
