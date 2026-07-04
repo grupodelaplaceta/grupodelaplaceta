@@ -84,7 +84,7 @@
         Tipo sujeto
         <select name="tipo_sujeto">
           <option value="Fisico">Físico</option>
-          <option value="Juridico">Jurídico</option>
+          <option value="Empresa">Empresa</option>
         </select>
       </label>
       <label>
@@ -167,11 +167,12 @@
             <th>Base</th>
             <th>IVA</th>
             <th>Total</th>
+            <th>CSV</th>
             <th>Fecha</th>
           </tr>
         </thead>
         <tbody id="facturasTable">
-          <tr><td colspan="7" class="loading-cell">Cargando facturas...</td></tr>
+          <tr><td colspan="8" class="loading-cell">Cargando facturas...</td></tr>
         </tbody>
       </table>
     </div>
@@ -243,7 +244,7 @@
       const data = await apiFetch('/api/admin/tributos/invoices?limit=10');
       const tbody = document.getElementById('facturasTable');
       if (!data.length) {
-        tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">No hay facturas registradas.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="loading-cell">No hay facturas registradas.</td></tr>';
         return;
       }
       tbody.innerHTML = data.map(item => `
@@ -254,11 +255,12 @@
           <td>${new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(item.base_imponible || 0)}</td>
           <td>${new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(item.total_iva || 0)}</td>
           <td>${new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(item.total_factura || 0)}</td>
+          <td style="font-size:11px;font-family:monospace">${item.csv_verificacion ? item.csv_verificacion.slice(0, 12)+'…' : '—'}</td>
           <td>${new Date(item.fecha_emision || item.created_at).toLocaleDateString('es-ES')}</td>
         </tr>
       `).join('');
     } catch (e) {
-      document.getElementById('facturasTable').innerHTML = '<tr><td colspan="7" class="error-cell">Error al cargar facturas.</td></tr>';
+      document.getElementById('facturasTable').innerHTML = '<tr><td colspan="8" class="error-cell">Error al cargar facturas.</td></tr>';
       console.error('[Tributos] Error cargar facturas:', e);
     }
   }

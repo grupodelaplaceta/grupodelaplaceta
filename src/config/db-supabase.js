@@ -581,14 +581,13 @@ export async function sbCreateTributosInvoice(payload) {
     total_iva: totalIva,
     total_factura: totalFactura,
     transaction_id_blp: payload.transaction_id_blp || null,
-    csv_verificacion: payload.csv_verificacion || null
+    csv_verificacion: payload.csv_verificacion || crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
   };
 
   const { data: invoice, error: invoiceError } = await sb.from('tributos_facturas')
     .insert(invoicePayload).select().single();
   if (invoiceError) throw new Error(invoiceError.message);
 
-  const lines = Array.isArray(payload.lineas) ? payload.lineas : [];
   if (lines.length > 0) {
     const lineItems = lines.map((line) => ({
       id: line.id || `${invoice.id}-${String(Date.now())}`,

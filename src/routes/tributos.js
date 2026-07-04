@@ -103,6 +103,7 @@ router.post('/invoices', verificarSesion, verificarRol('administrador', 'junta',
       numero_factura,
       emisor_placeta_id,
       receptor_placeta_id,
+      csv_verificacion: crypto.randomUUID?.() ? `CSV-${crypto.randomUUID().slice(0, 8).toUpperCase()}-${Date.now().toString(36).toUpperCase()}` : `CSV-${Date.now().toString(36).toUpperCase()}`,
       lineas: [
         {
           concepto_producto,
