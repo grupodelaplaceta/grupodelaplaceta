@@ -4,11 +4,13 @@
  */
 
 import { Router } from 'express';
+import bcrypt from 'bcryptjs';
 import {
-  sbFindSolicitanteByDip, sbCreateSolicitante,
+  sbFindSolicitanteByDip, sbFindSolicitante, sbCreateSolicitante,
   sbCreateLog
 } from '../config/db-supabase.js';
 import { buildPlacetaidSessionData } from '../services/placetaidAuth.js';
+import { getDb } from '../config/db.js';
 
 const router = Router();
 
@@ -33,6 +35,41 @@ router.post('/login', async (req, res) => {
   try {
     const { alias, password } = req.body;
     if (!alias || !password) return res.status(400).json({ error: 'DIP/Alias y contraseña requeridos' });
+
+    // Intentar autenticación local primero (fallback si PlacetaID externo no responde)
+    let localUser;
+    try { localUser = await sbFindSolicitante(alias); } catch (e) { localUser = null; }
+
+    // Fallback a SQLite (seed local)
+    if (!localUser || !localUser.password_hash) {
+      try {
+        const db = getDb();
+        localUser = db.prepare('SELECT * FROM solicitantes WHERE alias = ?').get(alias);
+      } catch (e) { localUser = null; }
+    }
+
+    if (localUser && localUser.password_hash) {
+      const validLocal = await bcrypt.compare(password, localUser.password_hash);
+      if (validLocal) {
+        const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
+        const sessionData = {
+          id: localUser.id,
+          alias: localUser.alias,
+          dip: localUser.dip,
+          placeid: localUser.placeid,
+          rol: localUser.rol || 'miembro',
+          franja_edad: localUser.franja_edad,
+          cargo: localUser.cargo,
+          estado: localUser.estado
+        };
+        req.session.usuario = sessionData;
+        try { await sbCreateLog({ usuario_id: sessionData.id, accion: 'login_local', detalle: 'Login local CRM', ip }); } catch (e) {}
+        const esAdmin = sessionData.rol === 'administrador' || sessionData.rol === 'admin' || sessionData.cargo === 'junta';
+        return res.json({ success: true, redirect: esAdmin ? '/admin/dashboard' : '/ciudadano', usuario: sessionData });
+      } else {
+        return res.status(401).json({ error: 'Credenciales inválidas' });
+      }
+    }
 
     // Llamar a FASE 1 del PlacetaID real
     const fase1Resp = await fetch(`${PLACETAID_API}/auth/fase1`, {

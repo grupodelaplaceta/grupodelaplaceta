@@ -61,6 +61,20 @@
     const placetaidClientId = '<%= placetaidClientId %>';
     const placetaidRedirectUri = '<%= placetaidRedirectUri %>';
 
+    function mostrarError(mensaje) {
+      const card = document.getElementById('loginCard');
+      let errDiv = document.getElementById('loginError');
+      if (!errDiv) {
+        errDiv = document.createElement('div');
+        errDiv.id = 'loginError';
+        errDiv.style.cssText = 'background:#fde8e8;color:#b91c1c;padding:12px 16px;border-radius:12px;margin-bottom:16px;font-size:13px;font-weight:500;display:none;';
+        card.insertBefore(errDiv, card.querySelector('#loginButtons'));
+      }
+      errDiv.textContent = mensaje;
+      errDiv.style.display = 'block';
+      setTimeout(() => { errDiv.style.display = 'none'; }, 6000);
+    }
+
     function irAPlacetaID() {
       const url = new URL(placetaidAuthUrl || 'https://id.laplaceta.org');
       url.searchParams.set('client_id', placetaidClientId || 'gdlp-crm');
@@ -79,16 +93,22 @@
       document.getElementById('loginLoading').classList.add('active');
       document.getElementById('loginLoading').querySelector('p').textContent = 'Iniciando sesión como ' + (tipo === 'admin' ? 'Administrador...' : 'Ciudadano...');
 
-      fetch('/api/placetid/login', {
+      fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(creds)
       }).then(r => r.json()).then(data => {
         if (data.success && data.redirect) window.location.href = data.redirect;
         else if (data.token) window.location.href = '/';
-        else window.location.href = '/';
-      }).catch(function() {
-        window.location.href = '/';
+        else {
+          mostrarError(data.error || 'Error al iniciar sesión');
+          document.getElementById('loginButtons').style.display = 'block';
+          document.getElementById('loginLoading').classList.remove('active');
+        }
+      }).catch(function(err) {
+        mostrarError('Error de conexión: ' + (err.message || 'Inténtalo de nuevo'));
+        document.getElementById('loginButtons').style.display = 'block';
+        document.getElementById('loginLoading').classList.remove('active');
       });
     }
 
