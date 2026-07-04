@@ -1,0 +1,295 @@
+<div class="dashboard">
+  <div class="dashboard-header">
+    <h1>Gestión de Tributos</h1>
+    <p class="dashboard-date">Módulo Tributario - Control de contribuyentes, declaraciones e IVA</p>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card stat-primary">
+      <div class="stat-icon">🧾</div>
+      <div class="stat-content">
+        <span class="stat-value" id="contribuyentesTotal">—</span>
+        <span class="stat-label">Contribuyentes</span>
+        <span class="stat-detail">Registros fiscales en el padrón</span>
+      </div>
+    </div>
+    <div class="stat-card stat-success">
+      <div class="stat-icon">📌</div>
+      <div class="stat-content">
+        <span class="stat-value" id="declaracionesTotal">—</span>
+        <span class="stat-label">Declaraciones</span>
+        <span class="stat-detail">Mensuales y en borrador</span>
+      </div>
+    </div>
+    <div class="stat-card stat-warning">
+      <div class="stat-icon">💶</div>
+      <div class="stat-content">
+        <span class="stat-value" id="facturasTotal">—</span>
+        <span class="stat-label">Facturas</span>
+        <span class="stat-detail">Emitidas en el periodo</span>
+      </div>
+    </div>
+    <div class="stat-card stat-info">
+      <div class="stat-icon">📊</div>
+      <div class="stat-content">
+        <span class="stat-value" id="importeTotal">—</span>
+        <span class="stat-label">Importe Total</span>
+        <span class="stat-detail" id="ivaTotal">IVA total</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Acciones rápidas</h2>
+    <div class="quick-actions">
+      <a href="#" class="action-card" onclick="cargarTributosResumen(); return false;">
+        <span class="action-icon">🔄</span>
+        <span class="action-title">Actualizar panel</span>
+        <span class="action-desc">Refrescar métricas tributarias</span>
+      </a>
+      <a href="#" class="action-card" onclick="cargarContribuyentes(); return false;">
+        <span class="action-icon">👥</span>
+        <span class="action-title">Ver contribuyentes</span>
+        <span class="action-desc">Lista de registros tributarios</span>
+      </a>
+      <a href="#" class="action-card" onclick="cargarFacturas(); return false;">
+        <span class="action-icon">📄</span>
+        <span class="action-title">Ver facturas</span>
+        <span class="action-desc">Historial de facturas emitidas</span>
+      </a>
+      <a href="#" class="action-card" onclick="cargarDeclaraciones(); return false;">
+        <span class="action-icon">📑</span>
+        <span class="action-title">Ver declaraciones</span>
+        <span class="action-desc">Historial de declaraciones</span>
+      </a>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Registrar contribuyente</h2>
+    <form data-api-form="/api/admin/tributos/contributors" class="form-grid">
+      <label>
+        Placeta ID
+        <input type="text" name="placeta_id" required placeholder="placeta123" />
+      </label>
+      <label>
+        DIP
+        <input type="text" name="dip" required placeholder="DIP123456" />
+      </label>
+      <label>
+        Nombre
+        <input type="text" name="nombre" required placeholder="Nombre completo" />
+      </label>
+      <label>
+        Tipo sujeto
+        <select name="tipo_sujeto">
+          <option value="Fisico">Físico</option>
+          <option value="Juridico">Jurídico</option>
+        </select>
+      </label>
+      <label>
+        Roles
+        <input type="text" name="roles_json" placeholder="ciudadano,contribuyente" />
+      </label>
+      <label>
+        IBAN
+        <input type="text" name="iban" placeholder="ES..." />
+      </label>
+      <button class="btn btn-primary" type="submit">Crear contribuyente</button>
+    </form>
+  </div>
+
+  <div class="section">
+    <h2>Crear factura</h2>
+    <form id="crearFacturaForm" data-api-form="/api/admin/tributos/invoices" class="form-grid">
+      <label>
+        Nº factura
+        <input type="text" name="numero_factura" required placeholder="F-0001" />
+      </label>
+      <label>
+        Emisor Placeta ID
+        <input type="text" name="emisor_placeta_id" required placeholder="placeta123" />
+      </label>
+      <label>
+        Receptor Placeta ID
+        <input type="text" name="receptor_placeta_id" required placeholder="placeta456" />
+      </label>
+      <label>
+        Concepto
+        <input type="text" name="concepto_producto" required placeholder="Servicio de asesoría" />
+      </label>
+      <label>
+        Cantidad
+        <input type="number" name="cantidad" min="1" value="1" />
+      </label>
+      <label>
+        Precio unitario
+        <input type="number" step="0.01" name="precio_unitario" min="0" value="0" />
+      </label>
+      <label>
+        IVA %
+        <input type="number" step="0.01" name="iva_porcentaje" min="0" value="12" />
+      </label>
+      <button class="btn btn-success" type="submit">Crear factura</button>
+    </form>
+  </div>
+
+  <div class="section">
+    <h2>Últimos contribuyentes</h2>
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Placeta ID</th>
+            <th>Nombre</th>
+            <th>DIP</th>
+            <th>Tipo</th>
+            <th>Estado fiscal</th>
+            <th>Alta</th>
+          </tr>
+        </thead>
+        <tbody id="contribuyentesTable">
+          <tr><td colspan="6" class="loading-cell">Cargando contribuyentes...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Facturas recientes</h2>
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Factura</th>
+            <th>Emisor</th>
+            <th>Receptor</th>
+            <th>Base</th>
+            <th>IVA</th>
+            <th>Total</th>
+            <th>Fecha</th>
+          </tr>
+        </thead>
+        <tbody id="facturasTable">
+          <tr><td colspan="7" class="loading-cell">Cargando facturas...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Declaraciones recientes</h2>
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Placeta ID</th>
+            <th>Periodo</th>
+            <th>Cuota IRM</th>
+            <th>Cuota IGF</th>
+            <th>Estado</th>
+            <th>Fecha</th>
+          </tr>
+        </thead>
+        <tbody id="declaracionesTable">
+          <tr><td colspan="7" class="loading-cell">Cargando declaraciones...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  async function cargarTributosResumen() {
+    try {
+      const res = await apiFetch('/api/admin/tributos/summary');
+      document.getElementById('contribuyentesTotal').textContent = res.contribuyentes;
+      document.getElementById('declaracionesTotal').textContent = res.declaraciones;
+      document.getElementById('facturasTotal').textContent = res.facturas;
+      document.getElementById('importeTotal').textContent = new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(res.importe_total);
+      document.getElementById('ivaTotal').textContent = new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(res.iva_total);
+    } catch (e) {
+      console.error('[Tributos] Error cargar resumen:', e);
+    }
+  }
+
+  async function cargarContribuyentes() {
+    try {
+      const data = await apiFetch('/api/admin/tributos/contributors');
+      const tbody = document.getElementById('contribuyentesTable');
+      if (!data.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="loading-cell">No hay contribuyentes registrados.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = data.map(item => `
+        <tr>
+          <td>${item.placeta_id}</td>
+          <td>${item.nombre}</td>
+          <td>${item.dip || '—'}</td>
+          <td>${item.tipo_sujeto || '—'}</td>
+          <td>${item.estado_fiscal || '—'}</td>
+          <td>${new Date(item.fecha_alta_tributos || item.created_at).toLocaleDateString('es-ES')}</td>
+        </tr>
+      `).join('');
+    } catch (e) {
+      document.getElementById('contribuyentesTable').innerHTML = '<tr><td colspan="6" class="error-cell">Error al cargar contribuyentes.</td></tr>';
+      console.error('[Tributos] Error cargar contribuyentes:', e);
+    }
+  }
+
+  async function cargarFacturas() {
+    try {
+      const data = await apiFetch('/api/admin/tributos/invoices?limit=10');
+      const tbody = document.getElementById('facturasTable');
+      if (!data.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">No hay facturas registradas.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = data.map(item => `
+        <tr>
+          <td>${item.numero_factura}</td>
+          <td>${item.emisor_placeta_id}</td>
+          <td>${item.receptor_placeta_id}</td>
+          <td>${new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(item.base_imponible || 0)}</td>
+          <td>${new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(item.total_iva || 0)}</td>
+          <td>${new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(item.total_factura || 0)}</td>
+          <td>${new Date(item.fecha_emision || item.created_at).toLocaleDateString('es-ES')}</td>
+        </tr>
+      `).join('');
+    } catch (e) {
+      document.getElementById('facturasTable').innerHTML = '<tr><td colspan="7" class="error-cell">Error al cargar facturas.</td></tr>';
+      console.error('[Tributos] Error cargar facturas:', e);
+    }
+  }
+
+  async function cargarDeclaraciones() {
+    try {
+      const data = await apiFetch('/api/admin/tributos/declarations');
+      const tbody = document.getElementById('declaracionesTable');
+      if (!data.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">No hay declaraciones registradas.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = data.map(item => `
+        <tr>
+          <td>${item.id}</td>
+          <td>${item.placeta_id || item.contributor_id || '—'}</td>
+          <td>${item.mes_periodo || '—'}</td>
+          <td>${new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(item.cuota_irm || 0)}</td>
+          <td>${new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(item.cuota_igf || 0)}</td>
+          <td>${item.estado_pago || '—'}</td>
+          <td>${new Date(item.updated_at || item.created_at).toLocaleDateString('es-ES')}</td>
+        </tr>
+      `).join('');
+    } catch (e) {
+      document.getElementById('declaracionesTable').innerHTML = '<tr><td colspan="7" class="error-cell">Error al cargar declaraciones.</td></tr>';
+      console.error('[Tributos] Error cargar declaraciones:', e);
+    }
+  }
+
+  cargarTributosResumen();
+  cargarContribuyentes();
+  cargarFacturas();
+  cargarDeclaraciones();
+</script>

@@ -30,6 +30,7 @@ import contenidosRoutes from './src/routes/contenidos.js';
 import voleybridgeRoutes from './src/routes/voleybridge.js';
 import placetaidAuthRoutes from './src/routes/placetaid-auth.js';
 import fotosRoutes from './src/routes/fotos.js';
+import tributosRoutes from './src/routes/tributos.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -115,6 +116,7 @@ app.use('/api/justicia', justiciaRoutes);
 app.use('/api/rgpd', rgpdRoutes);
 app.use('/api/pdf', pdfRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/admin/tributos', tributosRoutes);
 app.use('/api/firma', firmaRoutes);
 app.use('/api/placetid', placetidRoutes);
 app.use('/api/contenidos', contenidosRoutes);
@@ -217,6 +219,7 @@ app.get('/admin/dashboard', verificarAuth, async (req, res) => {
 app.get('/admin/identidad', verificarAuth, (req, res) => res.render('identidad/gestion', { titulo: 'Gestión de Identidad' }));
 app.get('/admin/bancario', verificarAuth, (req, res) => res.render('bancario/gestion', { titulo: 'Gestión Bancaria' }));
 app.get('/admin/fiscal', verificarAuth, (req, res) => res.render('fiscal/gestion', { titulo: 'Gestión Fiscal' }));
+app.get('/admin/tributos', verificarAuth, (req, res) => res.render('admin/tributos', { titulo: 'Gestión de Tributos' }));
 app.get('/admin/ocio', verificarAuth, (req, res) => res.render('ocio/gestion', { titulo: 'Gestión de Ocio y Loterías' }));
 app.get('/admin/recursos', verificarAuth, (req, res) => res.render('recursos/gestion', { titulo: 'Gestión de Recursos Digitales' }));
 app.get('/admin/justicia', verificarAuth, (req, res) => res.render('justicia/gestion', { titulo: 'Gestión de Justicia' }));

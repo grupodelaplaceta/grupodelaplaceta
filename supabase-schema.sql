@@ -115,7 +115,90 @@ CREATE TABLE IF NOT EXISTS fotos_likes (
   UNIQUE(foto_url, usuario_id)
 );
 
--- 10. CONTENIDOS
+-- 10. TRIBUTOS
+CREATE TABLE IF NOT EXISTS tributos_contribuyentes (
+  id TEXT PRIMARY KEY,
+  placeta_id TEXT UNIQUE NOT NULL,
+  dip TEXT UNIQUE,
+  nombre TEXT NOT NULL,
+  tipo_sujeto TEXT DEFAULT 'Fisico',
+  iban TEXT UNIQUE,
+  estado_fiscal TEXT DEFAULT 'Al Dia',
+  roles_json JSONB DEFAULT '[]',
+  fecha_alta_tributos TIMESTAMPTZ DEFAULT NOW(),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS tributos_declaraciones (
+  id TEXT PRIMARY KEY,
+  contributor_id TEXT REFERENCES tributos_contribuyentes(id),
+  placeta_id TEXT,
+  mes_periodo TEXT NOT NULL,
+  cuenta_id_blp TEXT,
+  patrimonio_medio REAL DEFAULT 0,
+  indice_acumulacion REAL DEFAULT 0,
+  cuota_irm REAL DEFAULT 0,
+  cuota_igf REAL DEFAULT 0,
+  exencion_aplicada BOOLEAN DEFAULT FALSE,
+  dias_declarados_banco INTEGER DEFAULT 0,
+  dias_reconstruidos_crm INTEGER DEFAULT 0,
+  dias_activos_mes INTEGER DEFAULT 30,
+  pdf_hash TEXT,
+  estado_pago TEXT DEFAULT 'Borrador',
+  bypass_junta_directiva BOOLEAN DEFAULT FALSE,
+  id_permiso_junta TEXT,
+  is_rectified BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS tributos_facturas (
+  id TEXT PRIMARY KEY,
+  numero_factura TEXT UNIQUE NOT NULL,
+  emisor_placeta_id TEXT NOT NULL,
+  receptor_placeta_id TEXT NOT NULL,
+  fecha_emision TIMESTAMPTZ DEFAULT NOW(),
+  base_imponible REAL DEFAULT 0,
+  total_iva REAL DEFAULT 0,
+  total_factura REAL DEFAULT 0,
+  transaction_id_blp TEXT,
+  csv_verificacion TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS tributos_lineas_factura (
+  id TEXT PRIMARY KEY,
+  factura_id TEXT REFERENCES tributos_facturas(id) ON DELETE CASCADE,
+  concepto_producto TEXT,
+  cantidad INTEGER DEFAULT 1,
+  precio_unitario REAL DEFAULT 0,
+  iva_porcentaje REAL DEFAULT 12,
+  subtotal_neto REAL DEFAULT 0,
+  subtotal_iva REAL DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS tributos_rectificaciones (
+  id TEXT PRIMARY KEY,
+  declaracion_id TEXT REFERENCES tributos_declaraciones(id),
+  estado_ajuste TEXT,
+  diferencia_delta REAL DEFAULT 0,
+  fecha_rectificacion TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS tributos_control_recaudacion (
+  id TEXT PRIMARY KEY,
+  declaracion_id TEXT REFERENCES tributos_declaraciones(id),
+  total_facturas REAL DEFAULT 0,
+  total_iva REAL DEFAULT 0,
+  total_recaudado REAL DEFAULT 0,
+  comentario TEXT,
+  fecha_control TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 11. CONTENIDOS
 CREATE TABLE IF NOT EXISTS contenidos (
   id BIGSERIAL PRIMARY KEY,
   titulo TEXT NOT NULL,

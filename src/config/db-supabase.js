@@ -475,6 +475,141 @@ export async function sbListDocumentosFirmados(limit = 100) {
   if (error) return [];
   return data || [];
 }
+// ── TRIBUTOS ─────────────────────────────────────────────────────────────────
+
+export async function sbGetTributosSummary() {
+  const sb = checkSupabase();
+
+  const { count: totalContribuyentes, error: contribError } = await sb.from('tributos_contribuyentes')
+    .select('id', { count: 'exact', head: true });
+  if (contribError) throw new Error(contribError.message);
+
+  const { count: totalDeclaraciones, error: declError } = await sb.from('tributos_declaraciones')
+    .select('id', { count: 'exact', head: true });
+  if (declError) throw new Error(declError.message);
+
+  const { count: totalFacturas, error: factError } = await sb.from('tributos_facturas')
+    .select('id', { count: 'exact', head: true });
+  if (factError) throw new Error(factError.message);
+
+  const { data: totalsFacturas, error: totalError } = await sb.from('tributos_facturas')
+    .select('total_factura,total_iva');
+  if (totalError) throw new Error(totalError.message);
+
+  const totalImporte = (totalsFacturas || []).reduce((sum, row) => sum + Number(row.total_factura || 0), 0);
+  const totalIva = (totalsFacturas || []).reduce((sum, row) => sum + Number(row.total_iva || 0), 0);
+
+  return {
+    contribuyentes: Number(totalContribuyentes || 0),
+    declaraciones: Number(totalDeclaraciones || 0),
+    facturas: Number(totalFacturas || 0),
+    importe_total: Number(totalImporte.toFixed(2)),
+    iva_total: Number(totalIva.toFixed(2))
+  };
+}
+
+export async function sbListTributosContributors(limit = 50) {
+  const sb = checkSupabase();
+  const { data, error } = await sb.from('tributos_contribuyentes')
+    .select('*')
+    .order('fecha_alta_tributos', { ascending: false }).limit(limit);
+  if (error) throw new Error(error.message);
+  return data || [];
+}
+
+export async function sbCreateTributosContributor(data) {
+  const sb = checkSupabase();
+  const { data: result, error } = await sb.from('tributos_contribuyentes')
+    .insert(data).select().single();
+  if (error) throw new Error(error.message);
+  return result;
+}
+
+export async function sbListTributosDeclarations(limit = 50) {
+  const sb = checkSupabase();
+  const { data, error } = await sb.from('tributos_declaraciones')
+    .select('*')
+    .order('created_at', { ascending: false }).limit(limit);
+  if (error) throw new Error(error.message);
+  return data || [];
+}
+
+export async function sbListTributosInvoices({ limit = 50 } = {}) {
+  const sb = checkSupabase();
+  const { data, error } = await sb.from('tributos_facturas')
+    .select('*')
+    .order('fecha_emision', { ascending: false }).limit(limit);
+  if (error) throw new Error(error.message);
+  return data || [];
+}
+
+export async function sbCreateTributosInvoice(payload) {
+  const sb = checkSupabase();
+  const lines = Array.isArray(payload.lineas) ? payload.lineas : [];
+  let baseImponible = Number(payload.base_imponible || 0);
+  let totalIva = Number(payload.total_iva || 0);
+  let totalFactura = Number(payload.total_factura || 0);
+
+  if (lines.length > 0) {
+    baseImponible = 0;
+    totalIva = 0;
+    totalFactura = 0;
+    for (const line of lines) {
+      const cantidad = Number(line.cantidad || 0);
+      const precio = Number(line.precio_unitario || 0);
+      const ivaPct = Number(line.iva_porcentaje || 0);
+      const subtotalNeto = cantidad * precio;
+      const subtotalIva = subtotalNeto * ivaPct / 100;
+      baseImponible += subtotalNeto;
+      totalIva += subtotalIva;
+      totalFactura += subtotalNeto + subtotalIva;
+      line.subtotal_neto = Number(subtotalNeto.toFixed(2));
+      line.subtotal_iva = Number(subtotalIva.toFixed(2));
+    }
+    totalIva = Number(totalIva.toFixed(2));
+    totalFactura = Number(totalFactura.toFixed(2));
+    baseImponible = Number(baseImponible.toFixed(2));
+  }
+
+  const invoicePayload = {
+    id: payload.id,
+    numero_factura: payload.numero_factura,
+    emisor_placeta_id: payload.emisor_placeta_id,
+    receptor_placeta_id: payload.receptor_placeta_id,
+    fecha_emision: payload.fecha_emision || new Date().toISOString(),
+    base_imponible: baseImponible,
+    total_iva: totalIva,
+    total_factura: totalFactura,
+    transaction_id_blp: payload.transaction_id_blp || null,
+    csv_verificacion: payload.csv_verificacion || null
+  };
+
+  const { data: invoice, error: invoiceError } = await sb.from('tributos_facturas')
+    .insert(invoicePayload).select().single();
+  if (invoiceError) throw new Error(invoiceError.message);
+
+  const lines = Array.isArray(payload.lineas) ? payload.lineas : [];
+  if (lines.length > 0) {
+    const lineItems = lines.map((line) => ({
+      id: line.id || `${invoice.id}-${String(Date.now())}`,
+      factura_id: invoice.id,
+      concepto_producto: line.concepto_producto,
+      cantidad: Number(line.cantidad) || 0,
+      precio_unitario: Number(line.precio_unitario) || 0,
+      iva_porcentaje: Number(line.iva_porcentaje) || 0,
+      subtotal_neto: Number(line.subtotal_neto) || 0,
+      subtotal_iva: Number(line.subtotal_iva) || 0
+    }));
+    const { error: linesError } = await sb.from('tributos_lineas_factura').insert(lineItems);
+    if (linesError) throw new Error(linesError.message);
+  }
+
+  const { data: lineData, error: lineFetchError } = await sb.from('tributos_lineas_factura')
+    .select('*').eq('factura_id', invoice.id);
+  if (lineFetchError) throw new Error(lineFetchError.message);
+
+  return { ...invoice, lineas: lineData || [] };
+}
 
 // ── OAUTH ───────────────────────────────────────────────────────────────────
 
