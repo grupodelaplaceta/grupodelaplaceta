@@ -40,15 +40,27 @@ router.post('/login', async (req, res) => {
     let localUser;
     try { localUser = await sbFindSolicitante(alias); } catch (e) { localUser = null; }
 
-    // Fallback a SQLite (seed local)
-    if (!localUser || !localUser.password_hash) {
+    // Si Supabase devolvió usuario pero sin password_hash, ignorar
+    if (localUser && !localUser.password_hash) localUser = null;
+
+    let validLocal = false;
+    if (localUser) {
+      try { validLocal = await bcrypt.compare(password, localUser.password_hash); } catch (e) { validLocal = false; }
+    }
+
+    // Fallback a SQLite si Supabase no tiene la password correcta
+    if (!validLocal) {
       try {
         const db = getDb();
-        localUser = db.prepare('SELECT * FROM solicitantes WHERE alias = ?').get(alias);
+        const sqliteUser = db.prepare('SELECT * FROM solicitantes WHERE alias = ?').get(alias);
+        if (sqliteUser) {
+          try { validLocal = await bcrypt.compare(password, sqliteUser.password_hash); } catch (e) { validLocal = false; }
+          if (validLocal) localUser = sqliteUser;
+        }
       } catch (e) { localUser = null; }
     }
 
-    if (localUser && localUser.password_hash) {
+    if (localUser && validLocal) {
       const validLocal = await bcrypt.compare(password, localUser.password_hash);
       if (validLocal) {
         const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';

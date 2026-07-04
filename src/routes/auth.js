@@ -20,13 +20,28 @@ router.post('/login', async (req, res) => {
     let usuario = null;
     try { usuario = await sbFindSolicitante(alias); } catch (e) {}
 
-    // Fallback a SQLite (bancario legacy)
-    if (!usuario) {
-      const db = getDb();
-      usuario = db.prepare('SELECT * FROM solicitantes WHERE alias = ?').get(alias);
+    // Si Supabase devolvió usuario pero sin password_hash, ignorar
+    if (usuario && !usuario.password_hash) usuario = null;
+
+    // Función helper para verificar password
+    let validPassword = false;
+    if (usuario) {
+      try { validPassword = await bcrypt.compare(password, usuario.password_hash); } catch (e) { validPassword = false; }
     }
 
-    if (!usuario) return res.status(401).json({ error: 'Credenciales inválidas' });
+    // Fallback a SQLite (bancario legacy) si Supabase falló
+    if (!validPassword || !usuario) {
+      try {
+        const db = getDb();
+        const sqliteUser = db.prepare('SELECT * FROM solicitantes WHERE alias = ?').get(alias);
+        if (sqliteUser) {
+          try { validPassword = await bcrypt.compare(password, sqliteUser.password_hash); } catch (e) { validPassword = false; }
+          if (validPassword) usuario = sqliteUser;
+        }
+      } catch (e) { /* ignore */ }
+    }
+
+    if (!usuario || !validPassword) return res.status(401).json({ error: 'Credenciales inválidas' });
 
     // Verificar estado
     if (usuario.estado === 'expulsado') return res.status(403).json({ error: 'Cuenta expulsada. Contacte a la Junta Directiva.' });
