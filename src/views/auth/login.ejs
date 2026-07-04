@@ -91,9 +91,7 @@
     }
 
     function demoLogin(tipo) {
-      const creds = tipo === 'admin'
-        ? { alias: 'admin', password: 'admin123' }
-        : { alias: '11111111D', password: 'Demo1234!' };
+      const creds = { alias: '11111111D', password: 'Demo1234!' };
 
       document.getElementById('loginButtons').style.display = 'none';
       document.getElementById('loginLoading').classList.add('active');
