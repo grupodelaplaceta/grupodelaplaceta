@@ -82,6 +82,12 @@
       url.searchParams.set('platform', 'web');
       url.searchParams.set('state', crypto.randomUUID());
       window.location.href = url.toString();
+      // Si tras 5s sigue aquí, mostrar error
+      setTimeout(function() {
+        mostrarError('PlacetaID remoto no disponible. Usa los botones de acceso rápido.');
+        document.getElementById('loginButtons').style.display = 'block';
+        document.getElementById('loginLoading').classList.remove('active');
+      }, 5000);
     }
 
     function demoLogin(tipo) {
