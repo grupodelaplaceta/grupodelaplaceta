@@ -16,11 +16,10 @@
         <span class="sidebar-logo">🏛️</span>
         <span class="sidebar-title">GDLP CRM</span>
       </a>
-      <button class="sidebar-toggle" onclick="document.getElementById('sidebar').classList.toggle('collapsed')" aria-label="Colapsar menú">☰</button>
+      <button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Colapsar menú" id="sidebarToggle">☰</button>
     </div>
 
     <nav class="sidebar-nav">
-      <!-- Panel -->
       <div class="sidebar-group">
         <div class="sidebar-group-title">Panel</div>
         <a href="/admin/dashboard" class="sidebar-link <%= pathActual === '/admin/dashboard' ? 'active' : '' %>">
@@ -28,7 +27,6 @@
         </a>
       </div>
 
-      <!-- Identidad -->
       <div class="sidebar-group">
         <div class="sidebar-group-title">Identidad</div>
         <a href="/admin/identidad" class="sidebar-link <%= pathActual.startsWith('/admin/identidad') ? 'active' : '' %>">
@@ -36,7 +34,6 @@
         </a>
       </div>
 
-      <!-- Económico-Financiero -->
       <div class="sidebar-group">
         <div class="sidebar-group-title">Económico-Financiero</div>
         <a href="/admin/bancario" class="sidebar-link <%= pathActual.startsWith('/admin/bancario') ? 'active' : '' %>">
@@ -50,7 +47,6 @@
         </a>
       </div>
 
-      <!-- Ocio y Cultura -->
       <div class="sidebar-group">
         <div class="sidebar-group-title">Ocio y Cultura</div>
         <a href="/admin/ocio" class="sidebar-link <%= pathActual.startsWith('/admin/ocio') ? 'active' : '' %>">
@@ -58,7 +54,6 @@
         </a>
       </div>
 
-      <!-- Recursos -->
       <div class="sidebar-group">
         <div class="sidebar-group-title">Recursos</div>
         <a href="/admin/recursos" class="sidebar-link <%= pathActual.startsWith('/admin/recursos') ? 'active' : '' %>">
@@ -66,7 +61,6 @@
         </a>
       </div>
 
-      <!-- Justicia -->
       <div class="sidebar-group">
         <div class="sidebar-group-title">Justicia</div>
         <a href="/admin/justicia" class="sidebar-link <%= pathActual.startsWith('/admin/justicia') ? 'active' : '' %>">
@@ -74,7 +68,6 @@
         </a>
       </div>
 
-      <!-- Secretaría -->
       <div class="sidebar-group">
         <div class="sidebar-group-title">Secretaría</div>
         <a href="/admin/rgpd" class="sidebar-link <%= pathActual.startsWith('/admin/rgpd') ? 'active' : '' %>">
@@ -91,7 +84,6 @@
         </a>
       </div>
 
-      <!-- Voley Club -->
       <div class="sidebar-group">
         <div class="sidebar-group-title">Voley Club</div>
         <a href="/admin/voley-club" class="sidebar-link <%= pathActual.startsWith('/admin/voley-club') ? 'active' : '' %>">
@@ -111,17 +103,15 @@
     </div>
   </aside>
 
-  <!-- Overlay para móvil -->
   <div class="sidebar-overlay" onclick="document.getElementById('sidebar').classList.remove('open')"></div>
 
   <!-- ── Main Content ─────────────────────────────────────────────────────── -->
   <div class="main-wrapper">
-    <!-- Top bar móvil -->
     <div class="topbar-mobile">
       <button class="hamburger" onclick="document.getElementById('sidebar').classList.toggle('open')" aria-label="Abrir menú">☰</button>
       <span class="topbar-mobile-title">🏛️ GDLP CRM</span>
       <form action="/api/auth/logout" method="POST" class="topbar-mobile-logout">
-        <button type="submit" class="btn-logout btn-sm">Salir</button>
+        <button type="submit" class="btn btn-sm btn-glass" style="color:white;border-color:rgba(255,255,255,0.2)">Salir</button>
       </form>
     </div>
 
@@ -131,14 +121,13 @@
 
     <footer class="footer">
       <div class="footer-content">
-        <span>Grupo de La Placeta · Normativa Institucional Unificada v5.0</span>
-        <span>Año <%= anoActual %> · Sistema CRM v1.0</span>
+        <span>🏛️ Grupo de La Placeta · Normativa v5.0</span>
+        <span>Año <%= anoActual %> · CRM v2.0</span>
       </div>
     </footer>
   </div>
 
   <% } else { %>
-  <!-- Sin sesión: layout mínimo -->
   <main class="main-content">
     <%- body %>
   </main>

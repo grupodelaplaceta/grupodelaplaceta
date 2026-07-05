@@ -1,0 +1,97 @@
+<section class="hero-small">
+  <h1>📄 Solicitar Factura</h1>
+  <p>Emite una factura con IVA del 12% — Art. 4.17 del Código Normativo Interno</p>
+</section>
+
+<section class="section">
+  <div class="section-inner tramite-form">
+
+    <div class="legal-notice legal-sim">
+      <span class="legal-notice-icon">📋</span>
+      <div>
+        <strong>Emisión de facturas del ecosistema.</strong> Las facturas emitidas en Tributos de La Placeta llevan un IVA del 12% sobre la base imponible. Cada factura genera un CSV (Código Seguro de Verificación) único.
+      </div>
+    </div>
+
+    <div class="form-card">
+      <% if (typeof resultado !== 'undefined' && resultado) { %>
+      <div class="alert alert-success" style="text-align:center">
+        <div style="font-size:48px;margin-bottom:10px">✅</div>
+        <strong style="font-size:20px">Factura emitida correctamente</strong>
+      </div>
+      <div style="background:var(--accent-soft);border-radius:12px;padding:16px;margin:14px 0;text-align:center">
+        <div style="font-size:12px;color:var(--text-light);margin-bottom:4px">Nº FACTURA</div>
+        <div style="font-size:20px;font-weight:900;color:var(--accent);letter-spacing:1px"><%= resultado.numero_factura %></div>
+        <div style="font-size:12px;color:var(--text-light);margin-top:6px">CSV: <strong style="font-family:monospace"><%= resultado.csv_verificacion %></strong></div>
+        <div style="display:flex;justify-content:center;gap:24px;margin-top:12px;font-size:14px">
+          <div><strong>Base:</strong> <%= (resultado.base_imponible || 0).toFixed(2) %> Pz</div>
+          <div><strong>IVA (12%):</strong> <%= (resultado.total_iva || 0).toFixed(2) %> Pz</div>
+          <div><strong>Total:</strong> <%= (resultado.total_factura || 0).toFixed(2) %> Pz</div>
+        </div>
+      </div>
+      <a href="/tramites/solicitar-factura" class="btn btn-primary btn-block">📄 Emitir otra factura</a>
+
+      <% } else { %>
+      <h2>Datos de la factura</h2>
+      <p>Rellena los datos para emitir una factura con IVA del 12%.</p>
+
+      <% if (typeof error !== 'undefined' && error) { %>
+      <div class="alert alert-error"><%= error %></div>
+      <% } %>
+
+      <form method="POST" action="/tramites/solicitar-factura">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Nº Factura *</label>
+            <input type="text" name="numero_factura" required placeholder="F-2026-0001">
+          </div>
+          <div class="form-group">
+            <label>Fecha de emisión</label>
+            <input type="date" name="fecha_emision" value="<%= new Date().toISOString().slice(0,10) %>">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Emisor (Placeta ID) *</label>
+            <input type="text" name="emisor_placeta_id" required placeholder="PID-MKL" value="<%= usuario ? 'PID-' + usuario.alias?.toUpperCase() : '' %>">
+          </div>
+          <div class="form-group">
+            <label>Receptor (Placeta ID) *</label>
+            <input type="text" name="receptor_placeta_id" required placeholder="PID-UNI">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Concepto / Producto *</label>
+          <input type="text" name="concepto_producto" required placeholder="Descripción del servicio o producto">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Cantidad</label>
+            <input type="number" name="cantidad" min="1" value="1">
+          </div>
+          <div class="form-group">
+            <label>Precio unitario (Pz) *</label>
+            <input type="number" step="0.01" name="precio_unitario" min="0" required value="100">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>IVA (%)</label>
+          <input type="number" step="0.01" name="iva_porcentaje" min="0" value="12">
+          <span class="form-hint">Por defecto 12% según el Código Normativo Interno.</span>
+        </div>
+
+        <div class="section-divider">Aceptación</div>
+
+        <div class="checkbox-group">
+          <div class="checkbox-item">
+            <input type="checkbox" id="fac_accept" required>
+            <label for="fac_accept">Confirmo que los datos facilitados son correctos y acepto la emisión de esta factura con IVA del <%= typeof ivaPorcentaje !== 'undefined' ? ivaPorcentaje : '12' %>%.</label>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block" style="margin-top:20px">📄 Emitir factura</button>
+      </form>
+      <% } %>
+    </div>
+  </div>
+</section>

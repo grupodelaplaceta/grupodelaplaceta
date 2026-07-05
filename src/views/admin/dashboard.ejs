@@ -1,17 +1,17 @@
 <div class="dashboard">
   <div class="dashboard-header">
     <h1>Panel de Administración</h1>
-    <p class="dashboard-date">Año 2026 · Sistema de Gestión Institucional</p>
+    <p class="dashboard-date">Año 2026 · Sistema de Gestión Institucional · CRM v2.0</p>
   </div>
 
-  <!-- Tarjetas de resumen -->
+  <!-- KPI Cards -->
   <div class="stats-grid">
     <div class="stat-card stat-primary">
       <div class="stat-icon">👥</div>
       <div class="stat-content">
         <span class="stat-value"><%= totalUsuarios %></span>
         <span class="stat-label">Total Usuarios</span>
-        <span class="stat-detail"><%= activos %> activos · <%= pendientes %> pendientes</span>
+        <span class="stat-detail"><span class="status-dot green"></span><%= activos %> activos · <span class="status-dot yellow"></span><%= pendientes %> pendientes</span>
       </div>
     </div>
     <div class="stat-card stat-success">
@@ -19,7 +19,7 @@
       <div class="stat-content">
         <span class="stat-value"><%= totalCuentas %></span>
         <span class="stat-label">Cuentas Bancarias</span>
-        <span class="stat-detail"><%= (masaMonetaria / 1000).toFixed(1) %>K Pz en circulación</span>
+        <span class="stat-detail">💰 <%= (masaMonetaria / 1000).toFixed(1) %>K Pz en circulación</span>
       </div>
     </div>
     <div class="stat-card stat-warning">
@@ -27,7 +27,7 @@
       <div class="stat-content">
         <span class="stat-value"><%= expedientesAbiertos %></span>
         <span class="stat-label">Expedientes Abiertos</span>
-        <span class="stat-detail">Pendientes de resolución</span>
+        <span class="stat-detail"><span class="status-dot red"></span> Pendientes de resolución</span>
       </div>
     </div>
     <div class="stat-card stat-info">
@@ -35,20 +35,30 @@
       <div class="stat-content">
         <span class="stat-value" id="totalDocumentos">—</span>
         <span class="stat-label">Documentos</span>
-        <span class="stat-detail" id="docPendientes">Cargando...</span>
+        <span class="stat-detail" id="docPendientes"><span class="spinner"></span> Cargando...</span>
       </div>
     </div>
   </div>
 
   <!-- Acciones rápidas -->
   <div class="section">
-    <h2>Acciones Rápidas</h2>
+    <div class="section-header">
+      <div>
+        <h2>Acciones Rápidas</h2>
+        <p class="section-desc">Accesos directos a los módulos del sistema</p>
+      </div>
+    </div>
     <div class="quick-actions">
       <a href="/admin/identidad" class="action-card">
         <span class="action-icon">📋</span>
         <span class="action-title">Gestionar Altas</span>
         <span class="action-desc">Revisar y aprobar solicitudes pendientes</span>
         <span class="action-badge" id="pendientesBadge"><%= pendientes %> pendientes</span>
+      </a>
+      <a href="/admin/tributos" class="action-card">
+        <span class="action-icon">🧾</span>
+        <span class="action-title">Tributos</span>
+        <span class="action-desc">Gestión de contribuyentes, IVA y declaraciones</span>
       </a>
       <a href="/admin/justicia" class="action-card">
         <span class="action-icon">⚖️</span>
@@ -91,7 +101,12 @@
 
   <!-- Últimos logs -->
   <div class="section">
-    <h2>Actividad Reciente</h2>
+    <div class="section-header">
+      <div>
+        <h2>Actividad Reciente</h2>
+        <p class="section-desc">Últimos movimientos registrados en el sistema</p>
+      </div>
+    </div>
     <div class="table-container">
       <table class="data-table">
         <thead>

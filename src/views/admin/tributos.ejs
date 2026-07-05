@@ -1,9 +1,10 @@
 <div class="dashboard">
   <div class="dashboard-header">
     <h1>Gestión de Tributos</h1>
-    <p class="dashboard-date">Módulo Tributario - Control de contribuyentes, declaraciones e IVA</p>
+    <p class="dashboard-date">Módulo Tributario TLP · Control de contribuyentes, declaraciones e IVA</p>
   </div>
 
+  <!-- KPI Cards -->
   <div class="stats-grid">
     <div class="stat-card stat-primary">
       <div class="stat-icon">🧾</div>
@@ -39,261 +40,549 @@
     </div>
   </div>
 
+  <!-- Inhibición Switch -->
   <div class="section">
-    <h2>Acciones rápidas</h2>
+    <div class="inhibition-switch">
+      <div>
+        <div class="switch-label">🔒 Inhibición de Recaudación del Periodo</div>
+        <div class="switch-desc" id="inhibitionDesc">Activado → bloquea cobros automáticos el día 5</div>
+      </div>
+      <label class="toggle-switch">
+        <input type="checkbox" id="inhibitionToggle" onchange="toggleInhibicion(this.checked)">
+        <span class="slider"></span>
+      </label>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="section">
+    <div class="section-header">
+      <div>
+        <h2>Acciones Rápidas</h2>
+        <p class="section-desc">Operaciones frecuentes del módulo tributario</p>
+      </div>
+    </div>
     <div class="quick-actions">
       <a href="#" class="action-card" onclick="cargarTributosResumen(); return false;">
         <span class="action-icon">🔄</span>
         <span class="action-title">Actualizar panel</span>
         <span class="action-desc">Refrescar métricas tributarias</span>
       </a>
-      <a href="#" class="action-card" onclick="cargarContribuyentes(); return false;">
-        <span class="action-icon">👥</span>
-        <span class="action-title">Ver contribuyentes</span>
-        <span class="action-desc">Lista de registros tributarios</span>
+      <a href="#" class="action-card" onclick="abrirModal('modalContribuyente'); return false;">
+        <span class="action-icon">➕</span>
+        <span class="action-title">Nuevo contribuyente</span>
+        <span class="action-desc">Dar de alta en el censo fiscal</span>
       </a>
-      <a href="#" class="action-card" onclick="cargarFacturas(); return false;">
+      <a href="#" class="action-card" onclick="abrirModal('modalFactura'); return false;">
         <span class="action-icon">📄</span>
-        <span class="action-title">Ver facturas</span>
-        <span class="action-desc">Historial de facturas emitidas</span>
+        <span class="action-title">Nueva factura</span>
+        <span class="action-desc">Crear factura con IVA del 12%</span>
       </a>
-      <a href="#" class="action-card" onclick="cargarDeclaraciones(); return false;">
+      <a href="#" class="action-card" onclick="abrirModal('modalDeclaracion'); return false;">
         <span class="action-icon">📑</span>
-        <span class="action-title">Ver declaraciones</span>
-        <span class="action-desc">Historial de declaraciones</span>
+        <span class="action-title">Nueva declaración</span>
+        <span class="action-desc">Crear declaración mensual</span>
       </a>
     </div>
   </div>
 
+  <!-- ── Daily Declarations / Reconciliation ───────────────────────────── -->
   <div class="section">
-    <h2>Registrar contribuyente</h2>
-    <form data-api-form="/api/admin/tributos/contributors" class="form-grid">
-      <label>
-        Placeta ID
-        <input type="text" name="placeta_id" required placeholder="placeta123" />
-      </label>
-      <label>
-        DIP
-        <input type="text" name="dip" required placeholder="DIP123456" />
-      </label>
-      <label>
-        Nombre
-        <input type="text" name="nombre" required placeholder="Nombre completo" />
-      </label>
-      <label>
-        Tipo sujeto
-        <select name="tipo_sujeto">
-          <option value="Fisico">Físico</option>
-          <option value="Empresa">Empresa</option>
+    <div class="section-header">
+      <div>
+        <h2>📅 Conciliación de Declaraciones Diarias</h2>
+        <p class="section-desc">Reconstruye saldos diarios desde transacciones bancarias y calcula patrimonio medio</p>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <select id="reconcileContribuyente" style="width:180px;padding:8px 12px;border:2px solid var(--line);border-radius:var(--radius);font-family:var(--font);font-size:13px">
+          <option value="">Seleccionar...</option>
         </select>
-      </label>
-      <label>
-        Roles
-        <input type="text" name="roles_json" placeholder="ciudadano,contribuyente" />
-      </label>
-      <label>
-        IBAN
-        <input type="text" name="iban" placeholder="ES..." />
-      </label>
-      <button class="btn btn-primary" type="submit">Crear contribuyente</button>
-    </form>
-  </div>
+        <input type="month" id="reconcileMes" style="width:160px;padding:8px 12px;border:2px solid var(--line);border-radius:var(--radius);font-family:var(--font);font-size:13px">
+        <button class="btn btn-primary btn-sm" onclick="ejecutarReconciliacion()">🔄 Reconciliar</button>
+        <button class="btn btn-outline btn-sm" onclick="cargarEstadoReconciliacion()">📊 Estado</button>
+      </div>
+    </div>
 
-  <div class="section">
-    <h2>Crear factura</h2>
-    <form id="crearFacturaForm" data-api-form="/api/admin/tributos/invoices" class="form-grid">
-      <label>
-        Nº factura
-        <input type="text" name="numero_factura" required placeholder="F-0001" />
-      </label>
-      <label>
-        Emisor Placeta ID
-        <input type="text" name="emisor_placeta_id" required placeholder="placeta123" />
-      </label>
-      <label>
-        Receptor Placeta ID
-        <input type="text" name="receptor_placeta_id" required placeholder="placeta456" />
-      </label>
-      <label>
-        Concepto
-        <input type="text" name="concepto_producto" required placeholder="Servicio de asesoría" />
-      </label>
-      <label>
-        Cantidad
-        <input type="number" name="cantidad" min="1" value="1" />
-      </label>
-      <label>
-        Precio unitario
-        <input type="number" step="0.01" name="precio_unitario" min="0" value="0" />
-      </label>
-      <label>
-        IVA %
-        <input type="number" step="0.01" name="iva_porcentaje" min="0" value="12" />
-      </label>
-      <button class="btn btn-success" type="submit">Crear factura</button>
-    </form>
-  </div>
+    <!-- Resultados de reconciliación -->
+    <div id="reconciliationResults" style="display:none">
+      <div class="stats-grid" style="margin-bottom:16px" id="reconciliationSummary"></div>
+      <div class="table-container">
+        <table class="data-table" id="dailyBalancesTable">
+          <thead>
+            <tr>
+              <th>Día</th>
+              <th>Fecha</th>
+              <th>Saldo (Pz)</th>
+              <th>Transacciones</th>
+              <th>Origen</th>
+            </tr>
+          </thead>
+          <tbody id="dailyBalancesBody">
+            <tr><td colspan="5" class="loading-cell">Selecciona un contribuyente y ejecuta reconciliación</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
 
-  <div class="section">
-    <h2>Últimos contribuyentes</h2>
-    <div class="table-container">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Placeta ID</th>
-            <th>Nombre</th>
-            <th>DIP</th>
-            <th>Tipo</th>
-            <th>Estado fiscal</th>
-            <th>Alta</th>
-          </tr>
-        </thead>
-        <tbody id="contribuyentesTable">
-          <tr><td colspan="6" class="loading-cell">Cargando contribuyentes...</td></tr>
-        </tbody>
-      </table>
+    <!-- Estado de reconciliación general -->
+    <div id="reconciliationStatus" style="display:none;margin-top:16px">
+      <div class="table-container">
+        <table class="data-table" id="reconStatusTable">
+          <thead>
+            <tr>
+              <th>Contribuyente</th>
+              <th>Tipo</th>
+              <th>Días mes</th>
+              <th>Conciliados</th>
+              <th>Pendientes</th>
+              <th>Patrimonio Medio</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
+          <tbody id="reconStatusBody">
+            <tr><td colspan="7" class="loading-cell">Cargando estado...</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 
+  <!-- Secciones con tabs -->
   <div class="section">
-    <h2>Facturas recientes</h2>
-    <div class="table-container">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Factura</th>
-            <th>Emisor</th>
-            <th>Receptor</th>
-            <th>Base</th>
-            <th>IVA</th>
-            <th>Total</th>
-            <th>CSV</th>
-            <th>Fecha</th>
-          </tr>
-        </thead>
-        <tbody id="facturasTable">
-          <tr><td colspan="8" class="loading-cell">Cargando facturas...</td></tr>
-        </tbody>
-      </table>
+    <div class="section-header">
+      <div>
+        <h2>Registros Tributarios</h2>
+        <p class="section-desc">Consulta y gestión de datos fiscales</p>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <input type="search" data-search="#contribuyentesTable" placeholder="🔍 Buscar contribuyente..." style="width:220px;padding:8px 12px;border:2px solid var(--line);border-radius:var(--radius);font-family:var(--font);font-size:13px">
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div style="display:flex;gap:4px;margin-bottom:16px;border-bottom:2px solid var(--line);padding-bottom:0">
+      <button class="tab-btn active" data-tab="tabContribuyentes" onclick="switchTab(this,'tabContribuyentes')" style="padding:10px 20px;border:none;background:none;font-weight:600;font-size:14px;font-family:var(--font);cursor:pointer;color:var(--p500);border-bottom:3px solid var(--p500);margin-bottom:-2px;transition:var(--transition)">👥 Contribuyentes</button>
+      <button class="tab-btn" data-tab="tabFacturas" onclick="switchTab(this,'tabFacturas')" style="padding:10px 20px;border:none;background:none;font-weight:600;font-size:14px;font-family:var(--font);cursor:pointer;color:var(--text-light);transition:var(--transition)">📄 Facturas</button>
+      <button class="tab-btn" data-tab="tabDeclaraciones" onclick="switchTab(this,'tabDeclaraciones')" style="padding:10px 20px;border:none;background:none;font-weight:600;font-size:14px;font-family:var(--font);cursor:pointer;color:var(--text-light);transition:var(--transition)">📑 Declaraciones</button>
+    </div>
+
+    <!-- Contribuyentes -->
+    <div id="tabContribuyentes" class="tab-content">
+      <div class="table-container">
+        <table class="data-table" id="contribuyentesTable">
+          <thead>
+            <tr>
+              <th>Placeta ID</th>
+              <th>Nombre</th>
+              <th>DIP</th>
+              <th>Tipo</th>
+              <th>Estado fiscal</th>
+              <th>Roles</th>
+              <th>Alta</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="7" class="loading-cell">Cargando contribuyentes...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Facturas -->
+    <div id="tabFacturas" class="tab-content" style="display:none">
+      <div class="table-container">
+        <table class="data-table" id="facturasTable">
+          <thead>
+            <tr>
+              <th>Factura</th>
+              <th>Emisor</th>
+              <th>Receptor</th>
+              <th>Base</th>
+              <th>IVA</th>
+              <th>Total</th>
+              <th>CSV</th>
+              <th>Fecha</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="9" class="loading-cell">Cargando facturas...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Declaraciones -->
+    <div id="tabDeclaraciones" class="tab-content" style="display:none">
+      <div class="table-container">
+        <table class="data-table" id="declaracionesTable">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Placeta ID</th>
+              <th>Periodo</th>
+              <th>Cuota IRM</th>
+              <th>Cuota IGF</th>
+              <th>Estado</th>
+              <th>Bypass</th>
+              <th>Fecha</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="9" class="loading-cell">Cargando declaraciones...</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
+</div>
 
-  <div class="section">
-    <h2>Declaraciones recientes</h2>
-    <div class="table-container">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Placeta ID</th>
-            <th>Periodo</th>
-            <th>Cuota IRM</th>
-            <th>Cuota IGF</th>
-            <th>Estado</th>
-            <th>Fecha</th>
-          </tr>
-        </thead>
-        <tbody id="declaracionesTable">
-          <tr><td colspan="7" class="loading-cell">Cargando declaraciones...</td></tr>
-        </tbody>
-      </table>
+<!-- ── Modal: Nuevo Contribuyente ──────────────────────────────────────────── -->
+<div class="modal-overlay" id="modalContribuyente">
+  <div class="modal-window">
+    <div class="modal-header">
+      <h3>➕ Nuevo Contribuyente</h3>
+      <button class="modal-close" data-modal-close>✕</button>
+    </div>
+    <div class="modal-body">
+      <form data-api-form="/api/admin/tributos/contributors" class="form-grid" style="box-shadow:none;padding:0;border:none;background:none">
+        <label>Placeta ID <input type="text" name="placeta_id" required placeholder="PID-MKL"></label>
+        <label>DIP <input type="text" name="dip" required placeholder="DIP123456"></label>
+        <label>Nombre <input type="text" name="nombre" required placeholder="Nombre completo"></label>
+        <label>Tipo sujeto
+          <select name="tipo_sujeto">
+            <option value="Fisico">Persona Física</option>
+            <option value="Empresa">Empresa</option>
+          </select>
+        </label>
+        <label>Roles <input type="text" name="roles_json" placeholder="ciudadano"></label>
+        <label>IBAN <input type="text" name="iban" placeholder="GDLP-..."></label>
+        <div style="grid-column:1/-1;display:flex;gap:12px;justify-content:flex-end;margin-top:8px">
+          <button type="button" class="btn btn-outline" data-modal-close>Cancelar</button>
+          <button class="btn btn-primary" type="submit">Crear contribuyente</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: Nueva Factura ────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="modalFactura">
+  <div class="modal-window">
+    <div class="modal-header">
+      <h3>📄 Nueva Factura</h3>
+      <button class="modal-close" data-modal-close>✕</button>
+    </div>
+    <div class="modal-body">
+      <form data-api-form="/api/admin/tributos/invoices" class="form-grid" style="box-shadow:none;padding:0;border:none;background:none">
+        <label>Nº Factura <input type="text" name="numero_factura" required placeholder="F-2026-0001"></label>
+        <label>Emisor Placeta ID <input type="text" name="emisor_placeta_id" required placeholder="PID-MKL"></label>
+        <label>Receptor Placeta ID <input type="text" name="receptor_placeta_id" required placeholder="PID-OTRO"></label>
+        <label>Concepto <input type="text" name="concepto_producto" required placeholder="Servicio de consultoría"></label>
+        <label>Cantidad <input type="number" name="cantidad" min="1" value="1"></label>
+        <label>Precio unitario (Pz) <input type="number" step="0.01" name="precio_unitario" min="0" value="0"></label>
+        <label>IVA % <input type="number" step="0.01" name="iva_porcentaje" min="0" value="12"></label>
+        <div style="grid-column:1/-1;display:flex;gap:12px;justify-content:flex-end;margin-top:8px">
+          <button type="button" class="btn btn-outline" data-modal-close>Cancelar</button>
+          <button class="btn btn-success" type="submit">Crear factura</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: Nueva Declaración ────────────────────────────────────────────── -->
+<div class="modal-overlay" id="modalDeclaracion">
+  <div class="modal-window">
+    <div class="modal-header">
+      <h3>📑 Nueva Declaración</h3>
+      <button class="modal-close" data-modal-close>✕</button>
+    </div>
+    <div class="modal-body">
+      <form data-api-form="/api/admin/tributos/declarations" class="form-grid" style="box-shadow:none;padding:0;border:none;background:none">
+        <label>Placeta ID <input type="text" name="placeta_id" required placeholder="PID-MKL"></label>
+        <label>Periodo (YYYY-MM) <input type="text" name="mes_periodo" required placeholder="2026-07"></label>
+        <label>Cuenta BLP <input type="text" name="cuenta_id_blp" placeholder="GDLP-..."></label>
+        <label>Patrimonio Medio <input type="number" step="0.01" name="patrimonio_medio" value="0"></label>
+        <label>Índice Acumulación <input type="number" step="0.0001" name="indice_acumulacion" value="0"></label>
+        <label>Cuota IRM <input type="number" step="0.01" name="cuota_irm" value="0"></label>
+        <label>Cuota IGF <input type="number" step="0.01" name="cuota_igf" value="0"></label>
+        <div style="grid-column:1/-1;display:flex;gap:12px;justify-content:flex-end;margin-top:8px">
+          <button type="button" class="btn btn-outline" data-modal-close>Cancelar</button>
+          <button class="btn btn-primary" type="submit">Crear declaración</button>
+        </div>
+      </form>
     </div>
   </div>
 </div>
 
 <script>
+  // ── Tab switching ──────────────────────────────────────────────────────────
+  function switchTab(btn, tabId) {
+    document.querySelectorAll('.tab-btn').forEach(b => {
+      b.style.color = 'var(--text-light)';
+      b.style.borderBottom = '3px solid transparent';
+      b.style.marginBottom = '-2px';
+    });
+    btn.style.color = 'var(--p500)';
+    btn.style.borderBottom = '3px solid var(--p500)';
+
+    document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+    document.getElementById(tabId).style.display = 'block';
+  }
+
+  // ── Inhibition Toggle ──────────────────────────────────────────────────────
+  async function toggleInhibicion(checked) {
+    try {
+      const res = await apiFetch('/api/admin/tributos/inhibition', {
+        method: 'PUT',
+        body: JSON.stringify({ estado_inhibicion_global: checked })
+      });
+      if (res.success) {
+        document.getElementById('inhibitionDesc').textContent = checked
+          ? '🟢 Activado → bloquea cobros automáticos el día 5'
+          : '🔴 Desactivado → autoriza compensación automática del BLP';
+        mostrarToast('success', checked ? '🔒 Inhibición activada' : '🔓 Inhibición desactivada');
+      }
+    } catch (e) {
+      mostrarToast('error', 'Error al cambiar estado de inhibición');
+      document.getElementById('inhibitionToggle').checked = !checked;
+    }
+  }
+
+  // ── Load inhibition state ─────────────────────────────────────────────────
+  async function cargarInhibicion() {
+    try {
+      const res = await apiFetch('/api/admin/tributos/inhibition');
+      const inhibido = res.estado_inhibicion_global !== false;
+      document.getElementById('inhibitionToggle').checked = inhibido;
+      document.getElementById('inhibitionDesc').textContent = inhibido
+        ? '🟢 Activado → bloquea cobros automáticos el día 5'
+        : '🔴 Desactivado → autoriza compensación automática del BLP';
+    } catch (e) { /* fallback */ }
+  }
+
+  // ── Load Summary ──────────────────────────────────────────────────────────
   async function cargarTributosResumen() {
     try {
       const res = await apiFetch('/api/admin/tributos/summary');
       document.getElementById('contribuyentesTotal').textContent = res.contribuyentes;
       document.getElementById('declaracionesTotal').textContent = res.declaraciones;
       document.getElementById('facturasTotal').textContent = res.facturas;
-      document.getElementById('importeTotal').textContent = new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(res.importe_total);
-      document.getElementById('ivaTotal').textContent = new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(res.iva_total);
-    } catch (e) {
-      console.error('[Tributos] Error cargar resumen:', e);
-    }
+      document.getElementById('importeTotal').textContent = formatMoneda(res.importe_total);
+      document.getElementById('ivaTotal').textContent = 'IVA total: ' + formatMoneda(res.iva_total);
+    } catch (e) { console.error('[Tributos] Error resumen:', e); }
   }
 
+  // ── Load Contributors ─────────────────────────────────────────────────────
   async function cargarContribuyentes() {
     try {
       const data = await apiFetch('/api/admin/tributos/contributors');
-      const tbody = document.getElementById('contribuyentesTable');
+      const tbody = document.querySelector('#contribuyentesTable tbody');
       if (!data.length) {
-        tbody.innerHTML = '<tr><td colspan="6" class="loading-cell">No hay contribuyentes registrados.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">No hay contribuyentes registrados.</td></tr>';
         return;
       }
-      tbody.innerHTML = data.map(item => `
-        <tr>
-          <td>${item.placeta_id}</td>
+      tbody.innerHTML = data.map(item => {
+        const roles = Array.isArray(item.roles_json) ? item.roles_json.join(', ') : (item.roles_json || '—');
+        const estado = item.estado_fiscal || '—';
+        const estadoBadge = estado === 'Al Dia' ? 'badge-activo' : estado === 'Moroso' ? 'badge-suspendido' : 'badge-pendiente';
+        return `<tr>
+          <td><strong>${item.placeta_id}</strong></td>
           <td>${item.nombre}</td>
           <td>${item.dip || '—'}</td>
-          <td>${item.tipo_sujeto || '—'}</td>
-          <td>${item.estado_fiscal || '—'}</td>
-          <td>${new Date(item.fecha_alta_tributos || item.created_at).toLocaleDateString('es-ES')}</td>
-        </tr>
-      `).join('');
+          <td><span class="pill ${item.tipo_sujeto === 'Empresa' ? 'pill-purple' : 'pill-green'}">${item.tipo_sujeto || '—'}</span></td>
+          <td><span class="badge ${estadoBadge}">${estado}</span></td>
+          <td style="font-size:12px">${roles}</td>
+          <td>${item.fecha_alta_tributos ? new Date(item.fecha_alta_tributos).toLocaleDateString('es-ES') : '—'}</td>
+        </tr>`;
+      }).join('');
     } catch (e) {
-      document.getElementById('contribuyentesTable').innerHTML = '<tr><td colspan="6" class="error-cell">Error al cargar contribuyentes.</td></tr>';
-      console.error('[Tributos] Error cargar contribuyentes:', e);
+      document.querySelector('#contribuyentesTable tbody').innerHTML = '<tr><td colspan="7" class="error-cell">Error al cargar contribuyentes</td></tr>';
     }
   }
 
+  // ── Load Invoices ─────────────────────────────────────────────────────────
   async function cargarFacturas() {
     try {
       const data = await apiFetch('/api/admin/tributos/invoices?limit=10');
-      const tbody = document.getElementById('facturasTable');
+      const tbody = document.querySelector('#facturasTable tbody');
       if (!data.length) {
-        tbody.innerHTML = '<tr><td colspan="8" class="loading-cell">No hay facturas registradas.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="loading-cell">No hay facturas registradas.</td></tr>';
         return;
       }
-      tbody.innerHTML = data.map(item => `
-        <tr>
-          <td>${item.numero_factura}</td>
+      tbody.innerHTML = data.map(item => {
+        const csv = item.csv_verificacion || '—';
+        return `<tr>
+          <td><strong>${item.numero_factura}</strong></td>
           <td>${item.emisor_placeta_id}</td>
           <td>${item.receptor_placeta_id}</td>
-          <td>${new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(item.base_imponible || 0)}</td>
-          <td>${new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(item.total_iva || 0)}</td>
-          <td>${new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(item.total_factura || 0)}</td>
-          <td style="font-size:11px;font-family:monospace">${item.csv_verificacion ? item.csv_verificacion.slice(0, 12)+'…' : '—'}</td>
-          <td>${new Date(item.fecha_emision || item.created_at).toLocaleDateString('es-ES')}</td>
-        </tr>
-      `).join('');
+          <td>${formatMoneda(item.base_imponible)}</td>
+          <td>${formatMoneda(item.total_iva)}</td>
+          <td><strong>${formatMoneda(item.total_factura)}</strong></td>
+          <td style="font-size:11px;font-family:monospace">${csv.length > 12 ? csv.slice(0,12)+'…' : csv}</td>
+          <td>${item.fecha_emision ? new Date(item.fecha_emision).toLocaleDateString('es-ES') : '—'}</td>
+          <td><button class="btn btn-sm btn-glass" onclick="mostrarToast('info','PDF: ${item.numero_factura}')" title="Descargar PDF">📄</button></td>
+        </tr>`;
+      }).join('');
     } catch (e) {
-      document.getElementById('facturasTable').innerHTML = '<tr><td colspan="8" class="error-cell">Error al cargar facturas.</td></tr>';
-      console.error('[Tributos] Error cargar facturas:', e);
+      document.querySelector('#facturasTable tbody').innerHTML = '<tr><td colspan="9" class="error-cell">Error al cargar facturas</td></tr>';
     }
   }
 
+  // ── Load Declarations ─────────────────────────────────────────────────────
   async function cargarDeclaraciones() {
     try {
       const data = await apiFetch('/api/admin/tributos/declarations');
-      const tbody = document.getElementById('declaracionesTable');
+      const tbody = document.querySelector('#declaracionesTable tbody');
       if (!data.length) {
-        tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">No hay declaraciones registradas.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="loading-cell">No hay declaraciones registradas.</td></tr>';
         return;
       }
-      tbody.innerHTML = data.map(item => `
-        <tr>
-          <td>${item.id}</td>
+      tbody.innerHTML = data.map(item => {
+        const estado = item.estado_pago || '—';
+        const estadoBadge = estado === 'Cobrado_Exito' ? 'badge-activo' : estado === 'Borrador' ? 'badge-pendiente' : estado === 'Emitido' ? 'badge-login' : 'badge-baja';
+        return `<tr>
+          <td style="font-size:11px;font-family:monospace">${(item.id || '').slice(0,8)}</td>
           <td>${item.placeta_id || item.contributor_id || '—'}</td>
-          <td>${item.mes_periodo || '—'}</td>
-          <td>${new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(item.cuota_irm || 0)}</td>
-          <td>${new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(item.cuota_igf || 0)}</td>
-          <td>${item.estado_pago || '—'}</td>
-          <td>${new Date(item.updated_at || item.created_at).toLocaleDateString('es-ES')}</td>
-        </tr>
-      `).join('');
+          <td><span class="pill pill-purple">${item.mes_periodo || '—'}</span></td>
+          <td>${formatMoneda(item.cuota_irm)}</td>
+          <td>${formatMoneda(item.cuota_igf)}</td>
+          <td><span class="badge ${estadoBadge}">${estado}</span></td>
+          <td>${item.bypass_junta_directiva ? '✅ Sí' : '—'}</td>
+          <td>${item.updated_at ? new Date(item.updated_at).toLocaleDateString('es-ES') : '—'}</td>
+          <td><button class="btn btn-sm btn-glass" onclick="mostrarToast('info','PDF Declaración')" title="Descargar PDF">📄</button></td>
+        </tr>`;
+      }).join('');
     } catch (e) {
-      document.getElementById('declaracionesTable').innerHTML = '<tr><td colspan="7" class="error-cell">Error al cargar declaraciones.</td></tr>';
-      console.error('[Tributos] Error cargar declaraciones:', e);
+      document.querySelector('#declaracionesTable tbody').innerHTML = '<tr><td colspan="9" class="error-cell">Error al cargar declaraciones</td></tr>';
     }
   }
 
+  // ── Load contributors for reconcile dropdown ──────────────────────────
+  async function cargarContribuyentesSelect() {
+    try {
+      const data = await apiFetch('/api/admin/tributos/contributors');
+      const select = document.getElementById('reconcileContribuyente');
+      if (!select) return;
+      select.innerHTML = '<option value="">Seleccionar contribuyente...</option>';
+      data.forEach(function(c) {
+        const opt = document.createElement('option');
+        opt.value = c.placeta_id;
+        opt.textContent = c.placeta_id + ' · ' + c.nombre;
+        select.appendChild(opt);
+      });
+    } catch (e) { /* fallback */ }
+  }
+
+  // ── Reconciliation Engine ─────────────────────────────────────────────────
+  async function ejecutarReconciliacion() {
+    const placetaId = document.getElementById('reconcileContribuyente')?.value;
+    const mes = document.getElementById('reconcileMes')?.value;
+    if (!placetaId) { mostrarToast('error', 'Selecciona un contribuyente'); return; }
+    if (!mes) { mostrarToast('error', 'Selecciona un mes'); return; }
+
+    mostrarToast('info', '⏳ Reconciliando saldos diarios...');
+    document.getElementById('reconciliationResults').style.display = 'block';
+    document.getElementById('dailyBalancesBody').innerHTML = '<tr><td colspan="5" class="loading-cell"><span class="spinner"></span> Calculando...</td></tr>';
+
+    try {
+      const res = await apiFetch('/api/admin/tributos/reconcile/' + encodeURIComponent(placetaId), {
+        method: 'POST',
+        body: JSON.stringify({ mes: mes })
+      });
+
+      if (res.success) {
+        mostrarToast('success', '✅ Reconciliación completada: ' + res.dias_con_datos + '/' + res.total_dias + ' días');
+
+        document.getElementById('reconciliationSummary').innerHTML =
+          '<div class="stat-card stat-primary"><div class="stat-icon">👤</div><div class="stat-content">' +
+            '<span class="stat-value">' + res.nombre + '</span>' +
+            '<span class="stat-label">' + res.placeta_id + '</span>' +
+          '</div></div>' +
+          '<div class="stat-card stat-success"><div class="stat-icon">📅</div><div class="stat-content">' +
+            '<span class="stat-value">' + res.dias_con_datos + '/' + res.total_dias + '</span>' +
+            '<span class="stat-label">Días Conciliados</span>' +
+          '</div></div>' +
+          '<div class="stat-card stat-info"><div class="stat-icon">💰</div><div class="stat-content">' +
+            '<span class="stat-value">' + formatMoneda(res.patrimonio_medio) + '</span>' +
+            '<span class="stat-label">Patrimonio Medio</span>' +
+          '</div></div>' +
+          '<div class="stat-card ' + (res.dias_con_datos >= res.total_dias ? 'stat-success' : 'stat-warning') + '"><div class="stat-icon">📊</div><div class="stat-content">' +
+            '<span class="stat-value">' + formatMoneda(res.saldo_actual) + '</span>' +
+            '<span class="stat-label">Saldo Actual</span>' +
+          '</div></div>';
+
+        const balances = res.balances || [];
+        document.getElementById('dailyBalancesBody').innerHTML = balances.map(function(b) {
+          var origenClass = b.origen === 'banco' ? 'badge-activo' : 'badge-pendiente';
+          var origenLabel = b.origen === 'banco' ? 'Banco' : 'Reconstruido';
+          var dia = b.fecha ? parseInt(b.fecha.slice(-2)) : '—';
+          return '<tr>' +
+            '<td><strong>' + dia + '</strong></td>' +
+            '<td>' + (b.fecha || '—') + '</td>' +
+            '<td><strong>' + formatMoneda(b.saldo) + '</strong></td>' +
+            '<td>' + (b.transactions_count || 0) + '</td>' +
+            '<td><span class="badge ' + origenClass + '">' + origenLabel + '</span></td>' +
+          '</tr>';
+        }).join('');
+
+        cargarDeclaraciones();
+        cargarTributosResumen();
+      } else {
+        mostrarToast('error', res.error || 'Error en reconciliación');
+      }
+    } catch (err) {
+      mostrarToast('error', 'Error al reconciliar: ' + (err.message || err));
+      document.getElementById('dailyBalancesBody').innerHTML = '<tr><td colspan="5" class="error-cell">Error al calcular</td></tr>';
+    }
+  }
+
+  // ── Load reconciliation status ────────────────────────────────────────────
+  async function cargarEstadoReconciliacion() {
+    const mesInput = document.getElementById('reconcileMes');
+    const mes = mesInput?.value || new Date().toISOString().slice(0, 7);
+    document.getElementById('reconciliationStatus').style.display = 'block';
+    document.getElementById('reconStatusBody').innerHTML = '<tr><td colspan="7" class="loading-cell"><span class="spinner"></span> Cargando...</td></tr>';
+
+    try {
+      const res = await apiFetch('/api/admin/tributos/reconciliation-status?mes=' + mes);
+      var list = res.contributors || [];
+      if (!list.length) {
+        document.getElementById('reconStatusBody').innerHTML = '<tr><td colspan="7" class="loading-cell">Sin contribuyentes registrados</td></tr>';
+        return;
+      }
+      document.getElementById('reconStatusBody').innerHTML = list.map(function(c) {
+        var pct = c.total_dias_mes > 0 ? Math.round(c.dias_conciliados / c.total_dias_mes * 100) : 0;
+        var statusClass = pct >= 100 ? 'badge-activo' : pct >= 50 ? 'badge-pendiente' : 'badge-baja';
+        var statusLabel = pct >= 100 ? '✅ Completo' : pct >= 50 ? '⏳ Parcial' : '❌ Pendiente';
+        return '<tr>' +
+          '<td><strong>' + c.placeta_id + '</strong><br><small>' + c.nombre + '</small></td>' +
+          '<td><span class="pill ' + (c.tipo_sujeto === 'Empresa' ? 'pill-purple' : 'pill-green') + '">' + (c.tipo_sujeto || '—') + '</span></td>' +
+          '<td>' + c.total_dias_mes + '</td>' +
+          '<td>' + c.dias_conciliados + '</td>' +
+          '<td>' + c.dias_pendientes + '</td>' +
+          '<td><strong>' + formatMoneda(c.patrimonio_medio) + '</strong></td>' +
+          '<td><span class="badge ' + statusClass + '">' + statusLabel + '</span></td>' +
+        '</tr>';
+      }).join('');
+    } catch (err) {
+      document.getElementById('reconStatusBody').innerHTML = '<tr><td colspan="7" class="error-cell">Error al cargar estado</td></tr>';
+    }
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', function() {
+    cargarInhibicion();
     cargarTributosResumen();
     cargarContribuyentes();
     cargarFacturas();
     cargarDeclaraciones();
+    cargarContribuyentesSelect();
+    const mesInput = document.getElementById('reconcileMes');
+    if (mesInput) mesInput.value = new Date().toISOString().slice(0, 7);
   });
+</script>
+
 </script>

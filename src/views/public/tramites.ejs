@@ -61,6 +61,18 @@
         <p>Registra tu empresa simulada y obtén tu EIP. PDF de registro disponible.</p>
         <span class="tag tag-eco">🎭 Ecosistema</span>
       </a>
+      <a class="tramite-card" onclick="abrirModal('alta-tributos')">
+        <div class="tramite-icon">🧾</div>
+        <h3>Alta en Tributos</h3>
+        <p>Regístrate en el censo de contribuyentes. Obligatorio para operar con tu cuenta bancaria.</p>
+        <span class="tag tag-eco">🎭 Ecosistema</span>
+      </a>
+      <a class="tramite-card" onclick="abrirModal('solicitar-factura')">
+        <div class="tramite-icon">📄</div>
+        <h3>Solicitar Factura</h3>
+        <p>Emite una factura con IVA del 12% y recibe tu CSV de verificación único.</p>
+        <span class="tag tag-eco">🎭 Ecosistema</span>
+      </a>
     </div>
   </div>
 </section>
@@ -88,8 +100,8 @@
     }
     div.innerHTML = '<div style="display:grid;gap:10px">' + docs.map(d => {
       const fecha = new Date(d.creado_en + 'Z').toLocaleDateString('es-ES');
-      const icono = d.tipo === 'dip' ? '🪪' : d.tipo === 'placetid' ? '🔑' : d.tipo === 'queja' ? '💬' : d.tipo === 'control-parental' ? '👨‍👩‍👧‍👦' : d.tipo === 'entidad' ? '🏢' : '📄';
-      const nombre = d.tipo === 'dip' ? 'Solicitud DIP' : d.tipo === 'placetid' ? 'Activación PlacetaID' : d.tipo === 'queja' ? 'Queja/Sugerencia' : d.tipo === 'control-parental' ? 'Control Parental' : d.tipo === 'entidad' ? 'Alta Entidad' : 'Trámite';
+      const icono = d.tipo === 'dip' ? '🪪' : d.tipo === 'placetid' ? '🔑' : d.tipo === 'queja' ? '💬' : d.tipo === 'control-parental' ? '👨‍👩‍👧‍👧' : d.tipo === 'entidad' ? '🏢' : d.tipo === 'alta-tributos' ? '🧾' : d.tipo === 'solicitar-factura' ? '📄' : '📄';
+      const nombre = d.tipo === 'dip' ? 'Solicitud DIP' : d.tipo === 'placetid' ? 'Activación PlacetaID' : d.tipo === 'queja' ? 'Queja/Sugerencia' : d.tipo === 'control-parental' ? 'Control Parental' : d.tipo === 'entidad' ? 'Alta Entidad' : d.tipo === 'alta-tributos' ? 'Alta en Tributos' : d.tipo === 'solicitar-factura' ? 'Solicitar Factura' : 'Trámite';
       return '<div style="background:rgba(255,255,255,.08);border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:14px">' +
         '<span style="font-size:24px">' + icono + '</span>' +
         '<div style="flex:1"><strong>' + nombre + '</strong><br><span style="font-size:12px;opacity:.6">' + fecha + (d.referencia ? ' · ' + d.referencia : '') + '</span></div>' +

@@ -338,6 +338,113 @@ router.get('/tramites/pdf/:tipo', async (req, res) => {
   }
 });
 
+// ═══════════════════════════════════════════════════════════════════════════
+//  TRÁMITES DE TRIBUTOS
+// ═══════════════════════════════════════════════════════════════════════════
+
+router.get('/tramites/alta-tributos', (req, res) => {
+  const usuario = req.session.usuario || null;
+  res.render('public/tramites/alta-tributos', {
+    titulo: 'Alta en Tributos', layout: 'layouts/publico', pathActual: '/tramites',
+    resultado: null, usuario, yaRegistrado: null
+  });
+});
+
+router.post('/tramites/alta-tributos', async (req, res) => {
+  const usuario = req.session.usuario || null;
+  try {
+    const { placeta_id, nombre, dip, tipo_sujeto, iban } = req.body;
+    if (!placeta_id || !nombre || !dip) {
+      return res.render('public/tramites/alta-tributos', {
+        titulo: 'Alta en Tributos', layout: 'layouts/publico', pathActual: '/tramites',
+        error: 'Faltan campos obligatorios: Placeta ID, nombre y DIP.', resultado: null, usuario, yaRegistrado: null
+      });
+    }
+
+    // Verificar si ya existe
+    const { sbGetTributosContributorByPlacetaId, sbCreateTributosContributor } = await import('../config/db-supabase.js');
+    const existente = await sbGetTributosContributorByPlacetaId(placeta_id).catch(() => null);
+    if (existente && existente.fecha_alta_tributos) {
+      return res.render('public/tramites/alta-tributos', {
+        titulo: 'Alta en Tributos', layout: 'layouts/publico', pathActual: '/tramites',
+        resultado: null, usuario,
+        yaRegistrado: new Date(existente.fecha_alta_tributos).toLocaleDateString('es-ES')
+      });
+    }
+
+    const contributor = await sbCreateTributosContributor({
+      id: crypto.randomUUID(),
+      placeta_id,
+      dip,
+      nombre,
+      tipo_sujeto: tipo_sujeto || 'Fisico',
+      estado_fiscal: 'Al Dia',
+      fecha_alta_tributos: new Date().toISOString(),
+      roles_json: ['ciudadano'],
+      iban: iban || null
+    });
+
+    return res.render('public/tramites/alta-tributos', {
+      titulo: 'Alta en Tributos', layout: 'layouts/publico', pathActual: '/tramites',
+      resultado: contributor, usuario, yaRegistrado: null
+    });
+  } catch (err) {
+    console.error('[Tributos] Error alta tramite:', err);
+    return res.render('public/tramites/alta-tributos', {
+      titulo: 'Alta en Tributos', layout: 'layouts/publico', pathActual: '/tramites',
+      error: 'Error al procesar la solicitud. Inténtalo de nuevo.', resultado: null, usuario, yaRegistrado: null
+    });
+  }
+});
+
+router.get('/tramites/solicitar-factura', (req, res) => {
+  const usuario = req.session.usuario || null;
+  res.render('public/tramites/solicitar-factura', {
+    titulo: 'Solicitar Factura', layout: 'layouts/publico', pathActual: '/tramites',
+    resultado: null, usuario, error: null
+  });
+});
+
+router.post('/tramites/solicitar-factura', async (req, res) => {
+  const usuario = req.session.usuario || null;
+  try {
+    const { numero_factura, emisor_placeta_id, receptor_placeta_id, concepto_producto, cantidad, precio_unitario, iva_porcentaje, fecha_emision } = req.body;
+    if (!numero_factura || !emisor_placeta_id || !receptor_placeta_id || !concepto_producto) {
+      return res.render('public/tramites/solicitar-factura', {
+        titulo: 'Solicitar Factura', layout: 'layouts/publico', pathActual: '/tramites',
+        error: 'Faltan campos obligatorios.', resultado: null, usuario
+      });
+    }
+
+    const { sbCreateTributosInvoice } = await import('../config/db-supabase.js');
+    const invoice = await sbCreateTributosInvoice({
+      id: crypto.randomUUID(),
+      numero_factura,
+      emisor_placeta_id,
+      receptor_placeta_id,
+      fecha_emision: fecha_emision ? new Date(fecha_emision).toISOString() : new Date().toISOString(),
+      csv_verificacion: `CSV-${crypto.randomUUID().slice(0, 8).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`,
+      lineas: [{
+        concepto_producto,
+        cantidad: Number(cantidad) || 1,
+        precio_unitario: Number(precio_unitario) || 0,
+        iva_porcentaje: Number(iva_porcentaje) || 12
+      }]
+    });
+
+    return res.render('public/tramites/solicitar-factura', {
+      titulo: 'Solicitar Factura', layout: 'layouts/publico', pathActual: '/tramites',
+      resultado: invoice, usuario, error: null
+    });
+  } catch (err) {
+    console.error('[Tributos] Error factura tramite:', err);
+    return res.render('public/tramites/solicitar-factura', {
+      titulo: 'Solicitar Factura', layout: 'layouts/publico', pathActual: '/tramites',
+      error: 'Error al emitir la factura. Inténtalo de nuevo.', resultado: null, usuario
+    });
+  }
+});
+
 // ── PÁGINAS LEGALES ─────────────────────────────────────────────────────────
 
 router.get('/aviso-legal', (req, res) => {
@@ -412,6 +519,27 @@ router.get('/api/tramites/form/:tramite', (req, res) => {
         <div class="form-group"><label>Descripción</label><textarea name="descripcion" rows="2"></textarea></div>
         <div class="cbox"><input type="checkbox" id="e1" required onchange="this.closest('.cbox').classList.toggle('checked',this.checked)"><label for="e1">Acepto los términos del registro de entidades simuladas.</label></div>
         <button type="submit" class="btn btn-p btn-bl">Registrar Entidad</button>
+      </form>`,
+    'alta-tributos': `
+      <div class="aviso aviso-sim"><span class="aviso-icon">🏛️</span><div><strong>Registro fiscal.</strong> Necesario para operar con tu cuenta bancaria.</div></div>
+      <form onsubmit="return enviarForm('alta-tributos',this)">
+        <div class="form-group"><label>Placeta ID *</label><input type="text" name="placeta_id" required placeholder="PID-MKL"></div>
+        <div class="form-group"><label>Nombre *</label><input type="text" name="nombre" required></div>
+        <div class="form-row"><div class="form-group"><label>DIP *</label><input type="text" name="dip" required></div><div class="form-group"><label>Tipo</label><select name="tipo_sujeto"><option value="Fisico">Físico</option><option value="Empresa">Empresa</option></select></div></div>
+        <div class="form-group"><label>IBAN (opcional)</label><input type="text" name="iban" placeholder="GDLP-..."></div>
+        <div class="s-div">Aceptación</div>
+        <div class="cbox"><input type="checkbox" id="at1" required onchange="this.closest('.cbox').classList.toggle('checked',this.checked)"><label for="at1">Acepto el régimen fiscal y la <a href="/privacidad" target="_blank">Política de Privacidad</a>.</label></div>
+        <button type="submit" class="btn btn-p btn-bl">📋 Darme de alta en Tributos</button>
+      </form>`,
+    'solicitar-factura': `
+      <form onsubmit="return enviarForm('solicitar-factura',this)">
+        <div class="form-row"><div class="form-group"><label>Nº Factura *</label><input type="text" name="numero_factura" required placeholder="F-2026-0001"></div><div class="form-group"><label>Fecha</label><input type="date" name="fecha_emision"></div></div>
+        <div class="form-row"><div class="form-group"><label>Emisor *</label><input type="text" name="emisor_placeta_id" required placeholder="PID-MKL"></div><div class="form-group"><label>Receptor *</label><input type="text" name="receptor_placeta_id" required placeholder="PID-UNI"></div></div>
+        <div class="form-group"><label>Concepto *</label><input type="text" name="concepto_producto" required></div>
+        <div class="form-row"><div class="form-group"><label>Cantidad</label><input type="number" name="cantidad" value="1"></div><div class="form-group"><label>Precio (Pz)</label><input type="number" step="0.01" name="precio_unitario" required value="100"></div></div>
+        <div class="form-group"><label>IVA %</label><input type="number" step="0.01" name="iva_porcentaje" value="12"></div>
+        <div class="cbox"><input type="checkbox" id="sf1" required onchange="this.closest('.cbox').classList.toggle('checked',this.checked)"><label for="sf1">Confirmo los datos y acepto emitir esta factura.</label></div>
+        <button type="submit" class="btn btn-p btn-bl">📄 Emitir factura</button>
       </form>`
   };
   const html = tramites[req.params.tramite];
@@ -503,6 +631,38 @@ router.post('/api/tramites/submit/:tramite', async (req, res) => {
         const eip = `EIP-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
         await sbCreateEntidad({ nombre: data.nombre_entidad, tipo: data.tipo, eip, representante_id: rep.id, cif: data.cif || '', descripcion: data.descripcion || '', email: data.email });
         ok = true; msg = `Entidad "${data.nombre_entidad}" registrada. EIP: ${eip}`;
+        break;
+      }
+      case 'alta-tributos': {
+        if (!data.placeta_id || !data.nombre || !data.dip) return res.json({ ok: false, error: 'Faltan campos obligatorios.' });
+        const { sbGetTributosContributorByPlacetaId, sbCreateTributosContributor } = await import('../config/db-supabase.js');
+        const existente = await sbGetTributosContributorByPlacetaId(data.placeta_id).catch(() => null);
+        if (existente && existente.fecha_alta_tributos) {
+          return res.json({ ok: false, error: `Ya estás registrado como contribuyente (${new Date(existente.fecha_alta_tributos).toLocaleDateString('es-ES')}).` });
+        }
+        const contributor = await sbCreateTributosContributor({
+          id: crypto.randomUUID(),
+          placeta_id: data.placeta_id, dip: data.dip, nombre: data.nombre,
+          tipo_sujeto: data.tipo_sujeto || 'Fisico', estado_fiscal: 'Al Dia',
+          fecha_alta_tributos: new Date().toISOString(), roles_json: ['ciudadano'],
+          iban: data.iban || null
+        });
+        ok = true; msg = `✅ Registrado en Tributos. Placeta ID: ${data.placeta_id}`;
+        html = `<div style="background:var(--p);color:var(--w);border-radius:12px;padding:16px;text-align:center;margin-top:12px"><div style="font-size:12px;opacity:.8">PLACETA ID TRIBUTARIO</div><div style="font-size:22px;font-weight:900;letter-spacing:2px;font-family:monospace;margin:6px 0">${data.placeta_id}</div><div style="margin-top:6px"><span class="badge badge-activo">Al Día</span></div></div>`;
+        break;
+      }
+      case 'solicitar-factura': {
+        if (!data.numero_factura || !data.emisor_placeta_id || !data.receptor_placeta_id || !data.concepto_producto) return res.json({ ok: false, error: 'Faltan campos obligatorios.' });
+        const { sbCreateTributosInvoice } = await import('../config/db-supabase.js');
+        const invoice = await sbCreateTributosInvoice({
+          id: crypto.randomUUID(), numero_factura: data.numero_factura,
+          emisor_placeta_id: data.emisor_placeta_id, receptor_placeta_id: data.receptor_placeta_id,
+          fecha_emision: data.fecha_emision ? new Date(data.fecha_emision).toISOString() : new Date().toISOString(),
+          csv_verificacion: `CSV-${crypto.randomUUID().slice(0,8).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`,
+          lineas: [{ concepto_producto: data.concepto_producto, cantidad: Number(data.cantidad) || 1, precio_unitario: Number(data.precio_unitario) || 0, iva_porcentaje: Number(data.iva_porcentaje) || 12 }]
+        });
+        ok = true; msg = `✅ Factura ${data.numero_factura} emitida.`;
+        html = `<div style="background:var(--p);color:var(--w);border-radius:12px;padding:16px;text-align:center;margin-top:12px"><div style="font-size:12px;opacity:.8">FACTURA EMITIDA</div><div style="font-size:18px;font-weight:800;margin:6px 0">${data.numero_factura}</div><div style="font-size:12px;opacity:.8">CSV: ${invoice.csv_verificacion}</div><div style="display:flex;justify-content:center;gap:16px;margin-top:8px;font-size:13px">Base: ${(invoice.base_imponible || 0).toFixed(2)} Pz · IVA: ${(invoice.total_iva || 0).toFixed(2)} Pz · Total: ${(invoice.total_factura || 0).toFixed(2)} Pz</div></div>`;
         break;
       }
       default: return res.json({ ok: false, error: 'Trámite no válido' });

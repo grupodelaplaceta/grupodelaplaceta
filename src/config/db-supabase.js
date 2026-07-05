@@ -145,6 +145,10 @@ function checkSupabase() {
   return supabase;
 }
 
+function safeSupabase() {
+  try { return checkSupabase(); } catch { return null; }
+}
+
 // ── SOLICITANTES ────────────────────────────────────────────────────────────
 
 export async function sbFindSolicitante(aliasOrDip) {
@@ -479,47 +483,59 @@ export async function sbListDocumentosFirmados(limit = 100) {
 // ── TRIBUTOS ─────────────────────────────────────────────────────────────────
 
 export async function sbGetTributosSummary() {
-  const sb = checkSupabase();
+  const sb = safeSupabase();
+  if (!sb) return { contribuyentes: 0, declaraciones: 0, facturas: 0, importe_total: 0, iva_total: 0 };
+  try {
+    const { count: totalContribuyentes, error: contribError } = await sb.from('tributos_contribuyentes')
+      .select('id', { count: 'exact', head: true });
+    if (contribError) throw contribError;
 
-  const { count: totalContribuyentes, error: contribError } = await sb.from('tributos_contribuyentes')
-    .select('id', { count: 'exact', head: true });
-  if (contribError) throw new Error(contribError.message);
+    const { count: totalDeclaraciones, error: declError } = await sb.from('tributos_declaraciones')
+      .select('id', { count: 'exact', head: true });
+    if (declError) throw declError;
 
-  const { count: totalDeclaraciones, error: declError } = await sb.from('tributos_declaraciones')
-    .select('id', { count: 'exact', head: true });
-  if (declError) throw new Error(declError.message);
+    const { count: totalFacturas, error: factError } = await sb.from('tributos_facturas')
+      .select('id', { count: 'exact', head: true });
+    if (factError) throw factError;
 
-  const { count: totalFacturas, error: factError } = await sb.from('tributos_facturas')
-    .select('id', { count: 'exact', head: true });
-  if (factError) throw new Error(factError.message);
+    const { data: totalsFacturas, error: totalError } = await sb.from('tributos_facturas')
+      .select('total_factura,total_iva');
+    if (totalError) throw totalError;
 
-  const { data: totalsFacturas, error: totalError } = await sb.from('tributos_facturas')
-    .select('total_factura,total_iva');
-  if (totalError) throw new Error(totalError.message);
+    const totalImporte = (totalsFacturas || []).reduce((sum, row) => sum + Number(row.total_factura || 0), 0);
+    const totalIva = (totalsFacturas || []).reduce((sum, row) => sum + Number(row.total_iva || 0), 0);
 
-  const totalImporte = (totalsFacturas || []).reduce((sum, row) => sum + Number(row.total_factura || 0), 0);
-  const totalIva = (totalsFacturas || []).reduce((sum, row) => sum + Number(row.total_iva || 0), 0);
-
-  return {
-    contribuyentes: Number(totalContribuyentes || 0),
-    declaraciones: Number(totalDeclaraciones || 0),
-    facturas: Number(totalFacturas || 0),
-    importe_total: Number(totalImporte.toFixed(2)),
-    iva_total: Number(totalIva.toFixed(2))
-  };
+    return {
+      contribuyentes: Number(totalContribuyentes || 0),
+      declaraciones: Number(totalDeclaraciones || 0),
+      facturas: Number(totalFacturas || 0),
+      importe_total: Number(totalImporte.toFixed(2)),
+      iva_total: Number(totalIva.toFixed(2))
+    };
+  } catch (err) {
+    console.error('[Tributos] Supabase query error (summary):', err.message || err);
+    return { contribuyentes: 0, declaraciones: 0, facturas: 0, importe_total: 0, iva_total: 0 };
+  }
 }
 
 export async function sbListTributosContributors(limit = 50) {
-  const sb = checkSupabase();
-  const { data, error } = await sb.from('tributos_contribuyentes')
-    .select('*')
-    .order('fecha_alta_tributos', { ascending: false }).limit(limit);
-  if (error) throw new Error(error.message);
-  return data || [];
+  const sb = safeSupabase();
+  if (!sb) return [];
+  try {
+    const { data, error } = await sb.from('tributos_contribuyentes')
+      .select('*')
+      .order('fecha_alta_tributos', { ascending: false }).limit(limit);
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    console.error('[Tributos] Supabase query error (contributors):', err.message || err);
+    return [];
+  }
 }
 
 export async function sbCreateTributosContributor(data) {
-  const sb = checkSupabase();
+  const sb = safeSupabase();
+  if (!sb) throw new Error('Supabase no configurado');
   const { data: result, error } = await sb.from('tributos_contribuyentes')
     .insert(data).select().single();
   if (error) throw new Error(error.message);
@@ -527,25 +543,38 @@ export async function sbCreateTributosContributor(data) {
 }
 
 export async function sbListTributosDeclarations(limit = 50) {
-  const sb = checkSupabase();
-  const { data, error } = await sb.from('tributos_declaraciones')
-    .select('*')
-    .order('created_at', { ascending: false }).limit(limit);
-  if (error) throw new Error(error.message);
-  return data || [];
+  const sb = safeSupabase();
+  if (!sb) return [];
+  try {
+    const { data, error } = await sb.from('tributos_declaraciones')
+      .select('*')
+      .order('created_at', { ascending: false }).limit(limit);
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    console.error('[Tributos] Supabase query error (declarations):', err.message || err);
+    return [];
+  }
 }
 
 export async function sbListTributosInvoices({ limit = 50 } = {}) {
-  const sb = checkSupabase();
-  const { data, error } = await sb.from('tributos_facturas')
-    .select('*')
-    .order('fecha_emision', { ascending: false }).limit(limit);
-  if (error) throw new Error(error.message);
-  return data || [];
+  const sb = safeSupabase();
+  if (!sb) return [];
+  try {
+    const { data, error } = await sb.from('tributos_facturas')
+      .select('*')
+      .order('fecha_emision', { ascending: false }).limit(limit);
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    console.error('[Tributos] Supabase query error (invoices):', err.message || err);
+    return [];
+  }
 }
 
 export async function sbCreateTributosInvoice(payload) {
-  const sb = checkSupabase();
+  const sb = safeSupabase();
+  if (!sb) throw new Error('Supabase no configurado');
   const lines = Array.isArray(payload.lineas) ? payload.lineas : [];
   let baseImponible = Number(payload.base_imponible || 0);
   let totalIva = Number(payload.total_iva || 0);
@@ -709,7 +738,8 @@ export async function sbDeactivatePlacetaidToken(token) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 export async function sbUpdateTributosContributor(placetaId, data) {
-  const sb = checkSupabase();
+  const sb = safeSupabase();
+  if (!sb) throw new Error('Supabase no configurado');
   const { data: result, error } = await sb.from('tributos_contribuyentes')
     .update(data).eq('placeta_id', placetaId).select().single();
   if (error) throw new Error(error.message);
@@ -717,15 +747,21 @@ export async function sbUpdateTributosContributor(placetaId, data) {
 }
 
 export async function sbGetTributosContributorByPlacetaId(placetaId) {
-  const sb = checkSupabase();
-  const { data, error } = await sb.from('tributos_contribuyentes')
-    .select('*').eq('placeta_id', placetaId).limit(1).single();
-  if (error && error.code !== 'PGRST116') return null;
-  return data;
+  const sb = safeSupabase();
+  if (!sb) return null;
+  try {
+    const { data, error } = await sb.from('tributos_contribuyentes')
+      .select('*').eq('placeta_id', placetaId).limit(1).single();
+    if (error && error.code !== 'PGRST116') return null;
+    return data;
+  } catch (err) {
+    return null;
+  }
 }
 
 export async function sbCreateTributosDeclaration(data) {
-  const sb = checkSupabase();
+  const sb = safeSupabase();
+  if (!sb) throw new Error('Supabase no configurado');
   const { data: result, error } = await sb.from('tributos_declaraciones')
     .insert({
       id: data.id,
@@ -749,57 +785,71 @@ export async function sbCreateTributosDeclaration(data) {
 }
 
 export async function sbGetTributosInhibition() {
-  const sb = checkSupabase();
+  const sb = safeSupabase();
   const now = new Date();
   const mesPeriodo = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const { data, error } = await sb.from('tributos_control_recaudacion')
-    .select('*').eq('mes_periodo', mesPeriodo).limit(1).single();
-  if (error && error.code !== 'PGRST116') {
+  if (!sb) return { mes_periodo: mesPeriodo, estado_inhibicion_global: true };
+  try {
+    const { data, error } = await sb.from('tributos_control_recaudacion')
+      .select('*').eq('mes_periodo', mesPeriodo).limit(1).single();
+    if (error && error.code !== 'PGRST116') return { mes_periodo: mesPeriodo, estado_inhibicion_global: true };
+    return data || { mes_periodo: mesPeriodo, estado_inhibicion_global: true };
+  } catch (err) {
     return { mes_periodo: mesPeriodo, estado_inhibicion_global: true };
   }
-  return data || { mes_periodo: mesPeriodo, estado_inhibicion_global: true };
 }
 
 export async function sbSetTributosInhibition(estado, operadorId) {
-  const sb = checkSupabase();
+  const sb = safeSupabase();
   const now = new Date();
   const mesPeriodo = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const { data: existing } = await sb.from('tributos_control_recaudacion')
-    .select('*').eq('mes_periodo', mesPeriodo).limit(1).single();
+  if (!sb) return { mes_periodo: mesPeriodo, estado_inhibicion_global: estado, operador_responsable_id: operadorId };
+  try {
+    const { data: existing } = await sb.from('tributos_control_recaudacion')
+      .select('*').eq('mes_periodo', mesPeriodo).limit(1).single();
 
-  if (existing) {
+    if (existing) {
+      const { data, error } = await sb.from('tributos_control_recaudacion')
+        .update({
+          estado_inhibicion_global: estado,
+          fecha_ultima_modificacion: new Date().toISOString(),
+          operador_responsable_id: operadorId
+        }).eq('mes_periodo', mesPeriodo).select().single();
+      if (error) return { mes_periodo: mesPeriodo, estado_inhibicion_global: estado };
+      return data;
+    }
+
     const { data, error } = await sb.from('tributos_control_recaudacion')
-      .update({
+      .insert({
+        id: crypto.randomUUID?.() || String(Date.now()),
+        mes_periodo: mesPeriodo,
         estado_inhibicion_global: estado,
-        fecha_ultima_modificacion: new Date().toISOString(),
         operador_responsable_id: operadorId
-      }).eq('mes_periodo', mesPeriodo).select().single();
-    if (error) throw new Error(error.message);
+      }).select().single();
+    if (error) return { mes_periodo: mesPeriodo, estado_inhibicion_global: estado };
     return data;
+  } catch (err) {
+    return { mes_periodo: mesPeriodo, estado_inhibicion_global: estado };
   }
-
-  const { data, error } = await sb.from('tributos_control_recaudacion')
-    .insert({
-      id: crypto.randomUUID?.() || String(Date.now()),
-      mes_periodo: mesPeriodo,
-      estado_inhibicion_global: estado,
-      operador_responsable_id: operadorId
-    }).select().single();
-  if (error) throw new Error(error.message);
-  return data;
 }
 
 export async function sbListTributosRectifications(limit = 50) {
-  const sb = checkSupabase();
-  const { data, error } = await sb.from('tributos_rectificaciones')
-    .select('*')
-    .order('fecha_rectificacion', { ascending: false }).limit(limit);
-  if (error) return [];
-  return data || [];
+  const sb = safeSupabase();
+  if (!sb) return [];
+  try {
+    const { data, error } = await sb.from('tributos_rectificaciones')
+      .select('*')
+      .order('fecha_rectificacion', { ascending: false }).limit(limit);
+    if (error) return [];
+    return data || [];
+  } catch (err) {
+    return [];
+  }
 }
 
 export async function sbCreateTributosRectification(data) {
-  const sb = checkSupabase();
+  const sb = safeSupabase();
+  if (!sb) throw new Error('Supabase no configurado');
   const { data: result, error } = await sb.from('tributos_rectificaciones')
     .insert(data).select().single();
   if (error) throw new Error(error.message);
@@ -807,12 +857,176 @@ export async function sbCreateTributosRectification(data) {
 }
 
 export async function sbListTributosAuditLogs(limit = 50) {
-  const sb = checkSupabase();
-  const { data, error } = await sb.from('tributos_audit_logs')
-    .select('*')
-    .order('created_at', { ascending: false }).limit(limit);
-  if (error) return [];
-  return data || [];
+  const sb = safeSupabase();
+  if (!sb) return [];
+  try {
+    const { data, error } = await sb.from('tributos_audit_logs')
+      .select('*')
+      .order('created_at', { ascending: false }).limit(limit);
+    if (error) return [];
+    return data || [];
+  } catch (err) {
+    return [];
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  TRIBUTOS — Daily Balances & Reconciliation Engine
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Obtiene los saldos diarios de un contribuyente para un mes dado.
+ * @param {string} placetaId
+ * @param {string} mesPeriodo - "YYYY-MM"
+ */
+export async function sbGetDailyBalances(placetaId, mesPeriodo) {
+  const sb = safeSupabase();
+  if (!sb) return [];
+  try {
+    const { data, error } = await sb.from('tributos_saldos_diarios')
+      .select('*')
+      .eq('placeta_id', placetaId)
+      .eq('mes_periodo', mesPeriodo)
+      .order('fecha', { ascending: true });
+    if (error) return [];
+    return data || [];
+  } catch (err) {
+    return [];
+  }
+}
+
+/**
+ * Guarda o actualiza un saldo diario para un contribuyente.
+ */
+export async function sbUpsertDailyBalance(placetaId, mesPeriodo, fecha, saldo, transactionsCount) {
+  const sb = safeSupabase();
+  if (!sb) return null;
+  try {
+    const { data: existing } = await sb.from('tributos_saldos_diarios')
+      .select('id')
+      .eq('placeta_id', placetaId)
+      .eq('fecha', fecha)
+      .limit(1)
+      .single();
+
+    if (existing) {
+      const { data, error } = await sb.from('tributos_saldos_diarios')
+        .update({
+          saldo: Number(saldo),
+          transactions_count: Number(transactionsCount || 0),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existing.id)
+        .select()
+        .single();
+      if (error) return null;
+      return data;
+    }
+
+    const { data, error } = await sb.from('tributos_saldos_diarios')
+      .insert({
+        id: crypto.randomUUID?.() || String(Date.now()),
+        placeta_id: placetaId,
+        mes_periodo: mesPeriodo,
+        fecha,
+        saldo: Number(saldo),
+        transactions_count: Number(transactionsCount || 0),
+        origen: 'banco',
+        created_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+    if (error) return null;
+    return data;
+  } catch (err) {
+    return null;
+  }
+}
+
+/**
+ * Elimina todos los saldos diarios de un contribuyente para un mes.
+ */
+export async function sbClearDailyBalances(placetaId, mesPeriodo) {
+  const sb = safeSupabase();
+  if (!sb) return false;
+  try {
+    await sb.from('tributos_saldos_diarios')
+      .delete()
+      .eq('placeta_id', placetaId)
+      .eq('mes_periodo', mesPeriodo);
+    return true;
+  } catch (err) {
+    return false;
+  }
+}
+
+/**
+ * Calcula y guarda/actualiza una declaración basada en los saldos diarios.
+ * Devuelve la declaración actualizada con los campos calculados.
+ */
+export async function sbCalculateDeclarationFromDailyBalances(placetaId, mesPeriodo, dailyBalances) {
+  const sb = safeSupabase();
+  if (!sb) return null;
+
+  const diasConSaldo = dailyBalances.filter(d => d.saldo !== undefined && d.saldo !== null);
+  const totalDias = diasConSaldo.length;
+  const sumaSaldos = diasConSaldo.reduce((sum, d) => sum + Number(d.saldo || 0), 0);
+  const patrimonioMedio = totalDias > 0 ? Number((sumaSaldos / totalDias).toFixed(2)) : 0;
+  const diasActivosMes = new Date(parseInt(mesPeriodo.slice(0,4)), parseInt(mesPeriodo.slice(5,7)), 0).getDate();
+  const transactionCount = dailyBalances.reduce((sum, d) => sum + Number(d.transactions_count || 0), 0);
+
+  try {
+    // Buscar declaración existente
+    const { data: existingDeclarations } = await sb.from('tributos_declaraciones')
+      .select('*')
+      .eq('placeta_id', placetaId)
+      .eq('mes_periodo', mesPeriodo)
+      .limit(1);
+
+    const declarationData = {
+      patrimonio_medio: patrimonioMedio,
+      indice_acumulacion: totalDias > 0 ? Number((transactionCount / totalDias).toFixed(4)) : 0,
+      dias_declarados_banco: totalDias,
+      dias_reconstruidos_crm: Math.max(0, diasActivosMes - totalDias),
+      dias_activos_mes: diasActivosMes,
+      updated_at: new Date().toISOString()
+    };
+
+    if (existingDeclarations && existingDeclarations.length > 0) {
+      const { data, error } = await sb.from('tributos_declaraciones')
+        .update(declarationData)
+        .eq('id', existingDeclarations[0].id)
+        .select()
+        .single();
+      if (error) return null;
+      return { ...data, calculated: true, dailyBalances: dailyBalances };
+    }
+
+    // Crear nueva declaración
+    const { data, error } = await sb.from('tributos_declaraciones')
+      .insert({
+        id: crypto.randomUUID?.() || String(Date.now()),
+        mes_periodo: mesPeriodo,
+        cuenta_id_blp: placetaId,
+        patrimonio_medio: patrimonioMedio,
+        indice_acumulacion: totalDias > 0 ? Number((transactionCount / totalDias).toFixed(4)) : 0,
+        cuota_irm: 0,
+        cuota_igf: 0,
+        exencion_aplicada: false,
+        dias_declarados_banco: totalDias,
+        dias_reconstruidos_crm: Math.max(0, diasActivosMes - totalDias),
+        dias_activos_mes: diasActivosMes,
+        estado_pago: 'Borrador',
+        bypass_junta_directiva: false,
+        is_rectified: false
+      })
+      .select()
+      .single();
+    if (error) return null;
+    return { ...data, calculated: true, dailyBalances: dailyBalances };
+  } catch (err) {
+    return null;
+  }
 }
 
 // ── Migraciones SQLite (solo tablas NO-Supabase) ──────────────────────────

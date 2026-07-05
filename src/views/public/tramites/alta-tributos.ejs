@@ -1,0 +1,100 @@
+<section class="hero-small">
+  <h1>🧾 Alta en Tributos de La Placeta</h1>
+  <p>Regístrate en el censo de contribuyentes — Obligatorio según Capítulo IV del Código Normativo</p>
+</section>
+
+<section class="section">
+  <div class="section-inner tramite-form">
+
+    <div class="legal-notice legal-sim">
+      <span class="legal-notice-icon">🏛️</span>
+      <div>
+        <strong>Registro fiscal del ecosistema simulado.</strong> El alta en Tributos de La Placeta (TLP) es necesaria para operar con el Banco de La Placeta. Sin este registro, tu cuenta bancaria quedará bloqueada. Los datos se tratan conforme al RGPD.
+      </div>
+    </div>
+
+    <div class="form-card">
+      <% if (typeof yaRegistrado !== 'undefined' && yaRegistrado && usuario) { %>
+      <div class="alert alert-success" style="text-align:center">
+        <div style="font-size:48px;margin-bottom:10px">✅</div>
+        <strong style="font-size:20px">Ya estás registrado en Tributos</strong>
+        <p style="margin-top:8px">Tu alta en el censo de contribuyentes está activa desde <strong><%= yaRegistrado %></strong>.</p>
+        <p style="font-size:13px;color:#666;margin-top:12px">Ya puedes operar con normalidad en el Banco de La Placeta.</p>
+      </div>
+      <a href="/admin/tributos" class="btn btn-primary btn-block">📊 Ir al panel de Tributos</a>
+
+      <% } else if (typeof resultado !== 'undefined' && resultado) { %>
+      <div class="alert alert-success">
+        <div style="text-align:center">
+          <div style="font-size:48px;margin-bottom:10px">✅</div>
+          <strong style="font-size:20px">¡Alta completada!</strong>
+          <p style="margin-top:8px">Te has registrado correctamente en el censo de contribuyentes de Tributos de La Placeta.</p>
+        </div>
+        <div style="background:var(--accent-soft);border-radius:12px;padding:16px;margin:14px 0;text-align:center">
+          <div style="font-size:12px;color:var(--text-light);margin-bottom:4px">PLACETA ID TRIBUTARIO</div>
+          <div style="font-size:22px;font-weight:900;color:var(--accent);letter-spacing:2px;font-family:monospace"><%= resultado.placeta_id %></div>
+          <div style="font-size:13px;color:var(--text-light);margin-top:6px">Estado fiscal: <span class="badge badge-activo">Al Día</span></div>
+        </div>
+      </div>
+      <a href="/admin/tributos" class="btn btn-primary btn-block">📊 Ir al panel de Tributos</a>
+
+      <% } else { %>
+      <h2>Formulario de alta censal</h2>
+      <p>Completa tus datos para darte de alta en Tributos de La Placeta. Este registro es necesario para que tu cuenta bancaria pueda operar con normalidad.</p>
+
+      <% if (typeof error !== 'undefined' && error) { %>
+      <div class="alert alert-error"><%= error %></div>
+      <% } %>
+
+      <form method="POST" action="/tramites/alta-tributos">
+        <div class="form-group">
+          <label>Placeta ID *</label>
+          <input type="text" name="placeta_id" required placeholder="Ej: PID-MKL" value="<%= usuario ? 'PID-' + usuario.alias?.toUpperCase() : '' %>" maxlength="30">
+          <span class="form-hint">Tu identificador único en el ecosistema.</span>
+        </div>
+        <div class="form-group">
+          <label>Nombre completo *</label>
+          <input type="text" name="nombre" required placeholder="Nombre o razón social" value="<%= usuario?.nombre_real || usuario?.alias || '' %>">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>DIP *</label>
+            <input type="text" name="dip" required placeholder="00000001A" value="<%= usuario?.dip || '' %>">
+          </div>
+          <div class="form-group">
+            <label>Tipo de sujeto</label>
+            <select name="tipo_sujeto">
+              <option value="Fisico">Persona Física</option>
+              <option value="Empresa">Empresa</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>IBAN (Cuenta Bancaria GDLP)</label>
+          <input type="text" name="iban" placeholder="GDLP-XXXX-XXX">
+          <span class="form-hint">Opcional. Se asignará uno automáticamente si no se proporciona.</span>
+        </div>
+
+        <div class="section-divider">Declaración y aceptación</div>
+
+        <div class="checkbox-group">
+          <div class="checkbox-item">
+            <input type="checkbox" id="trib_accept" required>
+            <label for="trib_accept">Acepto el <a href="/tramites" target="_blank">régimen fiscal de Tributos de La Placeta</a> y me comprometo a presentar mis declaraciones mensuales de IRM e IGF conforme al Capítulo IV del Código Normativo Interno.</label>
+          </div>
+          <div class="checkbox-item">
+            <input type="checkbox" id="trib_priv" required>
+            <label for="trib_priv">Acepto la <a href="/privacidad" target="_blank">Política de Privacidad</a> y el tratamiento de mis datos fiscales conforme al RGPD.</label>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block" style="margin-top:20px">📋 Darme de alta en Tributos</button>
+      </form>
+
+      <div style="margin-top:24px;padding:16px;background:#fef3c7;border-radius:12px;font-size:13px;color:#92400e">
+        <strong>⚠️ Importante:</strong> Al registrarte, aceptas las obligaciones fiscales del ecosistema, incluyendo la declaración mensual de tu patrimonio y el pago del IRM e IGF cuando corresponda.
+      </div>
+      <% } %>
+    </div>
+  </div>
+</section>
