@@ -17,12 +17,17 @@ async function fetchBancoState(req) {
   const url = `${BANCO_API}/api/crm-state`;
   const headers = { 'Content-Type': 'application/json', 'X-CRM-Key': CRM_KEY };
   let res;
-  try { res = await fetch(url, { headers }); }
-  catch (e) { throw new Error(`No se puede conectar con ${BANCO_API} — ${e.message}`); }
+  try { res = await fetch(url, { headers, signal: AbortSignal.timeout(8000) }); }
+  catch (e) {
+    // Fallback: devolver estado vacío en lugar de romper
+    console.warn(`[bancario-proxy] Sin conexión a ${BANCO_API}: ${e.message}`);
+    cache.data = { users: [], accounts: [], transactions: [], digitalCards: [], complianceFlags: [], auditLogs: [] };
+    return cache.data;
+  }
   if (!res.ok) {
-    let msg = `Banco API (${url}) respondió ${res.status}`;
-    try { const err = await res.json(); if (err.error) msg += `: ${err.error}`; } catch {}
-    throw new Error(msg);
+    console.warn(`[bancario-proxy] Banco API respondió ${res.status}`);
+    cache.data = { users: [], accounts: [], transactions: [], digitalCards: [], complianceFlags: [], auditLogs: [] };
+    return cache.data;
   }
   const data = await res.json();
   cache = { data, expiresAt: Date.now() + CACHE_TTL };
@@ -172,11 +177,13 @@ router.post('/emitir', verificarSesion, verificarRol('administrador', 'junta', '
     const { cantidad, dip, motivo } = req.body;
     if (!cantidad || !dip) return res.status(400).json({ error: 'Faltan cantidad o DIP' });
 
-    const r = await fetch(`${BANCO_API}/api/crm-state`, {
+    let r;
+    try { r = await fetch(`${BANCO_API}/api/crm-state`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-CRM-Key': CRM_KEY },
-      body: JSON.stringify({ action: 'emitir', cantidad, dip, motivo: motivo || 'Emisión administrativa' })
-    });
+      body: JSON.stringify({ action: 'emitir', cantidad, dip, motivo: motivo || 'Emisión administrativa' }),
+      signal: AbortSignal.timeout(8000)
+    }); } catch (e) { return res.status(502).json({ error: `Backend-banco no disponible: ${e.message}` }); }
     const data = await r.json();
     if (!r.ok) return res.status(r.status).json(data);
     res.json(data);
