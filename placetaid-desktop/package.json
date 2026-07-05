@@ -1,0 +1,43 @@
+{
+  "name": "placetaid-desktop",
+  "version": "1.0.0",
+  "description": "PlacetaID Desktop — Autenticación sin móvil. Guarda tus identidades y autoriza accesos desde el escritorio.",
+  "main": "main.js",
+  "author": "Grupo de La Placeta",
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis"
+  },
+  "devDependencies": {
+    "electron": "^42.2.0",
+    "electron-builder": "^26.8.1"
+  },
+  "build": {
+    "appId": "es.grupoplaceta.placetaiddesktop",
+    "productName": "PlacetaID Desktop",
+    "directories": { "output": "dist" },
+    "files": [
+      "package.json",
+      "main.js",
+      "preload.js",
+      "index.html",
+      "styles.css",
+      "app.js"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "icon.png",
+      "protocols": {
+        "name": "PlacetaID Desktop",
+        "schemes": ["placetaid-desktop"]
+      }
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "PlacetaID Desktop"
+    }
+  }
+}

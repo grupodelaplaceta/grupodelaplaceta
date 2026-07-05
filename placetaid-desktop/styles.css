@@ -1,0 +1,116 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --p: #3f00d8; --pd: #1c005f; --bg: #f5f3f7; --s: #fff; --s2: #f1eef8;
+  --text: #111; --tm: #444; --td: #8878a0;
+  --line: rgba(0,0,0,0.08); --green: #22a06b; --red: #d03131;
+  --radius: 12px; --radius-sm: 8px;
+  --font: 'Outfit', sans-serif;
+}
+body {
+  font-family: var(--font); background: var(--bg); color: var(--text);
+  min-height: 100vh; overflow: hidden; user-select: none;
+}
+
+/* ── Titlebar ── */
+.titlebar {
+  display: flex; align-items: center; height: 40px;
+  background: var(--pd); color: #fff; -webkit-app-region: drag;
+}
+.titlebar-drag { flex: 1; display: flex; align-items: center; gap: 8px; padding: 0 14px; font-size: 13px; font-weight: 600; -webkit-app-region: drag; }
+.titlebar-icon { flex-shrink: 0; }
+.titlebar-btn {
+  -webkit-app-region: no-drag; background: none; border: none; color: rgba(255,255,255,0.7);
+  width: 40px; height: 40px; cursor: pointer; font-size: 14px; display: grid; place-items: center;
+  transition: background 0.15s;
+}
+.titlebar-btn:hover { background: rgba(255,255,255,0.15); color: #fff; }
+.titlebar-close:hover { background: #d03131; }
+
+/* ── Views ── */
+.view { display: flex; flex-direction: column; height: calc(100vh - 40px); padding: 20px 24px; overflow-y: auto; }
+.header-section { margin-bottom: 20px; }
+.title { font-size: 22px; font-weight: 800; letter-spacing: -0.03em; color: var(--pd); }
+.subtitle { font-size: 13px; color: var(--tm); margin-top: 4px; }
+.btn-back { background: none; border: none; color: var(--p); cursor: pointer; font-size: 13px; font-weight: 600; padding: 0; margin-bottom: 8px; font-family: inherit; }
+.btn-back:hover { color: var(--pd); }
+
+/* ── Empty state ── */
+.empty-state { text-align: center; padding: 40px 20px; }
+.empty-icon { font-size: 48px; margin-bottom: 12px; }
+.empty-state h3 { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+.empty-state p { font-size: 13px; color: var(--tm); margin-bottom: 16px; line-height: 1.5; }
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 10px 20px; font-family: var(--font); font-size: 13px; font-weight: 600;
+  border-radius: 10px; cursor: pointer; border: none; transition: all 0.2s; text-decoration: none;
+}
+.btn-primary { background: var(--p); color: #fff; }
+.btn-primary:hover { background: var(--pd); transform: translateY(-1px); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.btn-ghost { background: transparent; color: var(--text); border: 1.5px solid var(--line); }
+.btn-ghost:hover { border-color: var(--p); color: var(--p); }
+.btn-danger { background: var(--red); color: #fff; }
+.btn-danger:hover { background: #c93a3a; transform: translateY(-1px); }
+.btn-full { width: 100%; }
+.btn-add { margin-top: 12px; }
+
+/* ── Identity cards ── */
+.identities-list { display: flex; flex-direction: column; gap: 8px; }
+.identity-card {
+  display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+  background: var(--s); border: 1.5px solid var(--line); border-radius: var(--radius);
+  cursor: pointer; transition: all 0.2s;
+}
+.identity-card:hover { border-color: var(--p); box-shadow: 0 4px 16px rgba(63,0,216,0.1); transform: translateY(-1px); }
+.identity-avatar {
+  width: 40px; height: 40px; border-radius: 50%; background: var(--p);
+  color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 16px;
+  flex-shrink: 0;
+}
+.identity-info { flex: 1; min-width: 0; }
+.identity-name { font-weight: 700; font-size: 14px; }
+.identity-dip { font-size: 12px; color: var(--tm); font-family: monospace; margin-top: 2px; }
+.identity-remove {
+  background: none; border: none; color: var(--td); cursor: pointer; padding: 4px 8px;
+  font-size: 16px; border-radius: 6px; transition: all 0.15s;
+}
+.identity-remove:hover { background: var(--s2); color: var(--red); }
+
+/* ── Form ── */
+.form { display: flex; flex-direction: column; gap: 14px; }
+.form-group { }
+.form-label { display: block; font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.form-input {
+  width: 100%; padding: 10px 14px; background: var(--s); border: 2px solid var(--line);
+  border-radius: var(--radius-sm); font-family: var(--font); font-size: 14px; font-weight: 500;
+  color: var(--text); outline: none; transition: border-color 0.2s;
+}
+.form-input:focus { border-color: var(--p); box-shadow: 0 0 0 3px rgba(63,0,216,0.1); }
+
+/* ── Auth view ── */
+.auth-card {
+  background: var(--s); border: 1.5px solid var(--line); border-radius: var(--radius);
+  padding: 16px; margin-bottom: 16px;
+}
+.auth-detail { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.auth-detail:last-child { border-bottom: none; }
+.auth-label { font-size: 12px; color: var(--tm); font-weight: 500; }
+.auth-value { font-size: 14px; font-weight: 600; text-align: right; }
+.auth-code { font-family: monospace; font-size: 18px; letter-spacing: 0.15em; color: var(--p); }
+
+.identity-selector { display: flex; flex-direction: column; gap: 6px; }
+.identity-option {
+  display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+  background: var(--s); border: 1.5px solid var(--line); border-radius: 10px;
+  cursor: pointer; transition: all 0.2s;
+}
+.identity-option:hover { border-color: var(--p); }
+.identity-option.selected { border-color: var(--p); background: rgba(63,0,216,0.06); }
+.identity-option .radio { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; flex-shrink: 0; }
+.identity-option.selected .radio { border-color: var(--p); }
+.identity-option.selected .radio::after { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--p); }
+
+.auth-actions { display: flex; gap: 10px; margin-top: auto; padding-top: 16px; }
+.auth-actions .btn { flex: 1; }

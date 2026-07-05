@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PlacetaID Desktop</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- ── Barra de título personalizada ── -->
+  <div class="titlebar">
+    <div class="titlebar-drag">
+      <svg class="titlebar-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+      </svg>
+      <span>PlacetaID Desktop</span>
+    </div>
+    <button class="titlebar-btn" onclick="window.placetaidDesktop.window.minimize()">─</button>
+    <button class="titlebar-btn titlebar-close" onclick="window.placetaidDesktop.window.close()">✕</button>
+  </div>
+
+  <!-- ── Vista: Lista de identidades ── -->
+  <div class="view" id="view-identities">
+    <div class="header-section">
+      <h1 class="title">Mis Identidades</h1>
+      <p class="subtitle">Selecciona una identidad para autorizar accesos</p>
+    </div>
+
+    <div class="identities-list" id="identitiesList">
+      <div class="empty-state" id="emptyState">
+        <div class="empty-icon">🪪</div>
+        <h3>No hay identidades guardadas</h3>
+        <p>Inicia sesión en PlacetaID y guarda tu identidad aquí para usarla sin móvil.</p>
+        <a class="btn btn-primary" href="https://id.laplaceta.org/" target="_blank">Ir a PlacetaID</a>
+      </div>
+    </div>
+
+    <button class="btn btn-ghost btn-add" id="btnAddIdentity" style="display:none;" onclick="abrirAgregar()">
+      ＋ Añadir identidad manualmente
+    </button>
+  </div>
+
+  <!-- ── Vista: Agregar identidad ── -->
+  <div class="view" id="view-add" style="display:none;">
+    <div class="header-section">
+      <button class="btn-back" onclick="volver()">← Volver</button>
+      <h1 class="title">Añadir Identidad</h1>
+      <p class="subtitle">Introduce los datos de tu PlacetaID</p>
+    </div>
+    <div class="form">
+      <div class="form-group">
+        <label class="form-label">DIP</label>
+        <input class="form-input" id="addDip" placeholder="12345678M" maxlength="9" style="text-transform:uppercase;">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nombre completo</label>
+        <input class="form-input" id="addNombre" placeholder="Nombre Apellidos">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Alias (opcional)</label>
+        <input class="form-input" id="addAlias" placeholder="Mi identidad personal">
+      </div>
+      <button class="btn btn-primary btn-full" onclick="guardarIdentidad()">Guardar identidad</button>
+    </div>
+  </div>
+
+  <!-- ── Vista: Solicitud de autenticación ── -->
+  <div class="view" id="view-auth" style="display:none;">
+    <div class="header-section">
+      <h1 class="title">Autorizar acceso</h1>
+      <p class="subtitle" id="authServiceName">Solicitud de autenticación</p>
+    </div>
+
+    <div class="auth-card" id="authCard">
+      <div class="auth-detail">
+        <span class="auth-label">Servicio</span>
+        <span class="auth-value" id="authServicio">—</span>
+      </div>
+      <div class="auth-detail">
+        <span class="auth-label">Código</span>
+        <span class="auth-value auth-code" id="authCodigo">—</span>
+      </div>
+      <div class="auth-detail">
+        <span class="auth-label">Identidad</span>
+        <span class="auth-value" id="authIdentidad">Selecciona abajo</span>
+      </div>
+    </div>
+
+    <div class="form-group" style="margin-top:0;">
+      <label class="form-label">Elige con qué identidad autorizar</label>
+      <div class="identity-selector" id="authIdentitySelector"></div>
+    </div>
+
+    <div class="auth-actions">
+      <button class="btn btn-danger" id="btnDeny" onclick="denegar()">✗ Denegar</button>
+      <button class="btn btn-primary" id="btnAuthorize" onclick="autorizar()" disabled>✓ Autorizar</button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
