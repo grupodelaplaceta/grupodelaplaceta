@@ -405,6 +405,13 @@ router.get('/tramites/solicitar-factura', (req, res) => {
   });
 });
 
+router.get('/tramites/consulta-tributos', (req, res) => {
+  const usuario = req.session.usuario || null;
+  res.render('public/tramites/consulta-tributos', {
+    titulo: 'Consulta Tributaria', layout: 'layouts/publico', pathActual: '/tramites', usuario
+  });
+});
+
 router.post('/tramites/solicitar-factura', async (req, res) => {
   const usuario = req.session.usuario || null;
   try {

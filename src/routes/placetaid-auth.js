@@ -18,7 +18,7 @@ const defaultPlacetaidApi = process.env.VERCEL ? 'https://id.laplaceta.org/api' 
 const PLACETAID_API = process.env.PLACETAID_API_URL && process.env.PLACETAID_API_URL !== 'http://localhost:3000/api'
   ? process.env.PLACETAID_API_URL
   : defaultPlacetaidApi;
-const PLACETAID_CLIENT_ID = process.env.PLACETAID_CLIENT_ID || 'gdlp-crm';
+const PLACETAID_CLIENT_ID = process.env.PLACETAID_CLIENT_ID || process.env.PLACETAID_API_KEY || 'ccb611655030bdadf7218418dc195dcb';
 const PLACETAID_CLIENT_SECRET = process.env.PLACETAID_CLIENT_SECRET || 'gdlp-crm-dev-secret';
 
 function buildPlacetaidHeaders(extraHeaders = {}) {

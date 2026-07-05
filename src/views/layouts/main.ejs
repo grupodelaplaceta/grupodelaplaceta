@@ -28,12 +28,18 @@
         <a href="/admin/dashboard" class="sidebar-link <%= pathActual === '/admin/dashboard' ? 'active' : '' %>">
           <span class="sl-icon">📊</span> Dashboard
         </a>
+        <a href="/admin/vigilancia" class="sidebar-link sidebar-sub <%= pathActual.startsWith('/admin/vigilancia') ? 'active' : '' %>">
+          <span class="sl-icon">🛡️</span> Vigilancia
+        </a>
       </div>
 
       <div class="sidebar-group">
         <div class="sidebar-group-title">Identidad</div>
         <a href="/admin/identidad" class="sidebar-link <%= pathActual.startsWith('/admin/identidad') ? 'active' : '' %>">
           <span class="sl-icon">🆔</span> Gestión de Altas
+        </a>
+        <a href="/admin/placetid" class="sidebar-link sidebar-sub <%= pathActual.startsWith('/admin/placetid') ? 'active' : '' %>">
+          <span class="sl-icon">🔐</span> PlacetaID
         </a>
       </div>
 
@@ -45,8 +51,8 @@
         <a href="/admin/tributos" class="sidebar-link sidebar-sub <%= pathActual.startsWith('/admin/tributos') ? 'active' : '' %>">
           <span class="sl-icon">🧾</span> Tributos
         </a>
-        <a href="/admin/fiscal" class="sidebar-link <%= pathActual.startsWith('/admin/fiscal') ? 'active' : '' %>">
-          <span class="sl-icon">💰</span> Fiscal
+        <a href="/admin/audit-bancario" class="sidebar-link sidebar-sub <%= pathActual.startsWith('/admin/audit-bancario') ? 'active' : '' %>">
+          <span class="sl-icon">🏦</span> Auditoría Bancaria
         </a>
       </div>
 
@@ -69,6 +75,9 @@
         <a href="/admin/justicia" class="sidebar-link <%= pathActual.startsWith('/admin/justicia') ? 'active' : '' %>">
           <span class="sl-icon">⚖️</span> Expedientes
         </a>
+        <a href="/admin/tramitacion" class="sidebar-link sidebar-sub <%= pathActual.startsWith('/admin/tramitacion') ? 'active' : '' %>">
+          <span class="sl-icon">📋</span> Tramitación
+        </a>
       </div>
 
       <div class="sidebar-group">
@@ -84,6 +93,9 @@
         </a>
         <a href="/admin/contenidos" class="sidebar-link <%= pathActual.startsWith('/admin/contenidos') ? 'active' : '' %>">
           <span class="sl-icon">📝</span> Contenidos
+        </a>
+        <a href="/admin/documentos" class="sidebar-link sidebar-sub <%= pathActual.startsWith('/admin/documentos') ? 'active' : '' %>">
+          <span class="sl-icon">📄</span> Documentos
         </a>
       </div>
 

@@ -1,555 +1,429 @@
 import PDFDocument from 'pdfkit';
 import crypto from 'crypto';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const FONTS_DIR = path.join(__dirname, '..', '..', 'public', 'fonts');
 
 /**
- * Motor de Generación de Documentos PDF
- * Basado en la Normativa Institucional Unificada v5.0
- * Catálogo de modelos: GDLP-JUS-001 a 004, GDLP-HAC-010 a 011, GDLP-SEC-020 a 021
+ * Motor de Documentos PDF — Estilo Corporativo GDLP
+ * Paleta: purple-900:#1c005f, purple-700:#341087, purple-500:#5a2fc2
+ * Fuente: Outfit con fallback Helvetica
  */
-
 class PDFGenerator {
   constructor() {
     this.doc = null;
+    this._fontsRegistered = false;
   }
 
-  /**
-   * Generar un PDF de resolución sancionadora (GDLP-JUS-003)
-   */
-  generarResolucionSancionadora(datos) {
-    this.doc = new PDFDocument({
-      size: 'A4',
-      margins: { top: 50, bottom: 50, left: 60, right: 60 },
-      info: {
-        Title: `Resolución Sancionadora - ${datos.ID_EXPEDIENTE}`,
-        Author: 'Departamento de Justicia - Grupo de La Placeta',
-        Subject: 'Resolución Sancionadora en Primera Instancia',
-        Keywords: 'GDLP-JUS-003, resolución, sanción, expediente'
-      }
-    });
-
-    this._agregarEncabezadoOficial();
-    this._agregarReferencia(datos);
-    this._agregarAntecedentes(datos);
-    this._agregarFundamentosDerecho(datos);
-    this._agregarParteDispositiva(datos);
-    this._agregarMedidasCautelares(datos);
-    this._agregarRegimenRecursos(datos);
-    this._agregarFirmaDigital(datos);
-
-    return this.doc;
-  }
-
-  /**
-   * Generar PDF de Acuerdo de Inicio de Expediente (GDLP-JUS-001)
-   */
-  generarInicioExpediente(datos) {
-    this.doc = new PDFDocument({ size: 'A4', margins: { top: 50, bottom: 50, left: 60, right: 60 } });
-    this._agregarEncabezadoOficial();
-    this.doc.fontSize(14).font('Helvetica-Bold').text('ACUERDO DE INICIO DE EXPEDIENTE DISCIPLINARIO Y PLIEGO DE CARGOS', { align: 'center' });
-    this.doc.moveDown(2);
-    this._agregarCampo('Ref. Expediente', datos.ID_EXPEDIENTE);
-    this._agregarCampo('Fecha de Emisión', datos.FECHA_SISTEMA || new Date().toLocaleDateString('es-ES'));
-    this._agregarCampo('Presunto Infractor', `${datos.ALIAS_INFRACTOR} · DIP: ${datos.DIP_NÚMERO}`);
-    this._agregarCampo('Tipo de Infración', datos.TIPO_INFRACCION);
-    this.doc.moveDown();
-    this.doc.fontSize(10).font('Helvetica').text('DESCRIPCIÓN DE LOS HECHOS:', { underline: true });
-    this.doc.moveDown(0.5);
-    this.doc.text(datos.DESCRIPCIÓN_HECHOS || 'Según consta en las actuaciones...');
-    this.doc.moveDown();
-    this._agregarFirmaDigital(datos);
-    return this.doc;
-  }
-
-  /**
-   * Generar PDF de Decreto de Expulsión (GDLP-JUS-004)
-   */
-  generarDecretoExpulsion(datos) {
-    this.doc = new PDFDocument({ size: 'A4', margins: { top: 50, bottom: 50, left: 60, right: 60 } });
-    this._agregarEncabezadoOficial();
-    this.doc.fontSize(16).font('Helvetica-Bold').fillColor('#cc0000').text('DECRETO DE EXPULSIÓN DEFINITIVA Y CONFISCACIÓN MONETARIA', { align: 'center' });
-    this.doc.fillColor('#000000');
-    this.doc.moveDown(2);
-    this._agregarCampo('Ref. Expediente', datos.ID_EXPEDIENTE);
-    this._agregarCampo('Infractor', datos.ALIAS_INFRACTOR);
-    this._agregarCampo('Saldo Confiscado', `${datos.SALDO_CONFISCADO} Pz`);
-    this._agregarCampo('Hash de Quema', datos.HASH_QUEMA_MONEDA);
-    this._agregarCampo('Estado de la Cuenta', datos.ESTADO_CUENTA || 'EXPULSADO_PERMANENTE');
-    this.doc.moveDown();
-    this.doc.fontSize(10).font('Helvetica');
-    this.doc.text('Visto el expediente disciplinario de referencia, y habiendo agotado la vía interna sin que el infractor haya ejercido su derecho de apelación en el plazo establecido, se procede a:');
-    this.doc.moveDown();
-    this.doc.list([
-      'La expulsión definitiva e irrevocable del ecosistema virtual "La Placeta".',
-      'La confiscación total del saldo bancario del infractor.',
-      `La quema irreversible de ${datos.SALDO_CONFISCADO} Pz del suministro monetario circulante.`,
-      'La inclusión del infractor en la lista negra del sistema, impidiendo cualquier nuevo registro futuro.'
-    ]);
-    this.doc.moveDown();
-    this._agregarFirmaDigital(datos);
-    return this.doc;
-  }
-
-  /**
-   * Generar PDF de Requerimiento de Regularización (GDLP-HAC-010)
-   */
-  generarRequerimientoDescubierto(datos) {
-    this.doc = new PDFDocument({ size: 'A4', margins: { top: 50, bottom: 50, left: 60, right: 60 } });
-    this._agregarEncabezadoOficial();
-    this.doc.fontSize(14).font('Helvetica-Bold').text('REQUERIMIENTO DE REGULARIZACIÓN POR DESCUBIERTO BANCARIO DE CUENTA', { align: 'center' });
-    this.doc.moveDown(2);
-    this._agregarCampo('Ciudadano', datos.ALIAS_INFRACTOR);
-    this._agregarCampo('DIP', datos.DIP_NÚMERO);
-    this._agregarCampo('Saldo Negativo Actual', `${datos.SALDO_NEGATIVO} Pz`);
-    this._agregarCampo('Sanción Aplicada', `${datos.SANCIÓN_APLICADA_PZ} Pz`);
-    this.doc.moveDown();
-    this.doc.fontSize(10).font('Helvetica').text('De conformidad con el Capítulo IV de la Normativa Institucional Unificada v5.0, y habiendo transcurrido el período de gracia de 5 días, se requiere al ciudadano para que regularice su situación financiera en el plazo máximo de 30 días, transcurridos los cuales se derivará el caso al Departamento de Justicia.');
-    this.doc.moveDown();
-    this._agregarFirmaDigital(datos);
-    return this.doc;
-  }
-
-  /**
-   * Generar PDF de Certificado de Baja (GDLP-SEC-020)
-   */
-  generarCertificadoBaja(datos) {
-    this.doc = new PDFDocument({ size: 'A4', margins: { top: 50, bottom: 50, left: 60, right: 60 } });
-    this._agregarEncabezadoOficial();
-    this.doc.fontSize(14).font('Helvetica-Bold').text('RESOLUCIÓN DE CERTIFICACIÓN DE BAJA VOLUNTARIA Y REVOCACIÓN DE IDENTIDAD', { align: 'center' });
-    this.doc.moveDown(2);
-    this._agregarCampo('Ciudadano', datos.ALIAS_CIUDADANO);
-    this._agregarCampo('DIP Revocado', datos.DIP_REVOCADO);
-    this._agregarCampo('Saldo Liquidado', `${datos.SALDO_LIQUIDADO_RETORNADO} Pz`);
-    this.doc.moveDown();
-    this._agregarFirmaDigital(datos);
-    return this.doc;
-  }
-
-  /**
-   * Generar PDF de Certificado ARCO (GDLP-SEC-021)
-   */
-  generarCertificadoARCO(datos) {
-    this.doc = new PDFDocument({ size: 'A4', margins: { top: 50, bottom: 50, left: 60, right: 60 } });
-    this._agregarEncabezadoOficial();
-    this.doc.fontSize(14).font('Helvetica-Bold').text('CERTIFICADO DE EJERCICIO DE DERECHOS ARCO Y ANONIMIZACIÓN DE DATOS REALES', { align: 'center' });
-    this.doc.moveDown(2);
-    this._agregarCampo('Titular', datos.NOMBRE_REAL_AFECTADO || '[DATOS ANONIMIZADOS]');
-    this._agregarCampo('Hash de Anonimización', datos.HASH_ANONIMIZACION);
-    this._agregarCampo('Restricciones Aplicadas', datos.LOG_RESTRICCION_DE_DATOS || 'Ninguna');
-    this.doc.moveDown();
-    this.doc.fontSize(9).font('Helvetica-Oblique').text('Este certificado acredita que se ha ejecutado el procedimiento de anonimización irreversible conforme al Reglamento General de Protección de Datos (RGPD) y la LOPDGDD.');
-    this.doc.moveDown();
-    this._agregarFirmaDigital(datos);
-    return this.doc;
-  }
-
-  // ── Métodos Privados ─────────────────────────────────────────────────────
-
-  _agregarEncabezadoOficial() {
-    const doc = this.doc;
-    doc.fontSize(8).font('Helvetica').fillColor('#666666');
-    doc.text('CÓDIGO DE MODELO: GDLP-JUS-003', { align: 'right' });
-    doc.moveDown(0.5);
-    doc.fontSize(16).font('Helvetica-Bold').fillColor('#1a1a2e').text('DEPARTAMENTO DE JUSTICIA', { align: 'center' });
-    doc.fontSize(10).font('Helvetica').fillColor('#555555').text('Ecosistema Virtual "La Placeta" · Asociación Grupo de La Placeta', { align: 'center' });
-    doc.moveDown(0.5);
-    doc.fontSize(8).font('Helvetica').fillColor('#999999').text('NIF: G-12345678 · Normativa v5.0', { align: 'center' });
-    doc.moveDown();
-    this._dibujarLinea();
-    doc.moveDown();
-  }
-
-  _dibujarLinea() {
-    this.doc.moveTo(60, this.doc.y)
-      .lineTo(535, this.doc.y)
-      .strokeColor('#1a1a2e')
-      .stroke();
-  }
-
-  _agregarReferencia(datos) {
-    const doc = this.doc;
-    doc.fontSize(9).font('Helvetica').fillColor('#333333');
-    doc.text(`Ref. Expediente Disciplinario: ${datos.ID_EXPEDIENTE}`);
-    doc.text(`Fecha de Emisión: ${datos.FECHA_SISTEMA || new Date().toLocaleDateString('es-ES')}`);
-    doc.text(`Destinatario: ${datos.ALIAS_INFRACTOR} · DIP: ${datos.DIP_NÚMERO}`);
-    doc.text(`Modalidad de Alta: ${datos.MODALIDAD_ALTA || 'Estándar'}`);
-    doc.moveDown();
-    this._dibujarLinea();
-    doc.moveDown();
-  }
-
-  _agregarAntecedentes(datos) {
-    const doc = this.doc;
-    doc.fontSize(11).font('Helvetica-Bold').fillColor('#1a1a2e').text('ANTECEDENTES DE HECHO', { underline: true });
-    doc.moveDown(0.5);
-    doc.fontSize(9).font('Helvetica').fillColor('#333333');
-    doc.text(`Que en fecha ${datos.FECHA_INICIO_EXP || '—'}, este órgano instructor procedió a la apertura de expediente de oficio debido a la detección en los logs del sistema de la siguiente conducta tipificada en la Normativa Unificada v5.0:`);
-    doc.moveDown(0.5);
-    doc.font('Helvetica-Oblique').text(`> El ciudadano incurrió en: ${datos.DESCRIPCIÓN_CORTA_HECHOS || 'conductas contrarias a la normativa'}.`);
-    doc.moveDown(0.5);
-    doc.font('Helvetica').text('Habiéndose notificado el preceptivo Pliego de Cargos, y habiendo transcurrido el plazo estatutario de cinco (5) días hábiles otorgados para la presentación de descargos:');
-    doc.moveDown(0.3);
-    doc.text(datos.ALEGACIONES_PRESENTADAS !== false ? '[X] El presunto infractor presentó escrito de alegaciones en tiempo y forma.' : '[ ] El presunto infractor NO presentó alegaciones, precluyendo su derecho.');
-    doc.moveDown();
-  }
-
-  _agregarFundamentosDerecho(datos) {
-    const doc = this.doc;
-    doc.fontSize(11).font('Helvetica-Bold').fillColor('#1a1a2e').text('FUNDAMENTOS DE DERECHO', { underline: true });
-    doc.moveDown(0.5);
-    doc.fontSize(9).font('Helvetica').fillColor('#333333');
-    doc.text('PRIMERO.- Compete al Departamento de Justicia del Grupo de La Placeta la instrucción y resolución de los expedientes incoados por infracciones a la convivencia, la economía del sistema o el uso ilegítimo de recursos digitales de la asociación, conforme al Capítulo X, Artículo 21 del texto legal vigente.');
-    doc.moveDown(0.3);
-    doc.text(`SEGUNDO.- Los hechos probados y analizados durante la fase instructora constituyen de manera inequívoca una INFRACCIÓN de carácter: ${datos.GRAVEDAD_INFRACCION || 'Leve'} (Leve / Grave / Muy Grave).`);
-    doc.moveDown(0.3);
-    doc.text(`TERCERO.- Se ha constatado la concurrencia de los preceptos tipificados en el Art. 20 de la Normativa Unificada, encuadrándose la conducta específicamente bajo el supuesto de: "${datos.CONDUCTA_TIPICA_NORMATIVA || 'conducta contraria a la normativa de convivencia'}".`);
-    doc.moveDown();
-  }
-
-  _agregarParteDispositiva(datos) {
-    const doc = this.doc;
-    doc.fontSize(11).font('Helvetica-Bold').fillColor('#1a1a2e').text('PARTE DISPOSITIVA / RESOLUCIÓN', { underline: true });
-    doc.moveDown(0.5);
-    doc.fontSize(9).font('Helvetica').fillColor('#333333');
-    doc.text(`Vistos los preceptos normativos aplicables, este Juez del Departamento de Justicia resuelve imponer a ${datos.ALIAS_INFRACTOR} las siguientes medidas disciplinarias y correctivas de aplicación directa en el backend del CRM:`);
-    doc.moveDown(0.5);
-    doc.list([
-      `SANCIÓN ECONÓMICA: Se ordena un débito forzado inmediato en su cuenta bancaria personal por el importe de ${datos.CUANTÍA_MULTA_PZ || '0'} Placetas (Pz).`,
-      `SUSPENSIÓN DE DERECHOS: Se inhabilita temporalmente el pasaporte digital PlacetaID del usuario, lo que implica la restricción absoluta de accesos a los sistemas, canales y cargos durante un período ininterrumpido de ${datos.DÍAS_SUSPENSIÓN || '0'} días naturales a contar desde la firma de este acto.`,
-      `ADVERTENCIA DE REINCIDENCIA: Se notifica formalmente al sancionado que, en virtud del Art. 20, la reiteración en conductas tipificadas como ${datos.GRAVEDAD_INFRACCION || 'leves'} conllevará de forma automática la elevación de la sanción a la categoría de: ${datos.EFECTO_REINCIDENCIA || 'Muy Grave, pudiendo conllevar la expulsión definitiva'}.`
-    ]);
-    doc.moveDown();
-  }
-
-  _agregarMedidasCautelares(datos) {
-    const doc = this.doc;
-    doc.fontSize(11).font('Helvetica-Bold').fillColor('#1a1a2e').text('MEDIDAS CAUTELARES', { underline: true });
-    doc.moveDown(0.5);
-    doc.fontSize(9).font('Helvetica').fillColor('#333333');
-    doc.text(datos.MEDIDAS_RATIFICADAS ? '[X] Se ratifican las medidas cautelares adoptadas en el modelo GDLP-JUS-002, procediéndose a su conversión en definitivas.' : '[ ] Se levantan las medidas cautelares previas con efectos desde el día de hoy.');
-    doc.moveDown();
-  }
-
-  _agregarRegimenRecursos(datos) {
-    const doc = this.doc;
-    doc.fontSize(11).font('Helvetica-Bold').fillColor('#1a1a2e').text('RÉGIMEN DE RECURSOS', { underline: true });
-    doc.moveDown(0.5);
-    doc.fontSize(9).font('Helvetica').fillColor('#333333');
-    doc.text('Contra la presente resolución en primera instancia, que no agota la vía asociativa interna, el integrante podrá interponer Recurso de Apelación ante la Junta Directiva del Grupo de La Placeta utilizando el botón del CRM habilitado al efecto.');
-    doc.moveDown(0.3);
-    doc.font('Helvetica-Bold').text(`El plazo inalterable para interponer dicho recurso expira el día: ${datos.FECHA_LÍMITE_APELACIÓN || '—'} (inclusive). Transcurrido dicho término sin que se haya registrado actividad recursiva, la sanción devendrá firme, inmutable e histórica en el DIP del ciudadano.`);
-    doc.moveDown();
-    this._dibujarLinea();
-    doc.moveDown();
-    doc.fontSize(11).font('Helvetica-Bold').text('CÚMPLASE Y NOTIFÍQUESE.', { align: 'center' });
-    doc.moveDown();
-  }
-
-  _agregarFirmaDigital(datos) {
-    const doc = this.doc;
-    doc.moveDown();
-    doc.fontSize(8).font('Helvetica').fillColor('#666666');
-    const hash = crypto.createHash('sha256').update(JSON.stringify(datos) + Date.now()).digest('hex');
-    doc.text(`[ Huella Digital Criptográfica: ${hash.substring(0, 20)}... ]`, { align: 'center' });
-    doc.moveDown(0.3);
-    doc.text('DEPARTAMENTO DE JUSTICIA · ASOCIACIÓN GRUPO DE LA PLACETA', { align: 'center' });
-    doc.text('Documento generado electrónicamente · Código de verificación en CRM', { align: 'center', fontSize: 7 });
-  }
-
-  _agregarCampo(nombre, valor) {
-    this.doc.fontSize(9).font('Helvetica-Bold').fillColor('#333333');
-    this.doc.text(`${nombre}: `, { continued: true });
-    this.doc.font('Helvetica').fillColor('#555555').text(valor || '—');
-  }
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  //  TRIBUTOS DE LA PLACETA — Documentos con estilo Código Normativo
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  /**
-   * Generar PDF de Declaración Tributaria Mensual (TLP-DEC-001)
-   * Estilo basado en Código Normativo Interno (codigo.html)
-   */
-  generarDeclaracionTributaria(datos) {
-    this.doc = new PDFDocument({
-      size: 'A4',
-      margins: { top: 60, bottom: 50, left: 55, right: 55 },
-      info: {
-        Title: `Declaración Tributaria - ${datos.ID_DECLARACION || datos.mes_periodo}`,
-        Author: 'Tributos de La Placeta (TLP)',
-        Subject: 'Declaración Mensual IRM e IGF',
-        Keywords: 'TLP, tributación, IRM, IGF, declaración'
-      }
-    });
-    this._estiloCodigoNormativo();
-    this.doc.moveDown(2);
-
-    // Título
-    this.doc.fontSize(9).fillColor('#5a2fc2').font('Helvetica-Bold');
-    this.doc.text('TRIBUTOS DE LA PLACETA', { align: 'center' });
-    this.doc.moveDown(0.3);
-    this.doc.fontSize(7).fillColor('#5c5566').font('Helvetica');
-    this.doc.text('Sistema de Control Fiscal · Acoplado al Banco de La Placeta (BLP)', { align: 'center' });
-    this.doc.moveDown(0.5);
-    this._tributosLinea('#5a2fc2');
-    this.doc.moveDown(1.5);
-
-    this.doc.fontSize(16).fillColor('#1c005f').font('Helvetica-Bold');
-    this.doc.text('DECLARACIÓN TRIBUTARIA MENSUAL', { align: 'center' });
-    this.doc.moveDown(0.5);
-    this.doc.fontSize(9).fillColor('#5a2fc2').font('Helvetica');
-    this.doc.text(`Periodo: ${datos.mes_periodo || '—'} · Ref: ${datos.ID_DECLARACION || 'N/D'}`, { align: 'center' });
-    this.doc.moveDown(1.5);
-
-    // Datos del contribuyente
-    this._tributosRecuadroTitulo('DATOS DEL CONTRIBUYENTE');
-    this._tributosCampo('Placeta ID', datos.placeta_id || '—');
-    this._tributosCampo('Nombre / Razón Social', datos.nombre || '—');
-    this._tributosCampo('DIP', datos.dip || '—');
-    this._tributosCampo('Tipo de Sujeto', datos.tipo_sujeto || 'Físico');
-    this._tributosCampo('Cuenta BLP', datos.cuenta_id_blp || '—');
-    this.doc.moveDown(1);
-
-    // Cálculos
-    this._tributosRecuadroTitulo('CÁLCULO DE IMPUESTOS');
-    this._tributosFila('Patrimonio Medio', `${Number(datos.patrimonio_medio || 0).toLocaleString('es-ES', { minimumFractionDigits: 2 })} Pz`);
-    this._tributosFila('Índice de Acumulación (IA)', `${Number(datos.indice_acumulacion || 0).toFixed(4)}%`);
-    this._tributosFila('Cuota IRM', `${Number(datos.cuota_irm || 0).toLocaleString('es-ES', { minimumFractionDigits: 2 })} Pz`);
-    this._tributosFila('Cuota IGF', `${Number(datos.cuota_igf || 0).toLocaleString('es-ES', { minimumFractionDigits: 2 })} Pz`);
-    this._tributosFila('Exención Aplicada', datos.exencion_aplicada ? 'Sí' : 'No');
-    this.doc.moveDown(1);
-
-    // Estado
-    this._tributosRecuadroTitulo('ESTADO Y CONTROL');
-    this._tributosCampo('Estado de Pago', datos.estado_pago || 'Borrador');
-    this._tributosCampo('Días Declarados (Banco)', String(datos.dias_declarados_banco || 0));
-    this._tributosCampo('Días Reconstruidos (CRM)', String(datos.dias_reconstruidos_crm || 0));
-    this._tributosCampo('Días Activos del Mes', String(datos.dias_activos_mes || 30));
-    this._tributosCampo('Bypass Junta Directiva', datos.bypass_junta_directiva ? 'Sí' : 'No');
-    if (datos.id_permiso_junta) this._tributosCampo('ID Permiso Junta', datos.id_permiso_junta);
-
-    this.doc.moveDown(1.5);
-    this._tributosLinea('#1c005f');
-    this.doc.moveDown(1);
-
-    // Firma y hash
-    const hash = datos.pdf_hash || crypto.createHash('sha256').update(JSON.stringify(datos) + Date.now()).digest('hex');
-    this.doc.fontSize(7).fillColor('#5c5566').font('Helvetica');
-    this.doc.text(`CSV: ${datos.csv || hash.substring(0, 16).toUpperCase()}`, { align: 'center' });
-    this.doc.moveDown(0.3);
-    this.doc.text(`SHA-256: ${hash}`, { align: 'center' });
-    this.doc.moveDown(0.5);
-    this._tributosLinea('#5a2fc2');
-    this.doc.moveDown(0.5);
-    this.doc.fontSize(7).fillColor('#5c5566').font('Helvetica-Oblique');
-    this.doc.text('Tributos de La Placeta (TLP) · Documento generado electrónicamente con valor legal.', { align: 'center' });
-    this.doc.text('Código Normativo Interno · Capítulo IV — Banca, Capital e Impuestos', { align: 'center' });
-    this.doc.text(`Generado el ${new Date().toLocaleString('es-ES')}`, { align: 'center' });
-
-    return this.doc;
-  }
-
-  /**
-   * Generar PDF de Factura con IVA (TLP-FAC-001)
-   * Estilo basado en Código Normativo Interno
-   */
-  generarFacturaTributaria(datos) {
-    this.doc = new PDFDocument({
-      size: 'A4',
-      margins: { top: 60, bottom: 50, left: 55, right: 55 },
-      info: {
-        Title: `Factura TLP - ${datos.numero_factura}`,
-        Author: 'Tributos de La Placeta (TLP)',
-        Subject: 'Factura con IVA 12%',
-        Keywords: 'TLP, factura, IVA, tributación'
-      }
-    });
-    this._estiloCodigoNormativo();
-
-    // ── Cabecera ──
-    this.doc.fontSize(9).fillColor('#5a2fc2').font('Helvetica-Bold');
-    this.doc.text('TRIBUTOS DE LA PLACETA', { align: 'center' });
-    this.doc.moveDown(0.2);
-    this.doc.fontSize(7).fillColor('#5c5566').font('Helvetica');
-    this.doc.text('Sistema de Facturación · IVA 12% · Acoplado al Banco de La Placeta (BLP)', { align: 'center' });
-    this.doc.moveDown(0.3);
-    this._tributosLinea('#5a2fc2');
-    this.doc.moveDown(1.2);
-
-    this.doc.fontSize(16).fillColor('#1c005f').font('Helvetica-Bold');
-    this.doc.text('FACTURA', { align: 'center' });
-    this.doc.moveDown(0.3);
-    this.doc.fontSize(9).fillColor('#5a2fc2').font('Helvetica');
-    this.doc.text(`Nº ${datos.numero_factura} · CSV: ${datos.csv_verificacion || 'N/D'}`, { align: 'center' });
-    this.doc.moveDown(1.2);
-
-    this._tributosRecuadroTitulo('PARTES');
-    this._tributosCampo('Emisor (Placeta ID)', datos.emisor_placeta_id || '—');
-    this._tributosCampo('Receptor (Placeta ID)', datos.receptor_placeta_id || '—');
-    this._tributosCampo('Fecha de Emisión', datos.fecha_emision ? new Date(datos.fecha_emision).toLocaleString('es-ES') : '—');
-    if (datos.transaction_id_blp) this._tributosCampo('ID Transacción BLP', datos.transaction_id_blp);
-    this.doc.moveDown(1);
-
-    this._tributosRecuadroTitulo('IMPORTES');
-    this._tributosFila('Base Imponible', `${Number(datos.base_imponible || 0).toLocaleString('es-ES', { minimumFractionDigits: 2 })} Pz`);
-    this._tributosFila('IVA (12%)', `${Number(datos.total_iva || 0).toLocaleString('es-ES', { minimumFractionDigits: 2 })} Pz`);
-    this._tributosLinea('#5a2fc2');
-    this._tributosFila('TOTAL FACTURA', `${Number(datos.total_factura || 0).toLocaleString('es-ES', { minimumFractionDigits: 2 })} Pz`, true);
-
-    this.doc.moveDown(1.5);
-
-    // Líneas si hay detalle
-    if (datos.lineas && datos.lineas.length > 0) {
-      this._tributosRecuadroTitulo('DETALLE DE PRODUCTOS / SERVICIOS');
-      // Cabecera de tabla
-      const colX = [55, 200, 280, 340, 400, 470];
-      this.doc.fontSize(7.5).fillColor('#ffffff').font('Helvetica-Bold');
-      this.doc.rect(55, this.doc.y, 490, 18).fill('#1c005f');
-      const baseY = this.doc.y + 5;
-      this.doc.text('Concepto', colX[0], baseY, { width: 130 });
-      this.doc.text('Cant.', colX[1], baseY, { width: 40, align: 'center' });
-      this.doc.text('P. Unit.', colX[2], baseY, { width: 55, align: 'right' });
-      this.doc.text('Neto', colX[3], baseY, { width: 55, align: 'right' });
-      this.doc.text('IVA', colX[4], baseY, { width: 55, align: 'right' });
-      this.doc.text('Subtotal', colX[5], baseY, { width: 60, align: 'right' });
-      this.doc.y += 22;
-
-      datos.lineas.forEach((linea, index) => {
-        if (index % 2 === 0) {
-          this.doc.rect(55, this.doc.y - 4, 490, 20).fill('#f7f4fd');
-        }
-        this.doc.fontSize(7.5).fillColor('#1c1226').font('Helvetica');
-        const y = this.doc.y;
-        this.doc.text(linea.concepto_producto || '—', colX[0], y, { width: 130 });
-        this.doc.text(String(linea.cantidad || 0), colX[1], y, { width: 40, align: 'center' });
-        this.doc.text(Number(linea.precio_unitario || 0).toLocaleString('es-ES', { minimumFractionDigits: 2 }), colX[2], y, { width: 55, align: 'right' });
-        this.doc.text(Number(linea.subtotal_neto || 0).toLocaleString('es-ES', { minimumFractionDigits: 2 }), colX[3], y, { width: 55, align: 'right' });
-        this.doc.text(Number(linea.subtotal_iva || 0).toLocaleString('es-ES', { minimumFractionDigits: 2 }), colX[4], y, { width: 55, align: 'right' });
-        this.doc.text(Number((linea.subtotal_neto || 0) + (linea.subtotal_iva || 0)).toLocaleString('es-ES', { minimumFractionDigits: 2 }), colX[5], y, { width: 60, align: 'right' });
-        this.doc.y += 14;
-      });
+  _registerFonts(doc) {
+    if (this._fontsRegistered) return;
+    try {
+      doc.registerFont('Outfit', path.join(FONTS_DIR, 'outfit_regular.ttf'));
+      doc.registerFont('Outfit-Bold', path.join(FONTS_DIR, 'outfit_bold.ttf'));
+      doc.registerFont('Outfit-Light', path.join(FONTS_DIR, 'outfit_light.ttf'));
+      doc.registerFont('Outfit-Black', path.join(FONTS_DIR, 'outfit_black.ttf'));
+      this._fontsRegistered = true;
+    } catch (e) {
+      console.warn('[PDF] Outfit font not available:', e.message);
     }
-
-    this.doc.moveDown(1.5);
-    this._tributosLinea('#1c005f');
-    this.doc.moveDown(0.8);
-    this.doc.fontSize(7).fillColor('#5c5566').font('Helvetica-Oblique');
-    this.doc.text('Tributos de La Placeta (TLP) · Factura con IVA al 12% · Código Normativo Interno Cap. IV', { align: 'center' });
-    this.doc.text(`CSV: ${datos.csv_verificacion || 'N/D'} · Generado el ${new Date().toLocaleString('es-ES')}`, { align: 'center' });
-
-    return this.doc;
   }
 
-  /**
-   * Generar PDF de Rectificación / Reajuste Tributario (TLP-REC-001)
-   */
-  generarRectificacionTributaria(datos) {
+  _f(bold, light, black) {
+    if (black && this._fontsRegistered) return 'Outfit-Black';
+    if (bold && this._fontsRegistered) return 'Outfit-Bold';
+    if (light && this._fontsRegistered) return 'Outfit-Light';
+    if (this._fontsRegistered) return 'Outfit';
+    if (bold) return 'Helvetica-Bold';
+    if (light) return 'Helvetica-Oblique';
+    return 'Helvetica';
+  }
+
+  _initDoc(options) {
     this.doc = new PDFDocument({
       size: 'A4',
-      margins: { top: 60, bottom: 50, left: 55, right: 55 },
-      info: {
-        Title: `Rectificación Tributaria - ${datos.ID_RECTIFICACION || datos.id}`,
-        Author: 'Tributos de La Placeta (TLP)',
-        Subject: 'Rectificación Post-Bypass / Reajuste',
-        Keywords: 'TLP, rectificación, bypass, reajuste'
-      }
+      margins: { top: 55, bottom: 50, left: 50, right: 50 },
+      bufferPages: true,
+      info: { Author: 'Grupo de La Placeta', ...(options?.info || {}) }
     });
-    this._estiloCodigoNormativo();
-
-    this.doc.fontSize(9).fillColor('#5a2fc2').font('Helvetica-Bold');
-    this.doc.text('TRIBUTOS DE LA PLACETA', { align: 'center' });
-    this.doc.moveDown(0.2);
-    this.doc.fontSize(7).fillColor('#5c5566').font('Helvetica');
-    this.doc.text('Sistema de Rectificación Impositiva · Art. 4.16 ter', { align: 'center' });
-    this.doc.moveDown(0.3);
-    this._tributosLinea('#5a2fc2');
-    this.doc.moveDown(1.2);
-
-    this.doc.fontSize(15).fillColor('#1c005f').font('Helvetica-Bold');
-    this.doc.text('RECTIFICACIÓN Y REAJUSTE DE OFICIO', { align: 'center' });
-    this.doc.moveDown(0.3);
-    this.doc.fontSize(9).fillColor('#5a2fc2').font('Helvetica');
-    this.doc.text(`Ref: ${datos.ID_RECTIFICACION || datos.id || 'N/D'} · ${datos.fecha_rectificacion ? new Date(datos.fecha_rectificacion).toLocaleDateString('es-ES') : new Date().toLocaleDateString('es-ES')}`, { align: 'center' });
-    this.doc.moveDown(1.2);
-
-    this._tributosRecuadroTitulo('DATOS DE LA RECTIFICACIÓN');
-    this._tributosCampo('Declaración Original', datos.declaracion_original_id || '—');
-    this._tributosCampo('Placeta ID', datos.placeta_id || '—');
-    this._tributosCampo('Fecha Rectificación', datos.fecha_rectificacion ? new Date(datos.fecha_rectificacion).toLocaleString('es-ES') : new Date().toLocaleString('es-ES'));
-    this.doc.moveDown(1);
-
-    this._tributosRecuadroTitulo('DIFERENCIA DELTA (Δ)');
-    const delta = Number(datos.diferencia_delta || 0);
-    const esReembolso = delta < 0;
-    this._tributosFila('Cuota Provisional Cobrada', `${Number(datos.cuota_provisional_cobrada || 0).toLocaleString('es-ES', { minimumFractionDigits: 2 })} Pz`);
-    this._tributosFila('Cuota Real Calculada', `${Number(datos.cuota_real_calculada || 0).toLocaleString('es-ES', { minimumFractionDigits: 2 })} Pz`);
-    this._tributosLinea('#5a2fc2');
-    this._tributosFila(
-      esReembolso ? '🟢 Diferencia a Reembolsar' : '🔴 Diferencia a Cobrar',
-      `${Math.abs(delta).toLocaleString('es-ES', { minimumFractionDigits: 2 })} Pz`,
-      true
-    );
-
-    this.doc.moveDown(1);
-    this._tributosCampo('Estado del Ajuste', datos.estado_ajuste || 'Pendiente_Procesamiento');
-
-    if (datos.signature_sha256) {
-      this.doc.moveDown(1);
-      this.doc.fontSize(6.5).fillColor('#5c5566').font('Helvetica');
-      this.doc.text(`Firma SHA-256: ${datos.signature_sha256}`, { align: 'center' });
-    }
-
-    this.doc.moveDown(1.5);
-    this._tributosLinea('#1c005f');
-    this.doc.moveDown(0.5);
-    this.doc.fontSize(7).fillColor('#5c5566').font('Helvetica-Oblique');
-    this.doc.text('Tributos de La Placeta (TLP) · Rectificación según Art. 4.16 ter del Código Normativo Interno', { align: 'center' });
-    this.doc.text('Documento con validez ejecutiva · Compensación en caliente sobre el BLP', { align: 'center' });
-
+    this._registerFonts(this.doc);
+    this.doc.on('pageAdded', () => this._addFooter());
     return this.doc;
   }
 
-  // ── Estilo Código Normativo ─────────────────────────────────────────────
-
-  _estiloCodigoNormativo() {
-    // Colores de la paleta codigo.html:
-    // purple-900:#1c005f, purple-700:#341087, purple-500:#5a2fc2,
-    // purple-300:#9c7ee6, purple-100:#efe9fb, ink:#1c1226, gray:#5c5566
-  }
-
-  _tributosLinea(color = '#5a2fc2') {
-    this.doc.moveTo(55, this.doc.y)
-      .lineTo(545, this.doc.y)
-      .strokeColor(color)
-      .lineWidth(1.5)
-      .stroke();
-  }
-
-  _tributosRecuadroTitulo(texto) {
+  _header(titulo, subtitulo, codigo) {
     const doc = this.doc;
-    doc.fontSize(8).fillColor('#ffffff').font('Helvetica-Bold');
-    const y = doc.y;
-    doc.rect(55, y, 490, 18).fill('#5a2fc2');
-    doc.text(`  ${texto}`, 55, y + 4, { width: 480 });
-    doc.y = y + 22;
+    doc.save();
+    doc.font(this._f(true)).fontSize(11).fillColor('#1c005f');
+    doc.text('\u{1F3DB}\u{FE0F}  GRUPO DE LA PLACETA', 50, 40);
+    doc.font(this._f(false, true)).fontSize(7).fillColor('#5c5566');
+    doc.text(codigo || 'Documento Oficial', 50, 56);
+    if (titulo) {
+      doc.font(this._f(false, false, true)).fontSize(16).fillColor('#1c005f');
+      doc.text(titulo, 50, 78, { width: 500 });
+    }
+    if (subtitulo) {
+      doc.font(this._f(false, true)).fontSize(8.5).fillColor('#5a2fc2');
+      doc.text(subtitulo, 50, doc.y + 2, { width: 500 });
+    }
+    const lineY = Math.max(doc.y + 10, 120);
+    doc.rect(50, lineY, 500, 1.5).fill('#5a2fc2');
+    doc.y = lineY + 12;
+    doc.restore();
   }
 
-  _tributosCampo(nombre, valor) {
+  _addFooter() {
     const doc = this.doc;
-    doc.fontSize(8).fillColor('#1c1226').font('Helvetica-Bold');
-    const x = 60;
-    doc.text(`${nombre}: `, x, doc.y, { continued: true });
-    doc.font('Helvetica').fillColor('#5c5566').text(valor || '—');
+    const pg = doc.page;
+    const w = pg.width;
+    doc.save();
+    doc.rect(50, pg.height - 38, w - 100, 0.5).fill('#5a2fc2');
+    doc.font(this._f(false, true)).fontSize(6).fillColor('#5c5566');
+    doc.text('Grupo de La Placeta \u00B7 Documento oficial', 50, pg.height - 33, { width: 350 });
+    const pgN = doc.bufferedPageRange ? doc.bufferedPageRange().count : 1;
+    doc.text(`P\u00E1g. ${pgN}`, w - 100, pg.height - 33, { width: 50, align: 'right' });
+    doc.restore();
+  }
+
+  _tag(texto) {
+    const doc = this.doc;
+    doc.save();
+    const tw = Math.max(texto.length * 7, 60);
+    doc.roundedRect(50, doc.y - 2, tw + 20, 20, 4).fill('#1c005f');
+    doc.font(this._f(true)).fontSize(7.5).fillColor('#ffffff');
+    doc.text(` ${texto} `, 50, doc.y, { width: tw + 10, align: 'center' });
+    doc.y += 26;
+    doc.restore();
+  }
+
+  _titulo1(t) {
+    const doc = this.doc;
+    doc.moveDown(0.3);
+    doc.font(this._f(false, false, true)).fontSize(15).fillColor('#1c005f');
+    doc.text(t, 50, doc.y, { width: 500 });
+    doc.rect(50, doc.y + 2, 500, 2).fill('#1c005f');
+    doc.y += 12;
+  }
+
+  _titulo2(t) {
+    const doc = this.doc;
+    doc.moveDown(0.2);
+    doc.font(this._f(true)).fontSize(10.5).fillColor('#341087');
+    doc.text(t, 50, doc.y, { width: 500 });
+    doc.y += 6;
+  }
+
+  _titulo3(t) {
+    const doc = this.doc;
+    doc.moveDown(0.15);
+    doc.font(this._f(true)).fontSize(9).fillColor('#1c005f');
+    doc.text(t, 50, doc.y, { width: 500 });
+    doc.y += 4;
+  }
+
+  _texto(t) {
+    const doc = this.doc;
+    doc.font(this._f()).fontSize(8.5).fillColor('#1c1226');
+    doc.text(t, 50, doc.y, { width: 500, align: 'justify' });
     doc.y += 2;
   }
 
-  _tributosFila(nombre, valor, bold = false) {
+  _nota(t) {
     const doc = this.doc;
-    doc.fontSize(8.5).font(bold ? 'Helvetica-Bold' : 'Helvetica').fillColor('#1c1226');
     const y = doc.y;
-    doc.text(nombre, 60, y, { width: 300 });
-    doc.font(bold ? 'Helvetica-Bold' : 'Helvetica').fillColor(bold ? '#1c005f' : '#5c5566');
-    doc.text(valor, 360, y, { width: 180, align: 'right' });
-    doc.y = y + 14;
+    doc.save();
+    doc.rect(50, y, 3, 40).fill('#5a2fc2');
+    doc.font(this._f(false, true)).fontSize(8).fillColor('#1c1226');
+    doc.text(t, 63, y + 3, { width: 478, align: 'justify' });
+    doc.y = Math.max(doc.y, y + 18) + 5;
+    doc.restore();
+  }
+
+  _linea() {
+    const doc = this.doc;
+    doc.moveTo(50, doc.y).lineTo(550, doc.y).lineWidth(1).strokeColor('#5a2fc2').stroke();
+    doc.y += 6;
+  }
+
+  _campo(n, v) {
+    const doc = this.doc;
+    doc.font(this._f(true)).fontSize(8).fillColor('#1c1226');
+    doc.text(`${n}: `, 52, doc.y, { continued: true });
+    doc.font(this._f()).fillColor('#5c5566').text(v || '\u2014');
+    doc.y += 2.5;
+  }
+
+  _fila(n, v, b) {
+    const doc = this.doc;
+    const y = doc.y;
+    doc.font(b ? this._f(false, false, true) : this._f()).fontSize(8).fillColor(b ? '#1c005f' : '#1c1226');
+    doc.text(n, 52, y, { width: 280 });
+    doc.font(b ? this._f(false, false, true) : this._f()).fillColor(b ? '#1c005f' : '#5c5566');
+    doc.text(v, 340, y, { width: 190, align: 'right' });
+    doc.y = y + 12;
+  }
+
+  _tabla(headers, rows, cw) {
+    const doc = this.doc;
+    const sx = 50;
+    const tw = 500;
+    const cw2 = cw || headers.map(() => tw / headers.length);
+    const rh = 17;
+    const fs = 7;
+
+    doc.save();
+    doc.rect(sx, doc.y, tw, rh).fill('#1c005f');
+    doc.font(this._f(true)).fontSize(fs).fillColor('#ffffff');
+    let hx = sx + 3;
+    headers.forEach((h, i) => { doc.text(h, hx, doc.y + 4, { width: cw2[i] - 6 }); hx += cw2[i]; });
+    doc.y += rh;
+
+    rows.forEach((row, ri) => {
+      if (ri % 2 === 0) doc.rect(sx, doc.y, tw, rh).fill('#f7f4fd');
+      doc.font(this._f()).fontSize(fs).fillColor('#1c1226');
+      let rx = sx + 3;
+      row.forEach((cell, ci) => { doc.text(String(cell), rx, doc.y + 4, { width: cw2[ci] - 6 }); rx += cw2[ci]; });
+      doc.rect(sx, doc.y + rh - 0.5, tw, 0.5).fillColor('#e3dbf5').fill();
+      doc.y += rh;
+    });
+    doc.restore();
+  }
+
+  _firma(datos) {
+    const doc = this.doc;
+    const hash = crypto.createHash('sha256').update(JSON.stringify(datos) + Date.now()).digest('hex');
+    this._linea();
+    doc.moveDown(0.3);
+    doc.font(this._f(true)).fontSize(9).fillColor('#1c005f');
+    doc.text('C\u00DAMPLEASE Y NOTIF\u00CDQUESE.', 50, doc.y, { width: 500, align: 'center' });
+    doc.moveDown(1.2);
+    doc.font(this._f()).fontSize(7).fillColor('#5c5566');
+    doc.text('DEPARTAMENTO DE JUSTICIA \u00B7 GRUPO DE LA PLACETA', 50, doc.y, { width: 500, align: 'center' });
+    doc.moveDown(1);
+    doc.text('Documento generado electr\u00F3nicamente', 50, doc.y, { width: 500, align: 'center' });
+    doc.font(this._f(false, true)).fontSize(6).fillColor('#9c7ee6');
+    doc.text(`SHA-256: ${hash.substring(0, 20)}...`, 50, doc.y + 10, { width: 500, align: 'center' });
+  }
+
+  _footerDoc(leyenda) {
+    this._linea();
+    const doc = this.doc;
+    doc.font(this._f(false, true)).fontSize(6.5).fillColor('#5c5566');
+    doc.text(leyenda || 'Documento oficial del Grupo de La Placeta \u00B7 C\u00F3digo Normativo Interno', 50, doc.y, { width: 500, align: 'center' });
+    doc.moveDown(0.5);
+    doc.text(`Generado el ${new Date().toLocaleString('es-ES')}`, 50, doc.y, { width: 500, align: 'center' });
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  //  MODELOS DE DOCUMENTOS
+  // ══════════════════════════════════════════════════════════════════════════
+
+  generarInicioExpediente(d) {
+    this._initDoc({ info: { Title: `Inicio Exp. ${d.ID_EXPEDIENTE}`, Subject: 'Inicio Expediente' } });
+    this._header('ACUERDO DE INICIO DE EXPEDIENTE DISCIPLINARIO', 'Pliego de Cargos \u00B7 GDLP-JUS-001', 'GDLP-JUS-001');
+    this._tag('GDLP-JUS-001');
+    this._titulo2('Datos del expediente');
+    this._campo('Ref. Expediente', d.ID_EXPEDIENTE);
+    this._campo('Fecha', d.FECHA_SISTEMA || new Date().toLocaleDateString('es-ES'));
+    this._campo('Infractor', `${d.ALIAS_INFRACTOR} \u00B7 ${d.DIP_N\u00DAMERO}`);
+    this._campo('Infracci\u00F3n', d.TIPO_INFRACCION);
+    this._titulo2('Descripci\u00F3n de los hechos');
+    this._texto(d.DESCRIPCI\u00D3N_HECHOS || 'Seg\u00FAn consta en las actuaciones...');
+    this._titulo2('Pliego de cargos');
+    this._texto('Conforme al Cap\u00EDtulo X del C\u00F3digo Normativo Interno, se concede al presunto infractor un plazo de 5 d\u00EDas h\u00E1biles para presentar alegaciones.');
+    this._nota('Plazo: 5 d\u00EDas h\u00E1biles desde la notificaci\u00F3n. Transcurrido el plazo sin alegaciones, se dictar\u00E1 resoluci\u00F3n.');
+    this._firma(d);
+    this._footerDoc('C\u00F3digo Normativo Interno \u00B7 Cap\u00EDtulo X \u2014 R\u00E9gimen Sancionador');
+    return this.doc;
+  }
+
+  generarResolucionSancionadora(d) {
+    this._initDoc({ info: { Title: `Resoluci\u00F3n ${d.ID_EXPEDIENTE}`, Subject: 'Resoluci\u00F3n Sancionadora' } });
+    this._header('RESOLUCI\u00D3N SANCIONADORA', 'Primera Instancia \u00B7 GDLP-JUS-003', 'GDLP-JUS-003');
+    this._tag('GDLP-JUS-003');
+    this._titulo2('Referencia');
+    this._campo('Expediente', d.ID_EXPEDIENTE);
+    this._campo('Fecha', d.FECHA_SISTEMA || new Date().toLocaleDateString('es-ES'));
+    this._campo('Infractor', `${d.ALIAS_INFRACTOR} \u00B7 ${d.DIP_N\u00DAMERO}`);
+    this._campo('Gravedad', d.GRAVEDAD_INFRACCION);
+    this._titulo2('Antecedentes');
+    this._texto(`Iniciado expediente en fecha ${d.FECHA_INICIO_EXP || '\u2014'} por: ${d.DESCRIPCI\u00D3N_CORTA_HECHOS || 'conducta tipificada'}.`);
+    this._texto(d.ALEGACIONES_PRESENTADAS !== false ? '\u2713 Present\u00F3 alegaciones en tiempo y forma.' : '\u2717 No present\u00F3 alegaciones.');
+    this._titulo2('Fundamentos');
+    this._texto('PRIMERO.- Competencia del Departamento de Justicia conforme al Cap\u00EDtulo X del C\u00F3digo Normativo Interno.');
+    this._texto(`SEGUNDO.- Los hechos constituyen infracci\u00F3n de car\u00E1cter: ${d.GRAVEDAD_INFRACCION || 'Leve'}.`);
+    this._texto(`TERCERO.- Conducta tipificada en: "${d.CONDUCTA_TIPICA_NORMATIVA || 'Art. 20 del C\u00F3digo Normativo'}".`);
+    this._titulo2('Parte dispositiva');
+    this._texto(`Se impone a ${d.ALIAS_INFRACTOR}: Sanci\u00F3n econ\u00F3mica: ${d.CUANT\u00CDA_MULTA_PZ || '0'} Pz. Suspensi\u00F3n: ${d.D\u00CDAS_SUSPENSI\u00D3N || '0'} d\u00EDas. Reincidencia: ${d.EFECTO_REINCIDENCIA || 'Muy Grave'}.`);
+    this._titulo2('Recursos');
+    this._nota(`Plazo de apelaci\u00F3n ante la Junta Directiva: ${d.FECHA_L\u00CDMITE_APELACI\u00D3N || '\u2014'}.`);
+    this._firma(d);
+    this._footerDoc('C\u00F3digo Normativo Interno \u00B7 Cap\u00EDtulo X \u2014 R\u00E9gimen Sancionador');
+    return this.doc;
+  }
+
+  generarDecretoExpulsion(d) {
+    this._initDoc({ info: { Title: `Expulsi\u00F3n ${d.ID_EXPEDIENTE}`, Subject: 'Decreto de Expulsi\u00F3n' } });
+    this._header('DECRETO DE EXPULSI\u00D3N DEFINITIVA', 'Confiscaci\u00F3n Monetaria \u00B7 GDLP-JUS-004', 'GDLP-JUS-004');
+    this._tag('GDLP-JUS-004');
+    this._campo('Expediente', d.ID_EXPEDIENTE);
+    this._campo('Infractor', d.ALIAS_INFRACTOR);
+    this._campo('Saldo Confiscado', `${d.SALDO_CONFISCADO} Pz`);
+    this._campo('Hash Quema', d.HASH_QUEMA_MONEDA);
+    this._texto('Agotada la v\u00EDa interna sin apelaci\u00F3n, se procede a: expulsi\u00F3n definitiva, confiscaci\u00F3n total del saldo, quema irreversible y lista negra del sistema.');
+    this._firma(d);
+    this._footerDoc('C\u00F3digo Normativo Interno \u00B7 Cap\u00EDtulo X');
+    return this.doc;
+  }
+
+  generarRequerimientoDescubierto(d) {
+    this._initDoc({ info: { Title: `Requerimiento ${d.DIP_N\u00DAMERO}`, Subject: 'Requerimiento Descubierto' } });
+    this._header('REQUERIMIENTO DE REGULARIZACI\u00D3N', 'Descubierto Bancario \u00B7 GDLP-HAC-010', 'GDLP-HAC-010');
+    this._tag('GDLP-HAC-010');
+    this._campo('Ciudadano', `${d.ALIAS_INFRACTOR} \u00B7 ${d.DIP_N\u00DAMERO}`);
+    this._campo('Saldo Negativo', `${d.SALDO_NEGATIVO} Pz`);
+    this._campo('Sanci\u00F3n', `${d.SANCI\u00D3N_APLICADA_PZ} Pz`);
+    this._texto('Conforme al Cap\u00EDtulo IV del C\u00F3digo Normativo, se requiere regularizar la situaci\u00F3n financiera en 30 d\u00EDas. Transcurrido el plazo, se derivar\u00E1 al Departamento de Justicia.');
+    this._nota('El incumplimiento dar\u00E1 lugar a expediente disciplinario por infracci\u00F3n econ\u00F3mica.');
+    this._firma(d);
+    this._footerDoc('C\u00F3digo Normativo Interno \u00B7 Cap\u00EDtulo IV \u2014 Banca, Capital e Impuestos');
+    return this.doc;
+  }
+
+  generarCertificadoBaja(d) {
+    this._initDoc({ info: { Title: `Baja ${d.DIP_REVOCADO}`, Subject: 'Certificado de Baja' } });
+    this._header('CERTIFICADO DE BAJA VOLUNTARIA', 'Revocaci\u00F3n de Identidad \u00B7 GDLP-SEC-020', 'GDLP-SEC-020');
+    this._tag('GDLP-SEC-020');
+    this._campo('Ciudadano', d.ALIAS_CIUDADANO);
+    this._campo('DIP Revocado', d.DIP_REVOCADO);
+    this._campo('Saldo Liquidado', `${d.SALDO_LIQUIDADO_RETORNADO} Pz`);
+    this._texto('Se certifica la baja voluntaria del ciudadano, revocando su PlacetaID, DIP y cuenta bancaria.');
+    this._firma(d);
+    this._footerDoc('C\u00F3digo Normativo Interno \u00B7 Cap\u00EDtulo II');
+    return this.doc;
+  }
+
+  generarCertificadoARCO(d) {
+    this._initDoc({ info: { Title: `ARCO ${(d.HASH_ANONIMIZACION||'').substring(0,12)}`, Subject: 'Certificado ARCO' } });
+    this._header('CERTIFICADO DE DERECHOS ARCO', 'Anonimizaci\u00F3n de Datos \u00B7 GDLP-SEC-021', 'GDLP-SEC-021');
+    this._tag('GDLP-SEC-021');
+    this._campo('Titular', d.NOMBRE_REAL_AFECTADO || '[ANONIMIZADO]');
+    this._campo('Hash', d.HASH_ANONIMIZACION);
+    this._campo('Restricciones', d.LOG_RESTRICCION_DE_DATOS || 'Ninguna');
+    this._nota('Anonimizaci\u00F3n irreversible conforme al RGPD (UE) 2016/679 y LOPDGDD 3/2018.');
+    this._firma(d);
+    this._footerDoc('C\u00F3digo Normativo Interno \u00B7 Cap. XI y XV');
+    return this.doc;
+  }
+
+  // ── Tributos ──────────────────────────────────────────────────────────────
+
+  generarDeclaracionTributaria(d) {
+    this._initDoc({ info: { Title: `Declaraci\u00F3n ${d.ID_DECLARACION||d.mes_periodo}`, Subject: 'Declaraci\u00F3n Tributaria' } });
+    this._header('DECLARACI\u00D3N TRIBUTARIA MENSUAL', `Periodo: ${d.mes_periodo||'\u2014'} \u00B7 ${d.ID_DECLARACION||''}`, 'TLP-DEC-001');
+    this._tag('TLP-DEC-001');
+    this._titulo2('Contribuyente');
+    this._campo('Placeta ID', d.placeta_id); this._campo('Nombre', d.nombre);
+    this._campo('DIP', d.dip); this._campo('Tipo', d.tipo_sujeto); this._campo('Cuenta BLP', d.cuenta_id_blp);
+    this._titulo2('Impuestos');
+    this._fila('Patrimonio Medio', `${Number(d.patrimonio_medio||0).toLocaleString()} Pz`);
+    this._fila('IA', `${Number(d.indice_acumulacion||0).toFixed(4)}%`);
+    this._fila('Cuota IRM', `${Number(d.cuota_irm||0).toLocaleString()} Pz`);
+    this._fila('Cuota IGF', `${Number(d.cuota_igf||0).toLocaleString()} Pz`);
+    this._fila('Exenci\u00F3n', d.exencion_aplicada?'S\u00ED':'No');
+    this._titulo2('Control');
+    this._campo('Estado', d.estado_pago); this._campo('D\u00EDas banco', String(d.dias_declarados_banco||0));
+    this._campo('D\u00EDas CRM', String(d.dias_reconstruidos_crm||0)); this._campo('Bypass', d.bypass_junta_directiva?'S\u00ED':'No');
+    const hash = d.pdf_hash || crypto.createHash('sha256').update(JSON.stringify(d)+Date.now()).digest('hex');
+    this._footerDoc(`CSV: ${d.csv||hash.substring(0,16).toUpperCase()} \u00B7 Tributos de La Placeta (TLP)`);
+    return this.doc;
+  }
+
+  generarFacturaTributaria(d) {
+    this._initDoc({ info: { Title: `Factura ${d.numero_factura}`, Subject: 'Factura TLP' } });
+    this._header('FACTURA CON IVA', `N\u00BA ${d.numero_factura} \u00B7 ${d.csv_verificacion||''}`, 'TLP-FAC-001');
+    this._tag('TLP-FAC-001');
+    this._titulo2('Partes');
+    this._campo('Emisor', d.emisor_placeta_id); this._campo('Receptor', d.receptor_placeta_id);
+    this._campo('Fecha', d.fecha_emision ? new Date(d.fecha_emision).toLocaleString('es-ES') : '\u2014');
+    if (d.transaction_id_blp) this._campo('ID BLP', d.transaction_id_blp);
+    this._titulo2('Importes');
+    this._fila('Base Imponible', `${Number(d.base_imponible||0).toLocaleString()} Pz`);
+    this._fila('IVA 12%', `${Number(d.total_iva||0).toLocaleString()} Pz`);
+    this._linea();
+    this._fila('TOTAL', `${Number(d.total_factura||0).toLocaleString()} Pz`, true);
+    if (d.lineas?.length) {
+      this._titulo2('Detalle');
+      this._tabla(['Concepto','Cant.','Unitario','Neto','IVA','Total'],
+        d.lineas.map(l=>[l.concepto_producto||'\u2014',String(l.cantidad||0),Number(l.precio_unitario||0).toLocaleString(),Number(l.subtotal_neto||0).toLocaleString(),Number(l.subtotal_iva||0).toLocaleString(),Number((l.subtotal_neto||0)+(l.subtotal_iva||0)).toLocaleString()]),
+        [130,35,55,55,55,60]);
+    }
+    this._footerDoc(`CSV: ${d.csv_verificacion||'\u2014'} \u00B7 Tributos de La Placeta \u00B7 IVA 12%`);
+    return this.doc;
+  }
+
+  generarRectificacionTributaria(d) {
+    this._initDoc({ info: { Title: `Rectif. ${d.ID_RECTIFICACION||d.id}`, Subject: 'Rectificaci\u00F3n Tributaria' } });
+    this._header('RECTIFICACI\u00D3N Y REAJUSTE DE OFICIO', `Ref: ${d.ID_RECTIFICACION||d.id||'\u2014'}`, 'TLP-REC-001');
+    this._tag('TLP-REC-001');
+    this._campo('Decl. Original', d.declaracion_original_id); this._campo('Placeta ID', d.placeta_id);
+    this._campo('Fecha', d.fecha_rectificacion ? new Date(d.fecha_rectificacion).toLocaleString('es-ES') : new Date().toLocaleString('es-ES'));
+    this._titulo2('Delta (\u0394)');
+    const delta = Number(d.diferencia_delta||0);
+    this._fila('Cuota Provisional', `${Number(d.cuota_provisional_cobrada||0).toLocaleString()} Pz`);
+    this._fila('Cuota Real', `${Number(d.cuota_real_calculada||0).toLocaleString()} Pz`);
+    this._linea();
+    this._fila(delta < 0 ? 'A Reembolsar' : 'A Cobrar', `${Math.abs(delta).toLocaleString()} Pz`, true);
+    this._campo('Estado', d.estado_ajuste);
+    if (d.signature_sha256) this._texto(`SHA-256: ${d.signature_sha256}`);
+    this._footerDoc('Rectificaci\u00F3n Art. 4.16 ter \u00B7 Tributos de La Placeta');
+    return this.doc;
+  }
+
+  // ── Manual / Documento genérico ────────────────────────────────────────────
+  generarManual(titulo, contenido, meta) {
+    meta = meta || {};
+    this._initDoc({
+      margins: { top: 55, bottom: 50, left: 50, right: 50 },
+      info: { Title: titulo || 'Manual', Author: meta.autor || 'GDLP', Subject: meta.asunto || 'Manual', Keywords: meta.palabras_clave || 'GDLP' }
+    });
+    this._header(titulo, meta.subtitulo, `v${meta.version||'1.0'}`);
+
+    if (typeof contenido === 'string') {
+      this._renderHtml(contenido);
+    } else if (Array.isArray(contenido)) {
+      for (const s of contenido) {
+        if (s.tipo === 'tag') this._tag(s.texto||s.etiqueta||'');
+        else if (s.tipo === 'h1'||s.tipo === 'capitulo') this._titulo1(s.titulo||s.texto||'');
+        else if (s.tipo === 'h2'||s.tipo === 'seccion') this._titulo2(s.titulo||s.texto||'');
+        else if (s.tipo === 'h3'||s.tipo === 'articulo') this._titulo3(s.titulo||s.texto||'');
+        else if (s.tipo === 'texto'||s.tipo === 'p') this._texto(s.contenido||s.texto||'');
+        else if (s.tipo === 'nota') this._nota(s.contenido||s.texto||'');
+        else if (s.tipo === 'campo') this._campo(s.nombre||s.label||'', s.valor||'');
+        else if (s.tipo === 'fila') this._fila(s.nombre||s.label||'', s.valor||'', s.bold);
+        else if (s.tipo === 'tabla') this._tabla(s.headers||[], s.rows||[], s.colWidths);
+        else if (s.tipo === 'linea') this._linea();
+        else if (s.tipo === 'firma') this._firma(s.datos||{});
+        else if (s.contenido) this._texto(s.contenido);
+      }
+    }
+    this._footerDoc(meta.footer || `${titulo} \u00B7 Grupo de La Placeta`);
+    return this.doc;
+  }
+
+  _renderHtml(html) {
+    for (const line of html.split('\n')) {
+      const t = line.trim();
+      if (!t) { this.doc.y += 3; continue; }
+      if (t.startsWith('<h1>')) this._titulo1(t.replace(/<\/?h1>/g,''));
+      else if (t.startsWith('<h2>')) this._titulo2(t.replace(/<\/?h2>/g,''));
+      else if (t.startsWith('<h3>')) this._titulo3(t.replace(/<\/?h3>/g,''));
+      else if (t.startsWith('<tag>')) this._tag(t.replace(/<\/?tag>/g,''));
+      else if (t.startsWith('<note>')) this._nota(t.replace(/<\/?note>/g,''));
+      else if (t.startsWith('<p>')) this._texto(t.replace(/<\/?p>/g,''));
+      else this._texto(t);
+    }
   }
 }
 

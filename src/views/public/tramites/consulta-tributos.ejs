@@ -1,0 +1,107 @@
+<section class="hero-small">
+  <h1>📊 Consulta Tributaria</h1>
+  <p>Revisa tu estado fiscal, declaraciones pendientes e historial en Tributos de La Placeta</p>
+</section>
+
+<section class="section">
+  <div class="section-inner tramite-form">
+    <div class="form-card">
+      <% if (!usuario) { %>
+        <div class="alert alert-warning" style="text-align:center">
+          <div style="font-size:48px;margin-bottom:10px">🔒</div>
+          <strong style="font-size:18px">Inicia sesión para consultar tus datos fiscales</strong>
+          <p style="margin-top:8px">Necesitas estar autenticado con tu PlacetaID para acceder a esta información.</p>
+          <a href="/login" class="btn btn-primary btn-block" style="margin-top:16px">🔑 Iniciar sesión</a>
+        </div>
+      <% } else { %>
+        <div id="consultaLoading" style="text-align:center;padding:40px">
+          <div class="spinner" style="margin:0 auto 16px"></div>
+          <p style="color:var(--text-light)">Consultando tus datos fiscales...</p>
+        </div>
+        <div id="consultaContent" style="display:none"></div>
+      <% } %>
+    </div>
+  </div>
+</section>
+
+<script>
+(async function() {
+  <% if (usuario) { %>
+  try {
+    const dip = '<%= usuario.dip %>';
+    const alias = '<%= usuario.alias %>';
+
+    // Cargar contribuyente
+    const contribResp = await fetch('/api/admin/tributos/contributors').catch(() => null);
+    const contribs = contribResp ? await contribResp.json() : [];
+    const miContrib = Array.isArray(contribs) ? contribs.find(c => c.dip === dip || c.placeta_id === 'PID-' + alias.toUpperCase()) : null;
+
+    // Cargar declaraciones
+    const declResp = await fetch('/api/admin/tributos/declarations').catch(() => null);
+    const decls = declResp ? await declResp.json() : [];
+
+    // Cargar facturas
+    const factResp = await fetch('/api/admin/tributos/invoices?limit=20').catch(() => null);
+    const facts = factResp ? await factResp.json() : [];
+
+    document.getElementById('consultaLoading').style.display = 'none';
+    document.getElementById('consultaContent').style.display = 'block';
+
+    let html = '';
+
+    // Estado fiscal
+    if (miContrib) {
+      const estadoClass = miContrib.estado_fiscal === 'Al Dia' ? 'badge-activo' : miContrib.estado_fiscal === 'Moroso' ? 'badge-suspendido' : 'badge-pendiente';
+      html += '<div style="background:var(--accent-soft);border-radius:16px;padding:20px;margin-bottom:20px;text-align:center">' +
+        '<div style="font-size:48px;margin-bottom:8px">🧾</div>' +
+        '<h2 style="font-size:22px;font-weight:800;color:var(--accent);margin-bottom:4px">' + miContrib.nombre + '</h2>' +
+        '<p style="color:var(--text-light)">' + miContrib.placeta_id + ' · DIP: ' + miContrib.dip + '</p>' +
+        '<div style="display:flex;justify-content:center;gap:16px;margin-top:12px">' +
+          '<span class="badge ' + estadoClass + '">' + miContrib.estado_fiscal + '</span>' +
+          '<span class="pill ' + (miContrib.tipo_sujeto === 'Empresa' ? 'pill-purple' : 'pill-green') + '">' + (miContrib.tipo_sujeto || 'Físico') + '</span>' +
+        '</div>' +
+        '<p style="font-size:12px;color:var(--text-light);margin-top:8px">Alta: ' + new Date(miContrib.fecha_alta_tributos).toLocaleDateString('es-ES') + '</p>' +
+      '</div>';
+    } else {
+      html += '<div class="alert alert-warning" style="text-align:center">' +
+        '<strong>No estás registrado en Tributos</strong>' +
+        '<p style="margin-top:6px">Para aparecer en el censo de contribuyentes, realiza el trámite de <a href="/tramites" onclick="abrirModal(\'alta-tributos\')">Alta en Tributos</a>.</p>' +
+      '</div>';
+    }
+
+    // Declaraciones
+    const misDecls = Array.isArray(decls) && miContrib ? decls.filter(d => d.placeta_id === miContrib.placeta_id) : [];
+    html += '<div class="section-divider" style="margin:24px 0">Declaraciones</div>';
+    if (misDecls.length > 0) {
+      html += '<div class="table-container"><table class="data-table"><thead><tr><th>Periodo</th><th>Patrimonio</th><th>IRM</th><th>IGF</th><th>Días</th><th>Estado</th></tr></thead><tbody>';
+      misDecls.forEach(d => {
+        const estClass = d.estado_pago === 'Cobrado_Exito' ? 'badge-activo' : d.estado_pago === 'Borrador' ? 'badge-pendiente' : 'badge-baja';
+        html += '<tr><td>' + (d.mes_periodo || '—') + '</td><td>' + (d.patrimonio_medio || 0).toFixed(2) + ' Pz</td><td>' + (d.cuota_irm || 0).toFixed(2) + ' Pz</td><td>' + (d.cuota_igf || 0).toFixed(2) + ' Pz</td><td>' + (d.dias_declarados_banco || 0) + '/' + (d.dias_activos_mes || 30) + '</td><td><span class="badge ' + estClass + '">' + (d.estado_pago || '—') + '</span></td></tr>';
+      });
+      html += '</tbody></table></div>';
+    } else {
+      html += '<p style="color:var(--text-light);text-align:center;padding:20px">No hay declaraciones registradas.</p>';
+    }
+
+    // Facturas recientes
+    const misFacts = Array.isArray(facts) && miContrib ? facts.filter(f => f.emisor_placeta_id === miContrib.placeta_id || f.receptor_placeta_id === miContrib.placeta_id) : [];
+    html += '<div class="section-divider" style="margin:24px 0">Facturas Recientes</div>';
+    if (misFacts.length > 0) {
+      html += '<div class="table-container"><table class="data-table"><thead><tr><th>Nº</th><th>Concepto</th><th>Base</th><th>IVA</th><th>Total</th><th>CSV</th></tr></thead><tbody>';
+      misFacts.slice(0, 5).forEach(f => {
+        html += '<tr><td><strong>' + f.numero_factura + '</strong></td><td>' + (f.concepto_producto || '—') + '</td><td>' + (f.base_imponible || 0).toFixed(2) + ' Pz</td><td>' + (f.total_iva || 0).toFixed(2) + ' Pz</td><td><strong>' + (f.total_factura || 0).toFixed(2) + ' Pz</strong></td><td style="font-size:11px;font-family:monospace">' + (f.csv_verificacion || '—').slice(0, 16) + '</td></tr>';
+      });
+      html += '</tbody></table></div>';
+    } else {
+      html += '<p style="color:var(--text-light);text-align:center;padding:20px">No hay facturas registradas.</p>';
+    }
+
+    html += '<div style="text-align:center;margin-top:20px"><a href="/tramites" class="btn btn-primary">📋 Volver a Trámites</a></div>';
+    document.getElementById('consultaContent').innerHTML = html;
+
+  } catch (e) {
+    document.getElementById('consultaLoading').innerHTML = '<div class="alert alert-error">Error al cargar datos fiscales. Inténtalo de nuevo.</div>';
+  }
+  <% } %>
+})();
+</script>

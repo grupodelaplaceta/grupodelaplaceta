@@ -94,16 +94,18 @@
     }
 
     function demoLogin(tipo) {
-      const creds = { alias: '11111111D', password: 'Demo1234!' };
+      const alias = tipo === 'admin' ? 'admin' : 'admin';
+      const password = 'admin123';
+      const label = tipo === 'admin' ? 'Administrador' : 'Ciudadano';
 
       document.getElementById('loginButtons').style.display = 'none';
       document.getElementById('loginLoading').classList.add('active');
-      document.getElementById('loginLoading').querySelector('p').textContent = 'Iniciando sesión como ' + (tipo === 'admin' ? 'Administrador...' : 'Ciudadano...');
+      document.getElementById('loginLoading').querySelector('p').textContent = 'Iniciando sesión como ' + label + '...';
 
       fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(creds)
+        body: JSON.stringify({ alias, password })
       }).then(r => r.json()).then(data => {
         if (data.success && data.redirect) window.location.href = data.redirect;
         else if (data.token) window.location.href = '/';

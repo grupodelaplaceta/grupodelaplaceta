@@ -1,0 +1,163 @@
+<div class="dashboard">
+  <div class="dashboard-header">
+    <h1>🏦 Auditoría Bancaria</h1>
+    <p class="dashboard-date">Control total del sistema financiero BLP</p>
+  </div>
+
+  <div class="stats-grid" id="resumenGrid">
+    <div class="stat-card stat-primary"><div class="stat-icon">🏦</div><div class="stat-content"><span class="stat-value" id="totalCuentas">—</span><span class="stat-label">Cuentas</span><span class="stat-detail">Total en el sistema</span></div></div>
+    <div class="stat-card stat-success"><div class="stat-icon">✅</div><div class="stat-content"><span class="stat-value" id="cuentasActivas">—</span><span class="stat-label">Activas</span><span class="stat-detail">Cuentas operativas</span></div></div>
+    <div class="stat-card stat-danger"><div class="stat-icon">🔴</div><div class="stat-content"><span class="stat-value" id="cuentasNegativas">—</span><span class="stat-label">En descubierto</span><span class="stat-detail">Saldo negativo</span></div></div>
+    <div class="stat-card stat-warning"><div class="stat-icon">💰</div><div class="stat-content"><span class="stat-value" id="masaMonetaria">—</span><span class="stat-label">Masa monetaria</span><span class="stat-detail">Pz en circulación</span></div></div>
+    <div class="stat-card stat-info"><div class="stat-icon">📊</div><div class="stat-content"><span class="stat-value" id="volumenTransacciones">—</span><span class="stat-label">Vol. transacciones</span><span class="stat-detail">Últimos 30 días</span></div></div>
+    <div class="stat-card stat-purple"><div class="stat-icon">🎁</div><div class="stat-content"><span class="stat-value" id="bonosPendientes">—</span><span class="stat-label">Bonos pendientes</span><span class="stat-detail">Bienvenida sin cobrar</span></div></div>
+  </div>
+
+  <div class="section-header" style="margin-top:16px"><div><h2>Acciones</h2></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary" onclick="cargarTodo()">🔄 Refrescar</button>
+      <a href="/admin/dashboard" class="btn btn-secondary">← Volver</a>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:4px;margin-bottom:16px;border-bottom:2px solid var(--line)">
+    <button class="tab-btn active" data-tab="tabTransacciones" onclick="switchTab(this,'tabTransacciones')" style="padding:10px 20px;border:none;background:none;font-weight:600;cursor:pointer;color:var(--p500);border-bottom:3px solid var(--p500)">🔄 Transacciones</button>
+    <button class="tab-btn" data-tab="tabDescubiertos" onclick="switchTab(this,'tabDescubiertos')" style="padding:10px 20px;border:none;background:none;font-weight:600;cursor:pointer;color:var(--text-light)">🔴 Descubiertos</button>
+    <button class="tab-btn" data-tab="tabSaldos" onclick="switchTab(this,'tabSaldos')" style="padding:10px 20px;border:none;background:none;font-weight:600;cursor:pointer;color:var(--text-light)">📊 Saldos diarios</button>
+    <button class="tab-btn" data-tab="tabAjustes" onclick="switchTab(this,'tabAjustes')" style="padding:10px 20px;border:none;background:none;font-weight:600;cursor:pointer;color:var(--text-light)">⚙️ Ajustes</button>
+  </div>
+
+  <div id="tabTransacciones" class="tab-content">
+    <div class="section-header"><div><h2>🔄 Últimas Transacciones</h2></div>
+      <input type="search" id="searchTx" oninput="filtrarTabla('searchTx','txBody')" placeholder="🔍 Buscar..." style="width:200px;padding:8px 12px;border:2px solid var(--line);border-radius:var(--radius);font-family:var(--font);font-size:13px"></div>
+    <div class="table-container"><table class="data-table"><thead><tr><th>ID</th><th>Fecha</th><th>Tipo</th><th>Origen</th><th>Destino</th><th>Cantidad</th><th>Concepto</th><th>Estado</th></tr></thead>
+      <tbody id="txBody"><tr><td colspan="8" class="loading-cell">Cargando...</td></tr></tbody></table></div>
+  </div>
+
+  <div id="tabDescubiertos" class="tab-content" style="display:none">
+    <div class="section-header"><div><h2>🔴 Cuentas en Descubierto</h2></div></div>
+    <div class="table-container"><table class="data-table"><thead><tr><th>ID Cuenta</th><th>Alias</th><th>DIP</th><th>Saldo</th><th>Límite</th><th>Estado</th><th>Acciones</th></tr></thead>
+      <tbody id="descubiertosBody"><tr><td colspan="7" class="loading-cell">Cargando...</td></tr></tbody></table></div>
+  </div>
+
+  <div id="tabSaldos" class="tab-content" style="display:none">
+    <div class="section-header"><div><h2>📊 Historial de Saldos Diarios</h2></div>
+      <button class="btn btn-sm btn-primary" onclick="cargarSaldos()">🔄</button></div>
+    <div class="table-container"><table class="data-table"><thead><tr><th>Fecha</th><th>Saldo Total</th><th>Cuentas Negativas</th></tr></thead>
+      <tbody id="saldosBody"><tr><td colspan="3" class="loading-cell">Cargando...</td></tr></tbody></table></div>
+  </div>
+
+  <div id="tabAjustes" class="tab-content" style="display:none">
+    <div class="card" style="padding:20px;max-width:500px">
+      <h3 style="margin:0 0 12px 0;color:var(--p900)">⚙️ Ajuste Manual de Saldo</h3>
+      <div style="display:grid;gap:10px">
+        <input type="number" id="ajusteCuentaId" placeholder="ID de cuenta" style="padding:10px;border:2px solid var(--line);border-radius:8px;font-family:var(--font)">
+        <input type="number" id="ajusteCantidad" placeholder="Cantidad (+/- Pz)" style="padding:10px;border:2px solid var(--line);border-radius:8px;font-family:var(--font)">
+        <input type="text" id="ajusteConcepto" placeholder="Concepto" style="padding:10px;border:2px solid var(--line);border-radius:8px;font-family:var(--font)">
+        <button class="btn btn-primary" onclick="ajustarSaldo()">💾 Aplicar Ajuste</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function switchTab(btn, tabId) {
+  document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+  document.getElementById(tabId).style.display = 'block';
+  document.querySelectorAll('.tab-btn').forEach(b => { b.style.color = 'var(--text-light)'; b.style.borderBottom = '3px solid transparent'; });
+  btn.style.color = 'var(--p500)'; btn.style.borderBottom = '3px solid var(--p500)';
+}
+
+function filtrarTabla(searchId, tbodyId) {
+  const q = document.getElementById(searchId).value.toLowerCase();
+  document.querySelectorAll(`#${tbodyId} tr`).forEach(r => r.style.display = r.textContent.toLowerCase().includes(q) ? '' : 'none');
+}
+
+async function apiFetch(url, opts) {
+  const r = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...opts });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+
+function formatPz(n) { return Number(n || 0).toLocaleString('es-ES', { minimumFractionDigits: 2 }) + ' Pz'; }
+
+async function cargarResumen() {
+  try {
+    const d = await apiFetch('/api/admin/audit/bancario/resumen');
+    document.getElementById('totalCuentas').textContent = d.cuentas;
+    document.getElementById('cuentasActivas').textContent = d.activas;
+    document.getElementById('cuentasNegativas').textContent = d.negativas;
+    document.getElementById('masaMonetaria').textContent = formatPz(d.masaMonetaria);
+    document.getElementById('volumenTransacciones').textContent = d.totalTransacciones + ' (' + formatPz(d.volumenTransacciones) + ')';
+    document.getElementById('bonosPendientes').textContent = d.bonoPendientes;
+  } catch(e) { console.error(e); }
+}
+
+async function cargarTransacciones() {
+  try {
+    const d = await apiFetch('/api/admin/audit/bancario/transacciones?limit=200');
+    const tbody = document.getElementById('txBody');
+    if (!d.length) { tbody.innerHTML = '<tr><td colspan="8" class="loading-cell">Sin transacciones</td></tr>'; return; }
+    tbody.innerHTML = d.map(t => '<tr>' +
+      '<td>#' + t.id + '</td>' +
+      '<td>' + (t.creado_en ? new Date(t.creado_en).toLocaleString('es-ES') : '—') + '</td>' +
+      '<td><span class="pill pill-' + (t.tipo?.includes('debito')||t.cantidad<0?'danger':'success') + '">' + (t.tipo || 'transferencia') + '</span></td>' +
+      '<td>' + (t.alias_origen || '—') + '</td>' +
+      '<td>' + (t.alias_destino || '—') + '</td>' +
+      '<td><strong>' + formatPz(t.cantidad) + '</strong></td>' +
+      '<td style="font-size:12px">' + (t.concepto || '—') + '</td>' +
+      '<td><span class="badge badge-' + (t.estado === 'completada' ? 'activo' : 'pendiente') + '">' + (t.estado || '—') + '</span></td></tr>'
+    ).join('');
+  } catch(e) { document.getElementById('txBody').innerHTML = '<tr><td colspan="8" class="error-cell">Error</td></tr>'; }
+}
+
+async function cargarDescubiertos() {
+  try {
+    const d = await apiFetch('/api/admin/audit/bancario/cuentas-negativas');
+    const tbody = document.getElementById('descubiertosBody');
+    if (!d.length) { tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">Sin cuentas en descubierto</td></tr>'; return; }
+    tbody.innerHTML = d.map(c => '<tr>' +
+      '<td>#' + c.id + '</td><td>' + (c.alias || '—') + '</td><td>' + (c.dip || '—') + '</td>' +
+      '<td style="color:#dc2626;font-weight:700">' + formatPz(c.saldo) + '</td>' +
+      '<td>' + formatPz(c.saldo_maximo) + '</td>' +
+      '<td><span class="badge badge-' + (c.estado_usuario === 'activo' ? 'activo' : 'suspendido') + '">' + (c.estado || '—') + '</span></td>' +
+      '<td><button class="btn btn-sm btn-danger" onclick="bloquearCuenta(' + c.id + ')">🔒</button></td></tr>'
+    ).join('');
+  } catch(e) { document.getElementById('descubiertosBody').innerHTML = '<tr><td colspan="7" class="error-cell">Error</td></tr>'; }
+}
+
+async function cargarSaldos() {
+  try {
+    const d = await apiFetch('/api/admin/audit/bancario/saldos-diarios?days=31');
+    const tbody = document.getElementById('saldosBody');
+    if (!d.length) { tbody.innerHTML = '<tr><td colspan="3" class="loading-cell">Sin datos</td></tr>'; return; }
+    tbody.innerHTML = d.map(s => '<tr><td>' + (s.fecha || '—') + '</td><td>' + formatPz(s.saldo_total) + '</td><td>' + (s.cuentas_negativas || 0) + '</td></tr>').join('');
+  } catch(e) { document.getElementById('saldosBody').innerHTML = '<tr><td colspan="3" class="error-cell">Error</td></tr>'; }
+}
+
+async function bloquearCuenta(id) {
+  if (!confirm('¿Bloquear cuenta #' + id + '?')) return;
+  try { await apiFetch('/api/admin/audit/bancario/bloquear/' + id, { method: 'POST' }); alert('Cuenta bloqueada'); cargarDescubiertos(); cargarResumen(); }
+  catch(e) { alert('Error: ' + e.message); }
+}
+
+async function ajustarSaldo() {
+  const cuentaId = document.getElementById('ajusteCuentaId').value;
+  const cantidad = parseFloat(document.getElementById('ajusteCantidad').value);
+  const concepto = document.getElementById('ajusteConcepto').value;
+  if (!cuentaId || !cantidad) { alert('Completa todos los campos'); return; }
+  if (!confirm(`¿Ajustar saldo de cuenta #${cuentaId} en ${formatPz(cantidad)}?`)) return;
+  try {
+    await apiFetch('/api/admin/audit/bancario/ajustar-saldo', {
+      method: 'POST', body: JSON.stringify({ cuentaId: parseInt(cuentaId), cantidad, concepto })
+    });
+    alert('✅ Ajuste aplicado');
+    document.getElementById('ajusteCantidad').value = '';
+    document.getElementById('ajusteConcepto').value = '';
+    cargarResumen();
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+function cargarTodo() { cargarResumen(); cargarTransacciones(); cargarDescubiertos(); cargarSaldos(); }
+document.addEventListener('DOMContentLoaded', cargarTodo);
+</script>

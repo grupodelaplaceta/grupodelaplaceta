@@ -1,17 +1,21 @@
 <section class="hero-sm">
   <h1>📋 Trámites</h1>
-  <p>Gestiona tus trámites legales y del ecosistema. Todos los documentos se archivan y están disponibles para descarga.</p>
+  <p>Gestiona tus trámites legales y del ecosistema. Todos los archivos se guardan en <strong>Mis Documentos</strong>.</p>
 </section>
 
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SECCIÓN: TRÁMITES LEGALES (Asociación real)
+     ═══════════════════════════════════════════════════════════════════════════ -->
 <section class="section section-alt">
   <div class="section-inner">
     <div class="aviso aviso-real">
       <span class="aviso-icon">⚖️</span>
       <div><strong>Trámite legal real.</strong> Los marcados como <strong>"Asociación"</strong> son gestiones oficiales reales sujetas a la normativa española (LOPDGDD, RGPD, Ley 1/2002).</div>
     </div>
-    <h2>Trámites <span class="a">Legales</span></h2>
+    <h2>⚖️ Trámites <span class="a">Legales</span></h2>
     <p class="section-subtitle">Gestiones oficiales de la Asociación con plena validez jurídica real.</p>
     <div class="tramite-grid">
+      <div class="tramite-group-label">📋 Documentación y registro</div>
       <a class="tramite-card" onclick="abrirModal('control-parental')">
         <div class="tramite-icon">👨‍👩‍👧‍👦</div>
         <h3>Control Parental</h3>
@@ -34,44 +38,69 @@
   </div>
 </section>
 
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SECCIÓN: IDENTIDAD Y ACCESO (Ecosistema)
+     ═══════════════════════════════════════════════════════════════════════════ -->
 <section class="section">
   <div class="section-inner">
     <div class="aviso aviso-sim">
       <span class="aviso-icon">🎭</span>
       <div><strong>Entorno simulado.</strong> Los marcados como <strong>"Ecosistema"</strong> pertenecen al país ficticio de La Placeta. Sin validez jurídica real.</div>
     </div>
-    <h2>Trámites del <span class="a">Ecosistema</span></h2>
-    <p class="section-subtitle">Gestiona tu identidad dentro del país ficticio de La Placeta.</p>
+    <h2>🆔 Identidad y <span class="a">Acceso</span></h2>
+    <p class="section-subtitle">Gestiona tu identidad digital y credenciales en La Placeta.</p>
     <div class="tramite-grid">
       <a class="tramite-card" onclick="abrirModal('alta-dip')">
         <div class="tramite-icon">🪪</div>
         <h3>Alta DIP</h3>
-        <p>Solicita tu Documento de Identidad de La Placeta. Recibirás un PDF con los datos.</p>
+        <p>Solicita tu Documento de Identidad de La Placeta.</p>
         <span class="tag tag-eco">🎭 Ecosistema</span>
       </a>
       <a class="tramite-card" onclick="abrirModal('alta-placetid')">
         <div class="tramite-icon">🔑</div>
         <h3>Alta PlacetaID</h3>
-        <p>Activa tu identidad digital con un DIP provisional. PDF de activación incluido.</p>
+        <p>Activa tu identidad digital con un DIP provisional.</p>
         <span class="tag tag-eco">🎭 Ecosistema</span>
       </a>
       <a class="tramite-card" onclick="abrirModal('alta-entidad')">
         <div class="tramite-icon">🏢</div>
         <h3>Alta Entidad (EIP)</h3>
-        <p>Registra tu empresa simulada y obtén tu EIP. PDF de registro disponible.</p>
+        <p>Registra tu empresa simulada y obtén tu EIP.</p>
         <span class="tag tag-eco">🎭 Ecosistema</span>
       </a>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SECCIÓN: FISCAL Y TRIBUTOS (Ecosistema)
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<section class="section section-alt">
+  <div class="section-inner">
+    <div class="aviso aviso-sim">
+      <span class="aviso-icon">💰</span>
+      <div><strong>Gestión fiscal del ecosistema.</strong> Tributos de La Placeta (TLP) gestiona el censo, facturación e impuestos del ecosistema simulado.</div>
+    </div>
+    <h2>🧾 Fiscal y <span class="a">Tributos</span></h2>
+    <p class="section-subtitle">Gestiona tus obligaciones fiscales en el ecosistema: censo, facturación e impuestos.</p>
+    <div class="tramite-grid">
       <a class="tramite-card" onclick="abrirModal('alta-tributos')">
         <div class="tramite-icon">🧾</div>
         <h3>Alta en Tributos</h3>
         <p>Regístrate en el censo de contribuyentes. Obligatorio para operar con tu cuenta bancaria.</p>
-        <span class="tag tag-eco">🎭 Ecosistema</span>
+        <span class="tag tag-eco">💰 TLP</span>
       </a>
       <a class="tramite-card" onclick="abrirModal('solicitar-factura')">
         <div class="tramite-icon">📄</div>
         <h3>Solicitar Factura</h3>
         <p>Emite una factura con IVA del 12% y recibe tu CSV de verificación único.</p>
-        <span class="tag tag-eco">🎭 Ecosistema</span>
+        <span class="tag tag-eco">💰 TLP</span>
+      </a>
+      <a class="tramite-card" href="/tramites/consulta-tributos">
+        <div class="tramite-icon">📊</div>
+        <h3>Consulta Tributaria</h3>
+        <p>Revisa tu estado fiscal, declaraciones pendientes e historial de pagos.</p>
+        <span class="tag tag-eco">💰 TLP</span>
       </a>
     </div>
   </div>

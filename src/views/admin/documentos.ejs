@@ -1,0 +1,133 @@
+<div class="dashboard">
+  <div class="dashboard-header">
+    <h1>📄 Gestión de Documentos</h1>
+    <p class="dashboard-date">Manuales, procedimientos y documentos institucionales</p>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card stat-primary">
+      <div class="stat-icon">📚</div>
+      <div class="stat-content">
+        <span class="stat-value" id="totalDocs">—</span>
+        <span class="stat-label">Documentos</span>
+        <span class="stat-detail">Total en el sistema</span>
+      </div>
+    </div>
+    <div class="stat-card stat-success">
+      <div class="stat-icon">📝</div>
+      <div class="stat-content">
+        <span class="stat-value" id="totalManuales">—</span>
+        <span class="stat-label">Manuales</span>
+        <span class="stat-detail">Guías y procedimientos</span>
+      </div>
+    </div>
+    <div class="stat-card stat-info">
+      <div class="stat-icon">⚖️</div>
+      <div class="stat-content">
+        <span class="stat-value" id="totalProcedimientos">—</span>
+        <span class="stat-label">Procedimientos</span>
+        <span class="stat-detail">Normas y protocolos</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <div>
+        <h2>Acciones</h2>
+        <p class="section-desc">Crear y gestionar documentos</p>
+      </div>
+      <div style="display:flex;gap:8px">
+        <a href="/admin/documentos/editor" class="btn btn-primary">➕ Nuevo Documento</a>
+        <button class="btn btn-secondary" onclick="cargarDocumentos()">🔄 Refrescar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <div>
+        <h2>📚 Todos los Documentos</h2>
+        <p class="section-desc">Manuales, procedimientos y normativa</p>
+      </div>
+      <input type="search" id="searchDoc" oninput="filtrarDocs()" placeholder="🔍 Buscar..." style="width:200px;padding:8px 12px;border:2px solid var(--line);border-radius:var(--radius);font-family:var(--font);font-size:13px">
+    </div>
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr><th>Título</th><th>Tipo</th><th>Autor</th><th>Versión</th><th>Actualizado</th><th>Acciones</th></tr>
+        </thead>
+        <tbody id="docsBody"><tr><td colspan="6" class="loading-cell">Cargando documentos...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  let docsData = [];
+
+  async function cargarDocumentos() {
+    try {
+      const r = await fetch('/api/documentos');
+      docsData = Array.isArray(r) ? r : await r;
+      if (!Array.isArray(docsData)) docsData = [];
+
+      document.getElementById('totalDocs').textContent = docsData.length;
+      document.getElementById('totalManuales').textContent = docsData.filter(d => d.tipo === 'manual' || !d.tipo).length;
+      document.getElementById('totalProcedimientos').textContent = docsData.filter(d => d.tipo === 'procedimiento' || d.tipo === 'normativa').length;
+
+      const tbody = document.getElementById('docsBody');
+      if (!docsData.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="loading-cell">Sin documentos aún. <a href="/admin/documentos/editor">Crea el primero</a></td></tr>';
+        return;
+      }
+      tbody.innerHTML = docsData.map(d => {
+        const tipoClass = d.tipo === 'procedimiento' ? 'pill-purple' : d.tipo === 'normativa' ? 'pill-warning' : 'pill-primary';
+        return '<tr>' +
+          '<td><strong>' + (d.titulo || 'Sin título') + '</strong>' + (d.subtitulo ? '<br><span style="font-size:11px;color:var(--text-light)">' + d.subtitulo + '</span>' : '') + '</td>' +
+          '<td><span class="pill ' + tipoClass + '">' + (d.tipo || 'manual') + '</span></td>' +
+          '<td>' + (d.autor || '—') + '</td>' +
+          '<td>v' + (d.version || '1.0') + '</td>' +
+          '<td>' + (d.updated_at ? new Date(d.updated_at).toLocaleDateString('es-ES') : '—') + '</td>' +
+          '<td style="display:flex;gap:4px">' +
+            '<a href="/admin/documentos/editor/' + d.id + '" class="btn btn-sm btn-primary">✏️</a>' +
+            '<button class="btn btn-sm btn-success" onclick="exportarPDF(' + d.id + ')">📄</button>' +
+            '<button class="btn btn-sm btn-danger" onclick="eliminarDoc(' + d.id + ')">🗑️</button>' +
+          '</td></tr>';
+      }).join('');
+    } catch (e) {
+      document.getElementById('docsBody').innerHTML = '<tr><td colspan="6" class="error-cell">Error: ' + e.message + '</td></tr>';
+    }
+  }
+
+  function filtrarDocs() {
+    const q = document.getElementById('searchDoc').value.toLowerCase();
+    document.querySelectorAll('#docsBody tr').forEach(row => {
+      row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+  }
+
+  async function exportarPDF(id) {
+    try {
+      const r = await fetch('/api/documentos/exportar-pdf/' + id, { method: 'POST' });
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    } catch (e) {
+      mostrarToast('error', 'Error: ' + e.message);
+    }
+  }
+
+  async function eliminarDoc(id) {
+    if (!confirm('¿Eliminar este documento?')) return;
+    try {
+      await fetch('/api/documentos/' + id, { method: 'DELETE' });
+      mostrarToast('success', '✅ Documento eliminado');
+      cargarDocumentos();
+    } catch (e) {
+      mostrarToast('error', 'Error: ' + e.message);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', cargarDocumentos);
+</script>

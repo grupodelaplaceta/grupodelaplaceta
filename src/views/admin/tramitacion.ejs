@@ -1,0 +1,123 @@
+<div class="dashboard">
+  <div class="dashboard-header">
+    <h1>📋 Tramitación</h1>
+    <p class="dashboard-date">Gestión completa de trámites y solicitudes</p>
+  </div>
+
+  <div class="stats-grid" id="statsGrid">
+    <div class="stat-card stat-warning"><div class="stat-icon">⏳</div><div class="stat-content"><span class="stat-value" id="totalPendientes">—</span><span class="stat-label">Pendientes</span></div></div>
+    <div class="stat-card stat-success"><div class="stat-icon">✅</div><div class="stat-content"><span class="stat-value" id="totalAprobados">—</span><span class="stat-label">Aprobados</span></div></div>
+    <div class="stat-card stat-danger"><div class="stat-icon">❌</div><div class="stat-content"><span class="stat-value" id="totalRechazados">—</span><span class="stat-label">Rechazados</span></div></div>
+    <div class="stat-card stat-info"><div class="stat-icon">📄</div><div class="stat-content"><span class="stat-value" id="totalTramites">—</span><span class="stat-label">Total</span></div></div>
+  </div>
+
+  <div class="section-header"><div><h2>Acciones</h2></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary" onclick="cargarTramites()">🔄 Refrescar</button>
+      <button class="btn btn-secondary" onclick="mostrarTipos()">📋 Tipos de trámite</button>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:4px;margin-bottom:16px;border-bottom:2px solid var(--line)">
+    <button class="tab-btn active" onclick="filtrarEstado(this,'todos')" style="padding:10px 20px;border:none;background:none;font-weight:600;cursor:pointer;color:var(--p500);border-bottom:3px solid var(--p500)">📋 Todos</button>
+    <button class="tab-btn" onclick="filtrarEstado(this,'pendiente')" style="padding:10px 20px;border:none;background:none;font-weight:600;cursor:pointer;color:var(--text-light)">⏳ Pendientes</button>
+    <button class="tab-btn" onclick="filtrarEstado(this,'aprobado')" style="padding:10px 20px;border:none;background:none;font-weight:600;cursor:pointer;color:var(--text-light)">✅ Aprobados</button>
+    <button class="tab-btn" onclick="filtrarEstado(this,'rechazado')" style="padding:10px 20px;border:none;background:none;font-weight:600;cursor:pointer;color:var(--text-light)">❌ Rechazados</button>
+  </div>
+
+  <div class="section-header"><div><h2>Trámites</h2></div>
+    <input type="search" id="searchTramites" oninput="filtrarTramites()" placeholder="🔍 Buscar..." style="width:200px;padding:8px 12px;border:2px solid var(--line);border-radius:var(--radius);font-family:var(--font);font-size:13px"></div>
+  <div class="table-container"><table class="data-table"><thead><tr><th>ID</th><th>Fecha</th><th>Usuario</th><th>Tipo</th><th>Estado</th><th>Contenido</th><th>Observaciones</th><th>Acciones</th></tr></thead>
+    <tbody id="tramitesBody"><tr><td colspan="8" class="loading-cell">Cargando...</td></tr></tbody></table></div>
+</div>
+
+<script>
+let tramitesData = [];
+
+async function cargarTramites() {
+  try {
+    const r = await fetch('/api/admin/tramites/tramites');
+    tramitesData = await r.json();
+    if (!Array.isArray(tramitesData)) tramitesData = [];
+    renderTramites(tramitesData);
+  } catch(e) { document.getElementById('tramitesBody').innerHTML = '<tr><td colspan="8" class="error-cell">Error: ' + e.message + '</td></tr>'; }
+}
+
+function renderTramites(lista) {
+  document.getElementById('totalPendientes').textContent = lista.filter(t => t.estado === 'pendiente' || !t.estado).length;
+  document.getElementById('totalAprobados').textContent = lista.filter(t => t.estado === 'aprobado').length;
+  document.getElementById('totalRechazados').textContent = lista.filter(t => t.estado === 'rechazado').length;
+  document.getElementById('totalTramites').textContent = lista.length;
+
+  const tbody = document.getElementById('tramitesBody');
+  if (!lista.length) { tbody.innerHTML = '<tr><td colspan="8" class="loading-cell">Sin trámites</td></tr>'; return; }
+  tbody.innerHTML = lista.map(t => {
+    const estClass = t.estado === 'aprobado' ? 'badge-activo' : t.estado === 'rechazado' ? 'badge-suspendido' : 'badge-pendiente';
+    const estLabel = t.estado === 'aprobado' ? '✅ Aprobado' : t.estado === 'rechazado' ? '❌ Rechazado' : '⏳ Pendiente';
+    return '<tr data-estado="' + (t.estado || 'pendiente') + '">' +
+      '<td>#' + t.id + '</td>' +
+      '<td>' + (t.created_at ? new Date(t.created_at).toLocaleString('es-ES') : '—') + '</td>' +
+      '<td><strong>' + (t.alias || '—') + '</strong><br><span style="font-size:11px">' + (t.dip || '') + '</span></td>' +
+      '<td><span class="pill pill-purple">' + (t.tipo || '—') + '</span></td>' +
+      '<td><span class="badge ' + estClass + '">' + estLabel + '</span></td>' +
+      '<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (t.contenido || '—') + '</td>' +
+      '<td style="max-width:150px;font-size:12px">' + (t.observaciones || '—') + '</td>' +
+      '<td style="display:flex;gap:4px">' +
+        (!t.estado || t.estado === 'pendiente' ?
+          '<button class="btn btn-success btn-sm" onclick="aprobar(' + t.id + ')">✅</button>' +
+          '<button class="btn btn-danger btn-sm" onclick="rechazar(' + t.id + ')">❌</button>' : '') +
+        '<button class="btn btn-sm btn-primary" onclick="generarPDF(' + t.id + ')">📄</button>' +
+      '</td></tr>';
+  }).join('');
+}
+
+function filtrarEstado(btn, estado) {
+  document.querySelectorAll('.tab-btn').forEach(b => { b.style.color = 'var(--text-light)'; b.style.borderBottom = '3px solid transparent'; });
+  btn.style.color = 'var(--p500)'; btn.style.borderBottom = '3px solid var(--p500)';
+  const rows = document.querySelectorAll('#tramitesBody tr');
+  rows.forEach(r => {
+    if (estado === 'todos') r.style.display = '';
+    else r.style.display = r.getAttribute('data-estado') === estado ? '' : 'none';
+  });
+}
+
+function filtrarTramites() {
+  const q = document.getElementById('searchTramites').value.toLowerCase();
+  document.querySelectorAll('#tramitesBody tr').forEach(r => { r.style.display = r.textContent.toLowerCase().includes(q) ? '' : 'none'; });
+}
+
+async function aprobar(id) {
+  const obs = prompt('Observaciones (opcional):');
+  try {
+    await fetch('/api/admin/tramites/aprobar/' + id, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ observaciones: obs || '' }) });
+    alert('✅ Trámite #' + id + ' aprobado');
+    cargarTramites();
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+async function rechazar(id) {
+  const motivo = prompt('Motivo del rechazo (obligatorio):');
+  if (!motivo) return alert('Debes indicar un motivo');
+  try {
+    await fetch('/api/admin/tramites/rechazar/' + id, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ observaciones: motivo }) });
+    alert('❌ Trámite #' + id + ' rechazado');
+    cargarTramites();
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+async function generarPDF(id) {
+  try {
+    const r = await fetch('/api/admin/tramites/generar-pdf/' + id, { method: 'POST' });
+    const blob = await r.blob();
+    window.open(URL.createObjectURL(blob), '_blank');
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+function mostrarTipos() {
+  fetch('/api/admin/tramites/tipos').then(r=>r.json()).then(d => {
+    alert('Tipos disponibles:\n' + d.map(t => '• ' + t.nombre + ': ' + t.descripcion).join('\n'));
+  });
+}
+
+document.addEventListener('DOMContentLoaded', cargarTramites);
+</script>

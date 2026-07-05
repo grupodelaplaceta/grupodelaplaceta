@@ -1,0 +1,256 @@
+<div class="dashboard">
+  <div class="dashboard-header">
+    <h1>🆔 Administración PlacetaID</h1>
+    <p class="dashboard-date">Gestión de identidades digitales · PLID26</p>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card stat-primary">
+      <div class="stat-icon">👤</div>
+      <div class="stat-content">
+        <span class="stat-value" id="totalRegistros">—</span>
+        <span class="stat-label">Registros</span>
+        <span class="stat-detail">Identidades en PLID26</span>
+      </div>
+    </div>
+    <div class="stat-card stat-success">
+      <div class="stat-icon">✅</div>
+      <div class="stat-content">
+        <span class="stat-value" id="totalActivos">—</span>
+        <span class="stat-label">Activos</span>
+        <span class="stat-detail">Cuentas operativas</span>
+      </div>
+    </div>
+    <div class="stat-card stat-warning">
+      <div class="stat-icon">🔒</div>
+      <div class="stat-content">
+        <span class="stat-value" id="totalBloqueados">—</span>
+        <span class="stat-label">Bloqueados</span>
+        <span class="stat-detail">Cuentas bloqueadas</span>
+      </div>
+    </div>
+    <div class="stat-card stat-info">
+      <div class="stat-icon">📋</div>
+      <div class="stat-content">
+        <span class="stat-value" id="totalLogs">—</span>
+        <span class="stat-label">Auditoría</span>
+        <span class="stat-detail">Eventos registrados</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <div>
+        <h2>Acciones Rápidas</h2>
+        <p class="section-desc">Gestión de identidades PlacetaID</p>
+      </div>
+    </div>
+    <div class="quick-actions">
+      <button class="action-card" onclick="cargarRegistros()">
+        <span class="action-icon">🔄</span>
+        <span class="action-title">Actualizar datos</span>
+        <span class="action-desc">Refrescar registros y estadísticas</span>
+      </button>
+      <button class="action-card" onclick="cargarLogs()">
+        <span class="action-icon">📋</span>
+        <span class="action-title">Ver auditoría</span>
+        <span class="action-desc">Eventos de autenticación recientes</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div style="display:flex;gap:4px;margin-bottom:16px;border-bottom:2px solid var(--line);padding-bottom:0">
+    <button class="tab-btn active" data-tab="tabRegistros" onclick="switchTabPlacetid(this,'tabRegistros')" style="padding:10px 20px;border:none;background:none;font-weight:600;font-size:14px;font-family:var(--font);cursor:pointer;color:var(--p500);border-bottom:3px solid var(--p500);margin-bottom:-2px;transition:var(--transition)">👤 Registros</button>
+    <button class="tab-btn" data-tab="tabLogs" onclick="switchTabPlacetid(this,'tabLogs')" style="padding:10px 20px;border:none;background:none;font-weight:600;font-size:14px;font-family:var(--font);cursor:pointer;color:var(--text-light);transition:var(--transition)">📋 Auditoría</button>
+    <button class="tab-btn" data-tab="tabConfig" onclick="switchTabPlacetid(this,'tabConfig')" style="padding:10px 20px;border:none;background:none;font-weight:600;font-size:14px;font-family:var(--font);cursor:pointer;color:var(--text-light);transition:var(--transition)">⚙️ Configuración</button>
+  </div>
+
+  <!-- Registros -->
+  <div id="tabRegistros" class="tab-content">
+    <div class="section-header">
+      <div>
+        <h2>👤 Identidades Registradas</h2>
+        <p class="section-desc">Usuarios del sistema PlacetaID</p>
+      </div>
+      <input type="search" id="searchRegistro" oninput="filtrarRegistros()" placeholder="🔍 Buscar DIP, nombre..." style="width:220px;padding:8px 12px;border:2px solid var(--line);border-radius:var(--radius);font-family:var(--font);font-size:13px">
+    </div>
+    <div class="table-container">
+      <table class="data-table" id="registrosTable">
+        <thead>
+          <tr><th>DIP</th><th>Nombre</th><th>Rol</th><th>Estado</th><th>2FA</th><th>Intentos</th><th>Registro</th><th>Acciones</th></tr>
+        </thead>
+        <tbody id="registrosBody"><tr><td colspan="8" class="loading-cell">Cargando registros...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Logs -->
+  <div id="tabLogs" class="tab-content" style="display:none">
+    <div class="section-header">
+      <div>
+        <h2>📋 Auditoría</h2>
+        <p class="section-desc">Eventos de autenticación y actividad</p>
+      </div>
+      <button class="btn btn-sm btn-primary" onclick="cargarLogs()">🔄 Refrescar</button>
+    </div>
+    <div class="table-container">
+      <table class="data-table" id="logsTable">
+        <thead>
+          <tr><th>Fecha</th><th>DIP</th><th>Evento</th><th>Servicio</th><th>IP</th><th>Fase</th></tr>
+        </thead>
+        <tbody id="logsBody"><tr><td colspan="6" class="loading-cell">Cargando logs...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Config -->
+  <div id="tabConfig" class="tab-content" style="display:none">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-content">
+          <span class="stat-label">API Key PlacetaID</span>
+          <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
+            <code style="flex:1;padding:10px;background:var(--bg);border-radius:8px;font-size:12px;word-break:break-all" id="apiKeyDisplay">ccb611655030bdadf7218418dc195dcb</code>
+            <button class="btn btn-sm btn-primary" onclick="copiarAlPortapapeles('ccb611655030bdadf7218418dc195dcb', 'API Key copiada')">📋 Copiar</button>
+          </div>
+          <span class="stat-detail" style="margin-top:6px">Callback: https://grupodelaplaceta.vercel.app/placetid/callback</span>
+          <span class="stat-detail" style="margin-top:6px">Proxy activo: /api/admin/placetid · Estado: <span id="placetidStatus" style="font-weight:600;color:var(--warning)">⏳ Pendiente</span></span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-content">
+          <span class="stat-label">Endpoint PLID26</span>
+          <p style="margin-top:8px;font-size:13px">https://id.laplaceta.org</p>
+          <span class="stat-detail">Versión API v1 · Integración OAuth2</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let registrosData = [];
+
+  function switchTabPlacetid(btn, tabId) {
+    document.querySelectorAll('#tabRegistros, #tabLogs, #tabConfig').forEach(c => c.style.display = 'none');
+    document.getElementById(tabId).style.display = 'block';
+    document.querySelectorAll('.tab-btn').forEach(b => {
+      b.style.color = 'var(--text-light)'; b.style.borderBottom = '3px solid transparent'; b.style.marginBottom = '-2px';
+    });
+    btn.style.color = 'var(--p500)'; btn.style.borderBottom = '3px solid var(--p500)';
+  }
+
+  async function apiPlacetid(endpoint, opts = {}) {
+    const base = '/api/admin/placetid';
+    const path = endpoint.replace('/admin/', '/');
+    const r = await fetch(base + path, opts);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  }
+
+  async function cargarRegistros() {
+    try {
+      const data = await apiPlacetid('/registros');
+      registrosData = Array.isArray(data.registros) ? data.registros : Array.isArray(data) ? data : [];
+      const activos = registrosData.filter(r => r.activo && !r.bloqueado).length;
+      const bloqueados = registrosData.filter(r => r.bloqueado || r.banned).length;
+      document.getElementById('totalRegistros').textContent = registrosData.length;
+      document.getElementById('totalActivos').textContent = activos;
+      document.getElementById('totalBloqueados').textContent = bloqueados;
+
+      const tbody = document.getElementById('registrosBody');
+      if (!registrosData.length) {
+        tbody.innerHTML = '<tr><td colspan="8" class="loading-cell">Sin registros</td></tr>';
+        return;
+      }
+      tbody.innerHTML = registrosData.map(r => {
+        const estClass = r.bloqueado || r.banned ? 'badge-suspendido' : r.activo ? 'badge-activo' : 'badge-baja';
+        const estLabel = r.bloqueado || r.banned ? 'Bloqueado' : r.activo ? 'Activo' : 'Inactivo';
+        const tfaClass = r.totpVerified ? 'badge-activo' : 'badge-pendiente';
+        const tfaLabel = r.totpVerified ? '✅ Sí' : '❌ No';
+        return '<tr>' +
+          '<td><strong>' + (r.dip || '—') + '</strong></td>' +
+          '<td>' + (r.nombre || '') + ' ' + (r.apellidos || '') + '</td>' +
+          '<td><span class="pill pill-purple">' + (r.rol || 'miembro') + '</span></td>' +
+          '<td><span class="badge ' + estClass + '">' + estLabel + '</span></td>' +
+          '<td><span class="badge ' + tfaClass + '">' + tfaLabel + '</span></td>' +
+          '<td>' + (r.intentosFallidos || 0) + '</td>' +
+          '<td>' + (r.createdAt ? new Date(r.createdAt).toLocaleDateString('es-ES') : '—') + '</td>' +
+          '<td style="display:flex;gap:4px">' +
+            (r.bloqueado ? '<button class="btn btn-success btn-sm" onclick="desbloquear(\'' + r.dip + '\')">🔓</button>' : '') +
+            (!r.bloqueado ? '<button class="btn btn-warning btn-sm" onclick="toggleActivo(\'' + r.dip + '\')">' + (r.activo ? '🔒' : '🔓') + '</button>' : '') +
+          '</td></tr>';
+      }).join('');
+    } catch (e) {
+      document.getElementById('registrosBody').innerHTML = '<tr><td colspan="8" class="error-cell">Error: ' + (e.message || 'conexión') + '</td></tr>';
+    }
+  }
+
+  function filtrarRegistros() {
+    const q = document.getElementById('searchRegistro').value.toLowerCase();
+    document.querySelectorAll('#registrosBody tr').forEach(row => {
+      row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+  }
+
+  async function cargarLogs() {
+    try {
+      const data = await apiPlacetid('/admin/logs?limit=50');
+      const logs = Array.isArray(data.logs) ? data.logs : Array.isArray(data) ? data : [];
+      document.getElementById('totalLogs').textContent = logs.length;
+      const tbody = document.getElementById('logsBody');
+      if (!logs.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="loading-cell">Sin logs</td></tr>';
+        return;
+      }
+      tbody.innerHTML = logs.map(l => {
+        const evClass = l.evento === 'intento_exitoso' ? 'badge-activo' : l.evento === 'error_credenciales' || l.evento === 'error_2fa' ? 'badge-suspendido' : 'badge-pendiente';
+        return '<tr>' +
+          '<td>' + (l.timestamp ? new Date(l.timestamp).toLocaleString('es-ES') : '—') + '</td>' +
+          '<td><strong>' + (l.dip || '—') + '</strong></td>' +
+          '<td><span class="badge ' + evClass + '">' + (l.evento || '—') + '</span></td>' +
+          '<td>' + (l.servicio || '—') + '</td>' +
+          '<td style="font-size:11px;font-family:monospace">' + (l.ip || '—') + '</td>' +
+          '<td>' + (l.fase || '—') + '</td></tr>';
+      }).join('');
+    } catch (e) {
+      document.getElementById('logsBody').innerHTML = '<tr><td colspan="6" class="error-cell">Error: ' + (e.message || 'conexión') + '</td></tr>';
+    }
+  }
+
+  async function desbloquear(dip) {
+    try {
+      await apiPlacetid('/admin/desbloquear/' + dip, { method: 'POST' });
+      mostrarToast('success', '✅ DIP ' + dip + ' desbloqueado');
+      cargarRegistros();
+    } catch (e) { mostrarToast('error', 'Error: ' + e.message); }
+  }
+
+  async function toggleActivo(dip) {
+    try {
+      await apiPlacetid('/admin/toggle/' + dip, { method: 'POST' });
+      mostrarToast('success', '✅ Estado cambiado para ' + dip);
+      cargarRegistros();
+    } catch (e) { mostrarToast('error', 'Error: ' + e.message); }
+  }
+
+  async function checkStatus() {
+    const statusEl = document.getElementById('placetidStatus');
+    try {
+      const r = await fetch('/api/admin/placetid/stats');
+      if (r.ok) { statusEl.textContent = '✅ Conectado'; statusEl.style.color = 'var(--success)'; }
+      else { statusEl.textContent = '⚠️ Error ' + r.status; statusEl.style.color = 'var(--danger)'; }
+    } catch(e) {
+      statusEl.textContent = '❌ Sin conexión';
+      statusEl.title = e.message;
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    checkStatus();
+    cargarRegistros();
+    cargarLogs();
+  });
+</script>

@@ -1,0 +1,150 @@
+<div class="dashboard">
+  <div class="dashboard-header">
+    <h1>🛡️ Vigilancia y Monitoreo</h1>
+    <p class="dashboard-date">Sistema de control, alertas y auditoría en tiempo real</p>
+  </div>
+
+  <div class="stats-grid" id="statsGrid">
+    <div class="stat-card stat-info"><div class="stat-icon">👥</div><div class="stat-content"><span class="stat-value" id="totalUsuarios">—</span><span class="stat-label">Usuarios</span></div></div>
+    <div class="stat-card stat-success"><div class="stat-icon">✅</div><div class="stat-content"><span class="stat-value" id="usuariosActivos">—</span><span class="stat-label">Activos hoy</span></div></div>
+    <div class="stat-card stat-primary"><div class="stat-icon">🔄</div><div class="stat-content"><span class="stat-value" id="transaccionesHoy">—</span><span class="stat-label">Transacciones hoy</span></div></div>
+    <div class="stat-card stat-warning"><div class="stat-icon">📝</div><div class="stat-content"><span class="stat-value" id="logsHoy">—</span><span class="stat-label">Eventos hoy</span></div></div>
+  </div>
+
+  <!-- Alertas -->
+  <div class="section"><div class="section-header"><div><h2>🚨 Alertas del Sistema</h2></div><button class="btn btn-sm btn-primary" onclick="cargarAlertas()">🔄</button></div>
+    <div id="alertasContainer" style="display:grid;gap:8px"><p style="color:var(--text-light)">Cargando alertas...</p></div>
+  </div>
+
+  <div style="display:flex;gap:4px;margin-bottom:16px;border-bottom:2px solid var(--line)">
+    <button class="tab-btn active" onclick="switchTabV(this,'tabLogs')" style="padding:10px 20px;border:none;background:none;font-weight:600;cursor:pointer;color:var(--p500);border-bottom:3px solid var(--p500)">📋 Logs Auditoría</button>
+    <button class="tab-btn" onclick="switchTabV(this,'tabNotis')" style="padding:10px 20px;border:none;background:none;font-weight:600;cursor:pointer;color:var(--text-light)">🔔 Notificaciones</button>
+    <button class="tab-btn" onclick="switchTabV(this,'tabAcciones')" style="padding:10px 20px;border:none;background:none;font-weight:600;cursor:pointer;color:var(--text-light)">⚡ Acciones Rápidas</button>
+  </div>
+
+  <div id="tabLogs" class="tab-content">
+    <div class="section-header"><div><h2>📋 Logs de Auditoría</h2></div>
+      <input type="search" id="searchLogs" oninput="filtrarTablaV('searchLogs','logsBody')" placeholder="🔍 Buscar en logs..." style="width:220px;padding:8px 12px;border:2px solid var(--line);border-radius:8px;font-family:var(--font);font-size:13px">
+    </div>
+    <div class="table-container"><table class="data-table"><thead><tr><th>Fecha</th><th>Usuario</th><th>Acción</th><th>Detalle</th><th>IP</th></tr></thead>
+      <tbody id="logsBody"><tr><td colspan="5" class="loading-cell">Cargando...</td></tr></tbody></table></div>
+  </div>
+
+  <div id="tabNotis" class="tab-content" style="display:none">
+    <div class="card" style="padding:20px;margin-bottom:16px">
+      <h3 style="margin:0 0 12px 0;color:var(--p900)">📨 Crear Notificación</h3>
+      <div style="display:grid;gap:8px;max-width:500px">
+        <input type="text" id="notifTitulo" placeholder="Título" style="padding:10px;border:2px solid var(--line);border-radius:8px;font-family:var(--font)">
+        <textarea id="notifMensaje" placeholder="Mensaje" rows="3" style="padding:10px;border:2px solid var(--line);border-radius:8px;font-family:var(--font)"></textarea>
+        <select id="notifTipo" style="padding:10px;border:2px solid var(--line);border-radius:8px;font-family:var(--font)">
+          <option value="informativa">📢 Informativa</option><option value="alerta">⚠️ Alerta</option><option value="sancion">⚖️ Sanción</option>
+        </select>
+        <button class="btn btn-primary" onclick="crearNotificacion()">📨 Enviar</button>
+      </div>
+    </div>
+    <div class="section-header"><div><h2>🔔 Notificaciones Enviadas</h2></div></div>
+    <div class="table-container"><table class="data-table"><thead><tr><th>Fecha</th><th>Título</th><th>Mensaje</th><th>Tipo</th><th>Leída</th></tr></thead>
+      <tbody id="notisBody"><tr><td colspan="5" class="loading-cell">Cargando...</td></tr></tbody></table></div>
+  </div>
+
+  <div id="tabAcciones" class="tab-content" style="display:none">
+    <div class="card" style="padding:20px">
+      <h3 style="margin:0 0 12px 0;color:var(--p900)">⚡ Acciones Administrativas</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <button class="btn btn-primary" onclick="cargarLogs()">📋 Refrescar Logs</button>
+        <button class="btn btn-success" onclick="cargarNotificaciones()">🔔 Refrescar Notificaciones</button>
+        <button class="btn btn-warning" onclick="cargarAlertas()">🚨 Refrescar Alertas</button>
+        <a href="/admin/audit-bancario" class="btn" style="background:var(--p500);color:#fff;text-decoration:none;text-align:center;padding:14px;border-radius:12px;font-weight:600">🏦 Ir a Auditoría Bancaria</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function switchTabV(btn, tabId) {
+  document.querySelectorAll('#tabLogs, #tabNotis, #tabAcciones').forEach(c => c.style.display = 'none');
+  document.getElementById(tabId).style.display = 'block';
+  document.querySelectorAll('.tab-btn').forEach(b => { b.style.color = 'var(--text-light)'; b.style.borderBottom = '3px solid transparent'; });
+  btn.style.color = 'var(--p500)'; btn.style.borderBottom = '3px solid var(--p500)';
+}
+
+function filtrarTablaV(searchId, tbodyId) {
+  const q = document.getElementById(searchId).value.toLowerCase();
+  document.querySelectorAll(`#${tbodyId} tr`).forEach(r => r.style.display = r.textContent.toLowerCase().includes(q) ? '' : 'none');
+}
+
+async function cargarStats() {
+  try {
+    const r = await fetch('/api/admin/vigilancia/stats');
+    const d = await r.json();
+    document.getElementById('totalUsuarios').textContent = d.totalUsuarios || '—';
+    document.getElementById('usuariosActivos').textContent = d.usuariosHoy || '—';
+    document.getElementById('transaccionesHoy').textContent = d.transaccionesHoy || '—';
+    document.getElementById('logsHoy').textContent = d.logsHoy || '—';
+  } catch(e) {}
+}
+
+async function cargarAlertas() {
+  try {
+    const r = await fetch('/api/admin/vigilancia/alertas');
+    const d = await r.json();
+    const container = document.getElementById('alertasContainer');
+    if (!d.length) { container.innerHTML = '<p style="color:var(--success);font-weight:600">✅ Sin alertas activas</p>'; return; }
+    const colorMap = { danger:'#dc2626', warning:'#d97706', info:'#2563eb', success:'#16a34a' };
+    container.innerHTML = d.map(a => '<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:10px;background:' + colorMap[a.tipo] + '15;border-left:4px solid ' + colorMap[a.tipo] + '">' +
+      '<span style="font-size:20px">' + (a.tipo === 'danger' ? '🔴' : a.tipo === 'warning' ? '🟡' : a.tipo === 'success' ? '🟢' : '🔵') + '</span>' +
+      '<div><strong>' + a.mensaje + '</strong><br><span style="font-size:11px;color:var(--text-light)">' + new Date(a.fecha).toLocaleString('es-ES') + '</span></div></div>'
+    ).join('');
+  } catch(e) { document.getElementById('alertasContainer').innerHTML = '<p class="error-cell">Error cargando alertas</p>'; }
+}
+
+async function cargarLogs() {
+  try {
+    const r = await fetch('/api/admin/vigilancia/logs?limit=200');
+    const d = await r.json();
+    const tbody = document.getElementById('logsBody');
+    if (!d.length) { tbody.innerHTML = '<tr><td colspan="5" class="loading-cell">Sin logs</td></tr>'; return; }
+    tbody.innerHTML = d.map(l => '<tr><td>' + (l.created_at ? new Date(l.created_at).toLocaleString('es-ES') : '—') + '</td>' +
+      '<td>' + (l.alias || '—') + '</td>' +
+      '<td><span class="pill pill-' + (l.accion?.includes('error')?'danger':l.accion?.includes('login')?'primary':'info') + '">' + (l.accion || '—') + '</span></td>' +
+      '<td style="font-size:12px;max-width:250px">' + (l.detalle || '—') + '</td>' +
+      '<td style="font-size:11px;font-family:monospace">' + (l.ip || '—') + '</td></tr>'
+    ).join('');
+  } catch(e) { document.getElementById('logsBody').innerHTML = '<tr><td colspan="5" class="error-cell">Error</td></tr>'; }
+}
+
+async function cargarNotificaciones() {
+  try {
+    const r = await fetch('/api/admin/notificaciones');
+    const d = await r.json();
+    const tbody = document.getElementById('notisBody');
+    const notis = d.notificaciones || [];
+    if (!notis.length) { tbody.innerHTML = '<tr><td colspan="5" class="loading-cell">Sin notificaciones</td></tr>'; return; }
+    tbody.innerHTML = notis.map(n => '<tr><td>' + (n.created_at ? new Date(n.created_at).toLocaleString('es-ES') : '—') + '</td>' +
+      '<td><strong>' + (n.titulo || '—') + '</strong></td>' +
+      '<td style="font-size:12px">' + (n.mensaje || '—') + '</td>' +
+      '<td><span class="pill pill-' + (n.tipo === 'alerta' ? 'warning' : n.tipo === 'sancion' ? 'danger' : 'info') + '">' + (n.tipo || '—') + '</span></td>' +
+      '<td>' + (n.leida ? '✅ Sí' : '❌ No') + '</td></tr>'
+    ).join('');
+  } catch(e) {}
+}
+
+async function crearNotificacion() {
+  const titulo = document.getElementById('notifTitulo').value.trim();
+  const mensaje = document.getElementById('notifMensaje').value.trim();
+  const tipo = document.getElementById('notifTipo').value;
+  if (!titulo || !mensaje) { alert('Título y mensaje requeridos'); return; }
+  try {
+    await fetch('/api/admin/notificaciones/crear', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ titulo, mensaje, tipo })
+    });
+    alert('✅ Notificación enviada');
+    document.getElementById('notifTitulo').value = '';
+    document.getElementById('notifMensaje').value = '';
+    cargarNotificaciones();
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+document.addEventListener('DOMContentLoaded', () => { cargarStats(); cargarAlertas(); cargarLogs(); cargarNotificaciones(); });
+</script>

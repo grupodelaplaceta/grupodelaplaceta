@@ -31,6 +31,10 @@ import voleybridgeRoutes from './src/routes/voleybridge.js';
 import placetaidAuthRoutes from './src/routes/placetaid-auth.js';
 import fotosRoutes from './src/routes/fotos.js';
 import tributosRoutes from './src/routes/tributos.js';
+import placetaidAdminRoutes from './src/routes/placetaid-admin.js';
+import documentosRoutes from './src/routes/documentos.js';
+import auditRoutes from './src/routes/audit.js';
+import tramitacionRoutes from './src/routes/tramitacion.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -132,6 +136,10 @@ app.use('/api/rgpd', rgpdRoutes);
 app.use('/api/pdf', pdfRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin/tributos', tributosRoutes);
+app.use('/api/admin/placetid', placetaidAdminRoutes);
+app.use('/', documentosRoutes);
+app.use('/api/admin/audit', auditRoutes);
+app.use('/api/admin', tramitacionRoutes);
 app.use('/api/firma', firmaRoutes);
 app.use('/api/placetid', placetidRoutes);
 app.use('/api/contenidos', contenidosRoutes);
@@ -167,7 +175,7 @@ function getPlacetaidConfig(req) {
     ? process.env.PLACETAID_API_URL
     : defaultApiUrl;
   const authBaseUrl = process.env.PLACETAID_AUTH_URL || process.env.PLACETAID_BASE_URL || apiUrl.replace(/\/api$/, '');
-  const clientId = process.env.PLACETAID_CLIENT_ID || 'gdlp-crm';
+  const clientId = process.env.PLACETAID_CLIENT_ID || process.env.PLACETAID_API_KEY || 'ccb611655030bdadf7218418dc195dcb';
   const redirectUri = `${protocol}://${host}/placetid/callback`;
 
   return {
@@ -235,6 +243,7 @@ app.get('/admin/identidad', verificarAuth, (req, res) => res.render('identidad/g
 app.get('/admin/bancario', verificarAuth, (req, res) => res.render('bancario/gestion', { titulo: 'Gestión Bancaria' }));
 app.get('/admin/fiscal', verificarAuth, (req, res) => res.render('fiscal/gestion', { titulo: 'Gestión Fiscal' }));
 app.get('/admin/tributos', verificarAuth, (req, res) => res.render('admin/tributos', { titulo: 'Gestión de Tributos' }));
+app.get('/admin/placetid', verificarAuth, (req, res) => res.render('admin/placetid', { titulo: 'Administración PlacetaID' }));
 app.get('/admin/ocio', verificarAuth, (req, res) => res.render('ocio/gestion', { titulo: 'Gestión de Ocio y Loterías' }));
 app.get('/admin/recursos', verificarAuth, (req, res) => res.render('recursos/gestion', { titulo: 'Gestión de Recursos Digitales' }));
 app.get('/admin/justicia', verificarAuth, (req, res) => res.render('justicia/gestion', { titulo: 'Gestión de Justicia' }));
@@ -243,6 +252,9 @@ app.get('/admin/pdf', verificarAuth, (req, res) => res.render('pdf/gestion', { t
 app.get('/admin/firmas', verificarAuth, (req, res) => res.render('pdf/firmas', { titulo: 'Documentos para Firmar' }));
 app.get('/admin/contenidos', verificarAuth, (req, res) => res.render('admin/contenidos', { titulo: 'Gestión de Contenidos' }));
 app.get('/admin/voley-club', verificarAuth, (req, res) => res.render('admin/voley-club', { titulo: 'Voley Club - Gestión' }));
+app.get('/admin/audit-bancario', verificarAuth, (req, res) => res.render('admin/audit-bancario', { titulo: 'Auditoría Bancaria' }));
+app.get('/admin/tramitacion', verificarAuth, (req, res) => res.render('admin/tramitacion', { titulo: 'Tramitación' }));
+app.get('/admin/vigilancia', verificarAuth, (req, res) => res.render('admin/vigilancia', { titulo: 'Vigilancia y Monitoreo' }));
 
 // URLs públicas de firma
 app.get('/firmar/:token', async (req, res) => {

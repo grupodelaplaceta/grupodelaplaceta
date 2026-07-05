@@ -7,7 +7,7 @@ const defaultPlacetaidApiUrl = process.env.VERCEL ? 'https://id.laplaceta.org/ap
 const PLACETAID_API_URL = process.env.PLACETAID_API_URL && process.env.PLACETAID_API_URL !== 'http://localhost:3000/api'
   ? process.env.PLACETAID_API_URL
   : defaultPlacetaidApiUrl;
-const PLACETAID_CLIENT_ID = process.env.PLACETAID_CLIENT_ID || 'gdlp-crm';
+const PLACETAID_CLIENT_ID = process.env.PLACETAID_CLIENT_ID || process.env.PLACETAID_API_KEY || 'ccb611655030bdadf7218418dc195dcb';
 
 /**
  * Verificar un token PlacetaID contra el gateway

@@ -49,8 +49,7 @@ async function initSqlite() {
       sqliteWrapper = crearWrapperSqlite(rawDb);
       console.log('  📦 SQLite: Inicializado (fallback para tablas bancarias/fiscal/justicia)');
     } catch (err) {
-      console.log('  ⚠️  SQLite: No disponible (entorno serverless)');
-      // Crear wrapper stub que falla elegantemente
+      console.log('  ⚠️  SQLite: No disponible -', err.message?.substring(0,80));
       sqliteWrapper = crearWrapperStub();
     }
     return sqliteWrapper;
@@ -1031,6 +1030,7 @@ export async function sbCalculateDeclarationFromDailyBalances(placetaId, mesPeri
 
 // ── Migraciones SQLite (solo tablas NO-Supabase) ──────────────────────────
 function ejecutarMigracionesSqlite(database) {
+  database.run(`CREATE TABLE IF NOT EXISTS solicitantes (id INTEGER PRIMARY KEY AUTOINCREMENT, alias TEXT UNIQUE NOT NULL, nombre_real TEXT, email TEXT, fecha_nacimiento TEXT, edad INTEGER, dip TEXT UNIQUE, placeid TEXT, hash_credencial TEXT, password_hash TEXT, rol TEXT DEFAULT 'miembro', cargo TEXT, franja_edad TEXT, estado TEXT DEFAULT 'pendiente', ultimo_acceso TEXT, ip_ultimo_acceso TEXT, creado_en TEXT DEFAULT (datetime('now')), actualizado_en TEXT DEFAULT (datetime('now')))`);
   database.run(`CREATE TABLE IF NOT EXISTS cuentas_bancarias (id INTEGER PRIMARY KEY AUTOINCREMENT, usuario_id INTEGER NOT NULL, tipo_cuenta TEXT, saldo REAL DEFAULT 0, saldo_maximo REAL DEFAULT 500000, limite_transferencia_diario REAL DEFAULT 50000, bono_bienvenida_activo INTEGER DEFAULT 1, fecha_bono TEXT, estado TEXT DEFAULT 'activa', creado_en TEXT DEFAULT (datetime('now')), actualizado_en TEXT DEFAULT (datetime('now')))`);
   database.run(`CREATE TABLE IF NOT EXISTS transacciones (id INTEGER PRIMARY KEY AUTOINCREMENT, cuenta_origen_id INTEGER, cuenta_destino_id INTEGER, tipo TEXT, cantidad REAL NOT NULL, concepto TEXT, iva_aplicado REAL DEFAULT 0, retencion_aplicada REAL DEFAULT 0, referencia_externa TEXT, estado TEXT DEFAULT 'completada', creado_en TEXT DEFAULT (datetime('now')))`);
   database.run(`CREATE TABLE IF NOT EXISTS historial_saldos_diarios (id INTEGER PRIMARY KEY AUTOINCREMENT, cuenta_id INTEGER NOT NULL, fecha TEXT NOT NULL, saldo REAL NOT NULL, UNIQUE(cuenta_id, fecha))`);
@@ -1050,8 +1050,20 @@ function ejecutarMigracionesSqlite(database) {
   database.run(`CREATE TABLE IF NOT EXISTS asambleas (id INTEGER PRIMARY KEY AUTOINCREMENT, titulo TEXT NOT NULL, tipo TEXT, fecha_convocatoria TEXT, fecha_celebracion TEXT, orden_dia TEXT, quorum_primera INTEGER DEFAULT 0, quorum_segunda INTEGER DEFAULT 0, estado TEXT DEFAULT 'convocada', acta_texto TEXT, creado_en TEXT DEFAULT (datetime('now')))`);
   database.run(`CREATE TABLE IF NOT EXISTS votaciones (id INTEGER PRIMARY KEY AUTOINCREMENT, asamblea_id INTEGER, titulo TEXT NOT NULL, descripcion TEXT, tipo_voto TEXT, votos_a_favor INTEGER DEFAULT 0, votos_en_contra INTEGER DEFAULT 0, abstenciones INTEGER DEFAULT 0, resultado TEXT, fecha_cierre TEXT, creado_en TEXT DEFAULT (datetime('now')))`);
   database.run(`CREATE TABLE IF NOT EXISTS config_control_parental (id INTEGER PRIMARY KEY AUTOINCREMENT, nombre TEXT, activo INTEGER DEFAULT 1, creado_en TEXT DEFAULT (datetime('now')))`);
+  database.run(`CREATE TABLE IF NOT EXISTS documentos (id INTEGER PRIMARY KEY AUTOINCREMENT, titulo TEXT NOT NULL, subtitulo TEXT, contenido TEXT NOT NULL, tipo TEXT DEFAULT 'manual', autor TEXT, version TEXT DEFAULT '1.0', created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now')))`);
+  database.run(`CREATE TABLE IF NOT EXISTS notificaciones (id INTEGER PRIMARY KEY AUTOINCREMENT, usuario_id INTEGER, titulo TEXT NOT NULL, mensaje TEXT NOT NULL, tipo TEXT DEFAULT 'informativa', leida INTEGER DEFAULT 0, leida_en TEXT, creado_por INTEGER, created_at TEXT DEFAULT (datetime('now')))`);
+  database.run(`CREATE TABLE IF NOT EXISTS documentos_tramites (id INTEGER PRIMARY KEY AUTOINCREMENT, usuario_id INTEGER NOT NULL, tipo TEXT NOT NULL, contenido TEXT, estado TEXT DEFAULT 'pendiente', resuelto_por INTEGER, resuelto_en TEXT, observaciones TEXT, created_at TEXT DEFAULT (datetime('now')))`);
+  database.run(`CREATE TABLE IF NOT EXISTS logs_auditoria (id INTEGER PRIMARY KEY AUTOINCREMENT, usuario_id INTEGER, accion TEXT NOT NULL, detalle TEXT, ip TEXT, created_at TEXT DEFAULT (datetime('now')))`);
+  database.run(`CREATE TABLE IF NOT EXISTS voley_torneos (id INTEGER PRIMARY KEY AUTOINCREMENT, nombre TEXT NOT NULL, descripcion TEXT, fecha_inicio TEXT, fecha_fin TEXT, estado TEXT DEFAULT 'activo', creado_en TEXT DEFAULT (datetime('now')))`);
+  database.run(`CREATE TABLE IF NOT EXISTS voley_partidos (id INTEGER PRIMARY KEY AUTOINCREMENT, torneo_id INTEGER, equipo_local TEXT NOT NULL, equipo_visitante TEXT NOT NULL, fecha TEXT, resultado_local INTEGER, resultado_visitante INTEGER, estado TEXT DEFAULT 'pendiente', creado_en TEXT DEFAULT (datetime('now')))`);
+  database.run(`CREATE TABLE IF NOT EXISTS voley_noticias (id INTEGER PRIMARY KEY AUTOINCREMENT, titulo TEXT NOT NULL, contenido TEXT, autor TEXT, imagen_url TEXT, destacado INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime('now')))`);
+  database.run(`CREATE TABLE IF NOT EXISTS voley_miembros (id INTEGER PRIMARY KEY AUTOINCREMENT, nombre TEXT NOT NULL, rol TEXT, email TEXT, telefono TEXT, activo INTEGER DEFAULT 1, created_at TEXT DEFAULT (datetime('now')))`);
+  database.run(`CREATE TABLE IF NOT EXISTS voley_solicitudes (id INTEGER PRIMARY KEY AUTOINCREMENT, solicitante_nombre TEXT NOT NULL, email TEXT, tipo TEXT, mensaje TEXT, estado TEXT DEFAULT 'pendiente', gestionado_por INTEGER, gestionado_en TEXT, created_at TEXT DEFAULT (datetime('now')))`);
   
   database.run('CREATE INDEX IF NOT EXISTS idx_cuentas_usuario ON cuentas_bancarias(usuario_id)');
+  database.run('CREATE INDEX IF NOT EXISTS idx_notificaciones_usuario ON notificaciones(usuario_id)');
+  database.run('CREATE INDEX IF NOT EXISTS idx_tramites_estado ON documentos_tramites(estado)');
+  database.run('CREATE INDEX IF NOT EXISTS idx_logs_fecha ON logs_auditoria(created_at)');
   database.run('CREATE INDEX IF NOT EXISTS idx_transacciones_origen ON transacciones(cuenta_origen_id)');
   database.run('CREATE INDEX IF NOT EXISTS idx_transacciones_destino ON transacciones(cuenta_destino_id)');
   database.run('CREATE INDEX IF NOT EXISTS idx_expedientes_infractor ON expedientes_disciplinarios(infractor_id)');

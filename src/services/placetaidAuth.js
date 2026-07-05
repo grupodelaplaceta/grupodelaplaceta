@@ -23,7 +23,7 @@ export function buildPlacetaidSessionData(registroPlaceta = {}) {
 export function buildPlacetaidAuthUrl(options = {}) {
   const {
     authBaseUrl = process.env.PLACETAID_AUTH_URL || process.env.PLACETAID_BASE_URL || 'https://id.laplaceta.org',
-    clientId = process.env.PLACETAID_CLIENT_ID || 'gdlp-crm',
+    clientId = process.env.PLACETAID_CLIENT_ID || process.env.PLACETAID_API_KEY || 'ccb611655030bdadf7218418dc195dcb',
     redirectUri,
     state,
     platform = 'web'

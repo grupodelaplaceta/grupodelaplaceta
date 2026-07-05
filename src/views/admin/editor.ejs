@@ -1,0 +1,201 @@
+<!-- Quill.js CDN -->
+<link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
+
+<div class="dashboard" style="max-width:100%">
+  <div class="dashboard-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+    <div>
+      <h1 style="margin:0">📝 Editor de Documentos</h1>
+      <p class="dashboard-date" style="margin:4px 0 0 0">Editor online estilo Word · Estilo Código Normativo</p>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="guardarDocumento()">💾 Guardar</button>
+      <button class="btn btn-success" onclick="exportarPDF()">📄 Exportar PDF</button>
+      <a href="/admin/documentos" class="btn btn-secondary">← Volver</a>
+    </div>
+  </div>
+
+  <!-- Metadatos del documento -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;background:var(--bg-card);padding:16px;border-radius:var(--radius);border:1px solid var(--line)">
+    <div>
+      <label style="display:block;font-weight:600;font-size:12px;color:var(--text-light);margin-bottom:4px">Título del Documento</label>
+      <input type="text" id="docTitulo" value="<%= documento ? documento.titulo : 'Nuevo Documento' %>" style="width:100%;padding:10px 12px;border:2px solid var(--line);border-radius:8px;font-family:var(--font);font-size:14px;font-weight:600;color:var(--p900);background:white">
+    </div>
+    <div>
+      <label style="display:block;font-weight:600;font-size:12px;color:var(--text-light);margin-bottom:4px">Subtítulo</label>
+      <input type="text" id="docSubtitulo" value="<%= documento ? documento.subtitulo : '' %>" placeholder="Ej: Manual de bienvenida para nuevos integrantes" style="width:100%;padding:10px 12px;border:2px solid var(--line);border-radius:8px;font-family:var(--font);font-size:13px;color:var(--ink);background:white">
+    </div>
+    <div style="display:flex;gap:8px">
+      <div style="flex:1">
+        <label style="display:block;font-weight:600;font-size:12px;color:var(--text-light);margin-bottom:4px">Tipo</label>
+        <select id="docTipo" style="width:100%;padding:10px 12px;border:2px solid var(--line);border-radius:8px;font-family:var(--font);font-size:13px;background:white">
+          <option value="manual" <%= documento && documento.tipo === 'manual' ? 'selected' : '' %>>Manual</option>
+          <option value="procedimiento" <%= documento && documento.tipo === 'procedimiento' ? 'selected' : '' %>>Procedimiento</option>
+          <option value="normativa" <%= documento && documento.tipo === 'normativa' ? 'selected' : '' %>>Normativa</option>
+          <option value="informe" <%= documento && documento.tipo === 'informe' ? 'selected' : '' %>>Informe</option>
+        </select>
+      </div>
+      <div style="width:80px">
+        <label style="display:block;font-weight:600;font-size:12px;color:var(--text-light);margin-bottom:4px">Versión</label>
+        <input type="text" id="docVersion" value="<%= documento ? documento.version : '1.0' %>" style="width:100%;padding:10px 8px;border:2px solid var(--line);border-radius:8px;font-family:var(--font);font-size:13px;text-align:center;background:white">
+      </div>
+    </div>
+  </div>
+
+  <!-- Word-like Toolbar & Editor -->
+  <div id="editorContainer" style="background:white;border-radius:var(--radius);border:1px solid var(--line);overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.06)">
+    <!-- Personalizamos la toolbar de Quill con los estilos de codigo.html -->
+    <div id="toolbar" style="border-bottom:2px solid var(--p500);background:#f8f6ff;padding:8px 12px;display:flex;flex-wrap:wrap;gap:4px;align-items:center">
+      <span class="ql-formats">
+        <select class="ql-header" style="border:1px solid #ddd;border-radius:4px;padding:4px 6px;font-family:var(--font);font-size:13px">
+          <option value="1">Título (H1)</option>
+          <option value="2">Sección (H2)</option>
+          <option value="3">Artículo (H3)</option>
+          <option value="">Normal</option>
+        </select>
+      </span>
+      <span class="ql-formats">
+        <button class="ql-bold"></button>
+        <button class="ql-italic"></button>
+        <button class="ql-underline"></button>
+      </span>
+      <span class="ql-formats">
+        <button class="ql-list" value="ordered"></button>
+        <button class="ql-list" value="bullet"></button>
+      </span>
+      <span class="ql-formats">
+        <button class="ql-align"></button>
+        <button class="ql-align" value="center"></button>
+        <button class="ql-align" value="right"></button>
+      </span>
+      <span class="ql-formats">
+        <button class="ql-blockquote"></button>
+        <button class="ql-code-block"></button>
+      </span>
+      <span class="ql-formats">
+        <button class="ql-link"></button>
+      </span>
+      <span style="margin-left:auto;display:flex;gap:4px">
+        <button class="ql-clean" style="border:1px solid #ddd;border-radius:4px;padding:4px 8px;font-size:12px;cursor:pointer">Limpiar</button>
+      </span>
+    </div>
+    <div id="editor" style="min-height:600px;font-family:'Outfit','Segoe UI',sans-serif;font-size:14px;color:#1c1226;padding:20px">
+      <% if (documento) { %><%- documento.contenido %><% } else { %><h1>Nuevo Documento</h1><p>Comienza a escribir aquí...</p><% } %>
+    </div>
+  </div>
+
+  <!-- Estilo de vista previa tipo codigo.html -->
+  <style>
+    .ql-editor { font-family: 'Outfit', 'Segoe UI', sans-serif; font-size: 14px; line-height: 1.7; color: #1c1226; padding: 30px 40px; }
+    .ql-editor h1 { font-size: 28px; font-weight: 800; color: #1c005f; border-bottom: 2.5px solid #1c005f; padding-bottom: 8px; margin: 24px 0 12px 0; }
+    .ql-editor h2 { font-size: 20px; font-weight: 700; color: #341087; margin: 20px 0 8px 0; }
+    .ql-editor h3 { font-size: 16px; font-weight: 700; color: #1c005f; margin: 16px 0 6px 0; }
+    .ql-editor p { margin: 6px 0; text-align: justify; }
+    .ql-editor blockquote { background: #f7f4fd; border-left: 3px solid #5a2fc2; padding: 12px 16px; margin: 12px 0; color: #1c1226; border-radius: 0 6px 6px 0; }
+    .ql-editor ul, .ql-editor ol { padding-left: 24px; }
+    .ql-editor li { margin-bottom: 4px; }
+    .ql-editor table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+    .ql-editor th { background: #1c005f; color: #fff; font-weight: 600; padding: 6px 10px; text-align: left; }
+    .ql-editor td { padding: 6px 10px; border-bottom: 1px solid #e3dbf5; }
+    .ql-editor tr:nth-child(even) td { background: #f7f4fd; }
+    .ql-editor code { background: #efe9fb; color: #341087; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+    .ql-editor pre { background: #1c005f; color: #fff; padding: 12px 16px; border-radius: 6px; font-size: 13px; overflow-x: auto; }
+    .ql-toolbar button:hover { color: #5a2fc2 !important; }
+    .ql-toolbar button.ql-active { color: #1c005f !important; }
+  </style>
+</div>
+
+<script>
+  let quill;
+  let docId = <%= documento ? documento.id : 'null' %>;
+
+  document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar Quill
+    quill = new Quill('#editor', {
+      theme: 'snow',
+      modules: {
+        toolbar: '#toolbar'
+      },
+      placeholder: 'Comienza a escribir el contenido del documento...'
+    });
+
+    // Si venimos de un documento guardado, cargar contenido
+    <% if (documento) { %>
+      // El contenido ya está renderizado por EJS
+    <% } %>
+  });
+
+  function getContenidoHTML() {
+    return quill ? quill.root.innerHTML : document.getElementById('editor').innerHTML;
+  }
+
+  async function guardarDocumento() {
+    const titulo = document.getElementById('docTitulo').value.trim();
+    if (!titulo) { mostrarToast('error', 'El título es obligatorio'); return; }
+
+    const payload = {
+      id: docId,
+      titulo: titulo,
+      subtitulo: document.getElementById('docSubtitulo').value.trim(),
+      contenido: getContenidoHTML(),
+      tipo: document.getElementById('docTipo').value,
+      version: document.getElementById('docVersion').value.trim()
+    };
+
+    try {
+      const r = await fetch('/api/documentos/guardar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await r.json();
+      if (data.success) {
+        if (!docId && data.documento) docId = data.documento.id;
+        mostrarToast('success', '✅ Documento guardado correctamente');
+      } else {
+        mostrarToast('error', 'Error: ' + (data.error || 'desconocido'));
+      }
+    } catch (e) {
+      mostrarToast('error', 'Error de conexión: ' + e.message);
+    }
+  }
+
+  async function exportarPDF() {
+    const titulo = document.getElementById('docTitulo').value.trim() || 'Documento';
+
+    const payload = {
+      titulo: titulo,
+      subtitulo: document.getElementById('docSubtitulo').value.trim(),
+      contenido: getContenidoHTML(),
+      version: document.getElementById('docVersion').value.trim(),
+      metaItems: [
+        `Tipo: ${document.getElementById('docTipo').value}`,
+        `Versión: ${document.getElementById('docVersion').value}`,
+        `Generado el ${new Date().toLocaleDateString('es-ES')}`
+      ]
+    };
+
+    try {
+      const r = await fetch('/api/documentos/exportar-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!r.ok) throw new Error('Error al generar PDF');
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      mostrarToast('success', '📄 PDF generado');
+    } catch (e) {
+      mostrarToast('error', 'Error: ' + e.message);
+    }
+  }
+
+  // Ctrl+S para guardar
+  document.addEventListener('keydown', function(e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+      e.preventDefault();
+      guardarDocumento();
+    }
+  });
+</script>

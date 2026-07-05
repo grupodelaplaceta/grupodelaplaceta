@@ -1,242 +1,170 @@
-<section class="hero-sm">
-  <h1>🏐 Voley Club La Placeta</h1>
-  <p>Gestión de torneos, partidos, noticias y solicitudes</p>
-</section>
-
-<section class="section">
-  <div class="section-inner">
-
-    <!-- Estado de conexión -->
-    <div id="vcStatus" style="padding:12px 16px;border-radius:10px;margin-bottom:20px;font-size:13px;font-weight:600"></div>
-
-    <!-- Login como gestor (si no hay sesión) -->
-    <div id="vcLogin" style="background:var(--s);border-radius:var(--r-lg);padding:24px;margin-bottom:24px">
-      <h2 style="margin-bottom:12px">🔑 Conectar con Voley Club</h2>
-      <p style="color:var(--tm);margin-bottom:16px;font-size:14px">Inicia sesión como gestor para gestionar torneos, partidos y noticias.</p>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Usuario</label>
-          <input type="text" id="vcUser" placeholder="gestor">
-        </div>
-        <div class="form-group">
-          <label>Contraseña</label>
-          <input type="password" id="vcPass" placeholder="••••••••">
-        </div>
-      </div>
-      <button class="btn btn-go" onclick="vcLogin()">Iniciar sesión</button>
-    </div>
-
-    <!-- Panel de gestión (visible tras login) -->
-    <div id="vcPanel" style="display:none">
-
-      <!-- Dashboard stats -->
-      <div class="dash-grid" id="vcStats"></div>
-
-      <!-- Navegación pestañas -->
-      <div style="display:flex;gap:6px;margin-bottom:20px;flex-wrap:wrap">
-        <button class="btn btn-sm btn-p" onclick="vcCargar('torneos')" data-tab="torneos">🏆 Torneos</button>
-        <button class="btn btn-sm" style="background:var(--s);color:var(--t);border:1px solid var(--l)" onclick="vcCargar('partidos')" data-tab="partidos">⚽ Partidos</button>
-        <button class="btn btn-sm" style="background:var(--s);color:var(--t);border:1px solid var(--l)" onclick="vcCargar('noticias')" data-tab="noticias">📰 Noticias</button>
-        <button class="btn btn-sm" style="background:var(--s);color:var(--t);border:1px solid var(--l)" onclick="vcCargar('solicitudes')" data-tab="solicitudes">📋 Solicitudes</button>
-        <button class="btn btn-sm" style="background:var(--s);color:var(--t);border:1px solid var(--l)" onclick="vcCargar('miembros')" data-tab="miembros">👥 Miembros</button>
-      </div>
-
-      <!-- Contenido de la pestaña -->
-      <div id="vcContent"></div>
-    </div>
-
+<div class="dashboard">
+  <div class="dashboard-header">
+    <h1>🏐 Voley Club La Placeta</h1>
+    <p class="dashboard-date">Gestión directa de torneos, partidos, noticias, socios y solicitudes</p>
   </div>
-</section>
+
+  <div class="stats-grid" id="vcStats">
+    <div class="stat-card stat-primary"><div class="stat-icon">🏆</div><div class="stat-content"><span class="stat-value" id="statTorneos">—</span><span class="stat-label">Torneos</span></div></div>
+    <div class="stat-card stat-warning"><div class="stat-icon">⏳</div><div class="stat-content"><span class="stat-value" id="statPartidos">—</span><span class="stat-label">Partidos pend.</span></div></div>
+    <div class="stat-card stat-info"><div class="stat-icon">📰</div><div class="stat-content"><span class="stat-value" id="statNoticias">—</span><span class="stat-label">Noticias</span></div></div>
+    <div class="stat-card stat-success"><div class="stat-icon">👥</div><div class="stat-content"><span class="stat-value" id="statSocios">—</span><span class="stat-label">Socios</span></div></div>
+    <div class="stat-card stat-danger"><div class="stat-icon">📋</div><div class="stat-content"><span class="stat-value" id="statSolicitudes">—</span><span class="stat-label">Solicitudes</span></div></div>
+  </div>
+
+  <div style="display:flex;gap:4px;margin-bottom:16px;border-bottom:2px solid var(--line);flex-wrap:wrap">
+    <button class="tab-btn active" onclick="switchVC(this,'tabTorneos')" style="padding:10px 20px;border:none;background:none;font-weight:600;cursor:pointer;color:var(--p500);border-bottom:3px solid var(--p500)">🏆 Torneos</button>
+    <button class="tab-btn" onclick="switchVC(this,'tabPartidos')" style="padding:10px 20px;border:none;background:none;font-weight:600;cursor:pointer;color:var(--text-light)">🏐 Partidos</button>
+    <button class="tab-btn" onclick="switchVC(this,'tabNoticias')" style="padding:10px 20px;border:none;background:none;font-weight:600;cursor:pointer;color:var(--text-light)">📰 Noticias</button>
+    <button class="tab-btn" onclick="switchVC(this,'tabSocios')" style="padding:10px 20px;border:none;background:none;font-weight:600;cursor:pointer;color:var(--text-light)">👥 Socios</button>
+    <button class="tab-btn" onclick="switchVC(this,'tabSolicitudes')" style="padding:10px 20px;border:none;background:none;font-weight:600;cursor:pointer;color:var(--text-light)">📋 Solicitudes</button>
+  </div>
+
+  <!-- TORNEOS -->
+  <div id="tabTorneos" class="tab-content">
+    <div class="section-header"><div><h2>🏆 Torneos</h2></div><button class="btn btn-sm btn-primary" onclick="crearTorneo()">➕ Nuevo</button></div>
+    <div class="table-container"><table class="data-table"><thead><tr><th>Nombre</th><th>Descripción</th><th>Inicio</th><th>Fin</th><th>Estado</th><th>Acción</th></tr></thead>
+      <tbody id="torneosBody"><tr><td colspan="6" class="loading-cell">Cargando...</td></tr></tbody></table></div>
+  </div>
+
+  <!-- PARTIDOS -->
+  <div id="tabPartidos" class="tab-content" style="display:none">
+    <div class="section-header"><div><h2>🏐 Partidos</h2></div><button class="btn btn-sm btn-primary" onclick="crearPartido()">➕ Nuevo</button></div>
+    <div class="table-container"><table class="data-table"><thead><tr><th>Local</th><th>Visitante</th><th>Fecha</th><th>Resultado</th><th>Estado</th><th>Acción</th></tr></thead>
+      <tbody id="partidosBody"><tr><td colspan="6" class="loading-cell">Cargando...</td></tr></tbody></table></div>
+  </div>
+
+  <!-- NOTICIAS -->
+  <div id="tabNoticias" class="tab-content" style="display:none">
+    <div class="section-header"><div><h2>📰 Noticias</h2></div><button class="btn btn-sm btn-primary" onclick="crearNoticia()">➕ Nueva</button></div>
+    <div class="table-container"><table class="data-table"><thead><tr><th>Título</th><th>Contenido</th><th>Autor</th><th>Destacado</th><th>Fecha</th><th>Acción</th></tr></thead>
+      <tbody id="noticiasBody"><tr><td colspan="6" class="loading-cell">Cargando...</td></tr></tbody></table></div>
+  </div>
+
+  <!-- SOCIOS -->
+  <div id="tabSocios" class="tab-content" style="display:none">
+    <div class="section-header"><div><h2>👥 Socios</h2></div><button class="btn btn-sm btn-primary" onclick="crearSocio()">➕ Añadir</button></div>
+    <div class="table-container"><table class="data-table"><thead><tr><th>Nombre</th><th>Rol</th><th>Email</th><th>Teléfono</th><th>Activo</th><th>Acción</th></tr></thead>
+      <tbody id="sociosBody"><tr><td colspan="6" class="loading-cell">Cargando...</td></tr></tbody></table></div>
+  </div>
+
+  <!-- SOLICITUDES -->
+  <div id="tabSolicitudes" class="tab-content" style="display:none">
+    <div class="section-header"><div><h2>📋 Solicitudes</h2></div></div>
+    <div class="table-container"><table class="data-table"><thead><tr><th>Nombre</th><th>Email</th><th>Tipo</th><th>Mensaje</th><th>Estado</th><th>Fecha</th><th>Acción</th></tr></thead>
+      <tbody id="solicitudesBody"><tr><td colspan="7" class="loading-cell">Cargando...</td></tr></tbody></table></div>
+  </div>
+</div>
 
 <script>
-let vcConectado = false;
+function switchVC(btn, tabId) {
+  document.querySelectorAll('[id^="tab"]').forEach(c => c.style.display = 'none');
+  document.getElementById(tabId).style.display = 'block';
+  document.querySelectorAll('.tab-btn').forEach(b => { b.style.color = 'var(--text-light)'; b.style.borderBottom = '3px solid transparent'; });
+  btn.style.color = 'var(--p500)'; btn.style.borderBottom = '3px solid var(--p500)';
+}
+async function api(url, opts) {
+  const r = await fetch(url, { headers:{'Content-Type':'application/json'}, ...opts });
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
 
-async function vcLogin() {
-  const btn = event.target;
-  btn.disabled = true; btn.textContent = 'Conectando...';
+async function cargarDashboard() {
   try {
-    const r = await fetch('/api/voley/login', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ username: document.getElementById('vcUser').value, password: document.getElementById('vcPass').value })
-    });
-    const res = await r.json();
-    if (res.success) { vcConectado = true; document.getElementById('vcLogin').style.display = 'none'; document.getElementById('vcPanel').style.display = 'block'; vcCargarDashboard(); vcCargar('torneos'); }
-    else { alert('Error: ' + (res.error || 'Credenciales inválidas')); }
-  } catch(e) { alert('Error de conexión con Voley Club'); }
-  btn.disabled = false; btn.textContent = 'Iniciar sesión';
-}
-
-async function vcFetch(endpoint) {
-  try {
-    const r = await fetch('/api/voley' + endpoint);
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    return await r.json();
-  } catch(e) {
-    document.getElementById('vcStatus').innerHTML = '⚠️ ' + e.message;
-    document.getElementById('vcStatus').style.background = '#fde8e8';
-    document.getElementById('vcStatus').style.color = '#d03131';
-    return null;
-  }
-}
-
-async function vcCargarDashboard() {
-  const r = await vcFetch('/dashboard');
-  if (!r) return;
-  const s = document.getElementById('vcStats');
-  s.innerHTML = `
-    <div class="dash-card"><div class="dash-icon">💰</div><h3>${r.saldoActual || 0} €</h3><p>Saldo actual</p></div>
-    <div class="dash-card"><div class="dash-icon">🔒</div><h3>${r.fondosBloqueados || 0} €</h3><p>Fondos bloqueados</p></div>
-    <div class="dash-card"><div class="dash-icon">🆓</div><h3>${r.fondosDisponibles || 0} €</h3><p>Fondos disponibles</p></div>
-    <div class="dash-card"><div class="dash-icon">👥</div><h3>${r.totalMiembros || 0}</h3><p>Socios</p></div>
-  `;
-  document.getElementById('vcStatus').innerHTML = '✅ Conectado a Voley Club CRM';
-  document.getElementById('vcStatus').style.background = '#e6f7ee';
-  document.getElementById('vcStatus').style.color = '#166534';
-}
-
-async function vcCargar(tab) {
-  // Actualizar botones
-  document.querySelectorAll('[data-tab]').forEach(b => {
-    b.style.background = b.dataset.tab === tab ? 'var(--p)' : 'var(--s)';
-    b.style.color = b.dataset.tab === tab ? 'var(--w)' : 'var(--t)';
-    b.style.border = b.dataset.tab === tab ? 'none' : '1px solid var(--l)';
-  });
-
-  const datos = await vcFetch('/' + tab);
-  if (!datos) { document.getElementById('vcContent').innerHTML = '<p style="color:var(--r)">Error al cargar datos</p>'; return; }
-  const div = document.getElementById('vcContent');
-
-  if (tab === 'torneos') {
-    if (!Array.isArray(datos) || !datos.length) { div.innerHTML = '<p style="color:var(--tm)">No hay torneos registrados.</p>'; return; }
-    div.innerHTML = '<table class="tbl"><thead><tr><th>Nombre</th><th>Fecha</th><th>Ubicación</th><th>Estado</th><th>Acción</th></tr></thead><tbody>' +
-      datos.map(t => `<tr>
-        <td><strong>${t.nombre || '—'}</strong></td>
-        <td>${t.fecha ? new Date(t.fecha).toLocaleDateString('es-ES') : '—'}</td>
-        <td>${t.ubicacion || '—'}</td>
-        <td><span style="color:${t.estado === 'completado' ? 'var(--g)' : t.estado === 'pendiente' ? 'var(--go)' : 'var(--p)'}">${t.estado || '—'}</span></td>
-        <td><button class="btn btn-sm" style="background:var(--g);color:var(--w)" onclick="vcAprobarTorneo('${t._id || t.id}')">✅ Aprobar</button></td>
-      </tr>`).join('') + '</tbody></table>';
-  }
-  else if (tab === 'partidos') {
-    div.innerHTML = '<div style="margin-bottom:12px"><button class="btn btn-sm btn-go" onclick="vcMostrarFormPartido()">➕ Añadir partido</button></div>';
-    if (!Array.isArray(datos) || !datos.length) { div.innerHTML += '<p style="color:var(--tm)">No hay partidos registrados.</p>'; return; }
-    div.innerHTML += '<table class="tbl"><thead><tr><th>Rival</th><th>Fecha</th><th>Resultado</th><th>Acciones</th></tr></thead><tbody>' +
-      datos.map(p => `<tr>
-        <td><strong>${p.rival || '—'}</strong></td>
-        <td>${p.fecha ? new Date(p.fecha).toLocaleDateString('es-ES') : '—'}</td>
-        <td>${p.resultado || '—'}</td>
-        <td><button class="btn btn-sm" style="background:var(--r);color:var(--w)" onclick="vcEliminarPartido('${p._id || p.id}')">🗑️</button></td>
-      </tr>`).join('') + '</tbody></table>';
-  }
-  else if (tab === 'noticias') {
-    div.innerHTML = '<div style="margin-bottom:12px"><button class="btn btn-sm btn-go" onclick="vcMostrarFormNoticia()">➕ Nueva noticia</button></div>';
-    if (!Array.isArray(datos) || !datos.length) { div.innerHTML += '<p style="color:var(--tm)">No hay noticias.</p>'; return; }
-    div.innerHTML += '<table class="tbl"><thead><tr><th>Título</th><th>Fecha</th><th>Categoría</th><th>Acciones</th></tr></thead><tbody>' +
-      datos.map(n => `<tr>
-        <td><strong>${n.titulo || '—'}</strong></td>
-        <td>${n.fecha ? new Date(n.fecha).toLocaleDateString('es-ES') : '—'}</td>
-        <td>${n.categoria || '—'}</td>
-        <td><button class="btn btn-sm" style="background:var(--r);color:var(--w)" onclick="vcEliminarNoticia('${n._id || n.id}')">🗑️</button></td>
-      </tr>`).join('') + '</tbody></table>';
-  }
-  else if (tab === 'solicitudes') {
-    if (!Array.isArray(datos) || !datos.length) { div.innerHTML = '<p style="color:var(--tm)">No hay solicitudes pendientes.</p>'; return; }
-    div.innerHTML = '<table class="tbl"><thead><tr><th>Nombre</th><th>Email</th><th>Fecha</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>' +
-      datos.map(s => `<tr>
-        <td><strong>${s.nombre || '—'}</strong></td>
-        <td>${s.email || '—'}</td>
-        <td>${s.fecha ? new Date(s.fecha).toLocaleDateString('es-ES') : '—'}</td>
-        <td><span style="color:${s.estado === 'aprobada' ? 'var(--g)' : s.estado === 'rechazada' ? 'var(--r)' : 'var(--go)'}">${s.estado || 'pendiente'}</span></td>
-        <td style="display:flex;gap:4px">
-          <button class="btn btn-sm" style="background:var(--g);color:var(--w)" onclick="vcGestionarSolicitud('${s._id || s.id}','aprobada')">✅</button>
-          <button class="btn btn-sm" style="background:var(--r);color:var(--w)" onclick="vcGestionarSolicitud('${s._id || s.id}','rechazada')">❌</button>
-        </td>
-      </tr>`).join('') + '</tbody></table>';
-  }
-  else if (tab === 'miembros') {
-    if (!Array.isArray(datos)) { div.innerHTML = '<p style="color:var(--tm)">Error al cargar miembros.</p>'; return; }
-    div.innerHTML = '<table class="tbl"><thead><tr><th>Nombre</th><th>Email</th><th>Teléfono</th></tr></thead><tbody>' +
-      (Array.isArray(datos) && datos.length ? datos.map(m => `<tr><td><strong>${m.nombre || '—'}</strong></td><td>${m.email || '—'}</td><td>${m.telefono || '—'}</td></tr>`).join('') : '<tr><td colspan="3" style="color:var(--tm);text-align:center">Sin miembros</td></tr>') +
-      '</tbody></table>';
-  }
-}
-
-async function vcAprobarTorneo(id) {
-  if (!confirm('¿Aprobar este torneo?')) return;
-  try {
-    const r = await fetch('/api/voley/solicitudes/estado', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ id, estado: 'aprobada' })
-    });
-    const res = await r.json();
-    if (res.success) { vcCargar('torneos'); }
-  } catch(e) { alert('Error'); }
-}
-
-async function vcEliminarPartido(id) {
-  if (!confirm('¿Eliminar este partido?')) return;
-  try {
-    await fetch('/api/voley/partidos/' + id, { method: 'DELETE' });
-    vcCargar('partidos');
-  } catch(e) { alert('Error'); }
-}
-
-async function vcEliminarNoticia(id) {
-  if (!confirm('¿Eliminar esta noticia?')) return;
-  try {
-    await fetch('/api/voley/noticias/' + id, { method: 'DELETE' });
-    vcCargar('noticias');
-  } catch(e) { alert('Error'); }
-}
-
-function vcMostrarFormPartido() {
-  const rival = prompt('Rival:');
-  if (!rival) return;
-  const fecha = prompt('Fecha (YYYY-MM-DD):');
-  if (!fecha) return;
-  const resultado = prompt('Resultado (ej: 3-1):');
-  fetch('/api/voley/partidos', {
-    method: 'POST', headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ rival, fecha, resultado })
-  }).then(() => vcCargar('partidos'));
-}
-
-function vcMostrarFormNoticia() {
-  const titulo = prompt('Título de la noticia:');
-  if (!titulo) return;
-  const contenido = prompt('Contenido:');
-  if (!contenido) return;
-  const categoria = prompt('Categoría (opcional):');
-  fetch('/api/voley/noticias', {
-    method: 'POST', headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ titulo, contenido, categoria: categoria || 'general' })
-  }).then(() => vcCargar('noticias'));
-}
-
-async function vcGestionarSolicitud(id, estado) {
-  try {
-    const r = await fetch('/api/voley/solicitudes/estado', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ id, estado })
-    });
-    const res = await r.json();
-    if (res.success) vcCargar('solicitudes');
-  } catch(e) { alert('Error'); }
-}
-
-// Comprobar sesión al cargar
-(async function() {
-  try {
-    const r = await fetch('/api/voley/session');
-    const res = await r.json();
-    if (res.autenticado) {
-      vcConectado = true;
-      document.getElementById('vcLogin').style.display = 'none';
-      document.getElementById('vcPanel').style.display = 'block';
-      vcCargarDashboard();
-      vcCargar('torneos');
-    }
+    const d = await api('/api/voley/dashboard');
+    document.getElementById('statTorneos').textContent = d.torneos_activos ?? '—';
+    document.getElementById('statPartidos').textContent = d.partidos_pendientes ?? '—';
+    document.getElementById('statNoticias').textContent = d.noticias ?? '—';
+    document.getElementById('statSocios').textContent = d.socios ?? '—';
+    document.getElementById('statSolicitudes').textContent = d.solicitudes_pendientes ?? '—';
   } catch(e) {}
-})();
+}
+
+async function cargarTorneos() {
+  try {
+    const d = await api('/api/voley/torneos');
+    document.getElementById('torneosBody').innerHTML = Array.isArray(d) && d.length
+      ? d.map(t => '<tr><td><strong>'+t.nombre+'</strong></td><td>'+(t.descripcion||'')+'</td><td>'+(t.fecha_inicio||'')+'</td><td>'+(t.fecha_fin||'')+'</td><td><span class="badge badge-'+(t.estado==='activo'?'activo':'pendiente')+'">'+(t.estado||'')+'</span></td><td><button class="btn btn-sm btn-danger" onclick="eliminar(\'torneos\','+t.id+')">🗑️</button></td></tr>').join('')
+      : '<tr><td colspan="6" class="loading-cell">Sin torneos</td></tr>';
+  } catch(e) { document.getElementById('torneosBody').innerHTML = '<tr><td colspan="6" class="error-cell">Error al cargar</td></tr>'; }
+}
+async function crearTorneo() {
+  const n=prompt('Nombre:'); if(!n)return;
+  await api('/api/voley/torneos',{method:'POST',body:JSON.stringify({nombre:n,descripcion:prompt('Descripción:'),fecha_inicio:prompt('Fecha inicio:'),fecha_fin:prompt('Fecha fin:')})});
+  cargarTorneos(); cargarDashboard();
+}
+
+async function cargarPartidos() {
+  try {
+    const d = await api('/api/voley/partidos');
+    document.getElementById('partidosBody').innerHTML = Array.isArray(d) && d.length
+      ? d.map(p => '<tr><td><strong>'+p.equipo_local+'</strong></td><td><strong>'+p.equipo_visitante+'</strong></td><td>'+(p.fecha||'')+'</td><td>'+(p.resultado_local!=null?p.resultado_local+'-'+p.resultado_visitante:'—')+'</td><td><span class="badge badge-'+(p.estado==='finalizado'?'activo':'pendiente')+'">'+(p.estado||'')+'</span></td><td>'+
+        (p.estado==='pendiente'?'<button class="btn btn-sm btn-success" onclick="resultado('+p.id+')">📊</button> ':'')+
+        '<button class="btn btn-sm btn-danger" onclick="eliminar(\'partidos\','+p.id+')">🗑️</button></td></tr>').join('')
+      : '<tr><td colspan="6" class="loading-cell">Sin partidos</td></tr>';
+  } catch(e) { document.getElementById('partidosBody').innerHTML = '<tr><td colspan="6" class="error-cell">Error</td></tr>'; }
+}
+async function crearPartido() {
+  const l=prompt('Local:'),v=prompt('Visitante:'); if(!l||!v)return;
+  await api('/api/voley/partidos',{method:'POST',body:JSON.stringify({equipo_local:l,equipo_visitante:v,fecha:prompt('Fecha:')})});
+  cargarPartidos(); cargarDashboard();
+}
+async function resultado(id) {
+  const l=prompt('Resultado local:'),v=prompt('Resultado visitante:');
+  await api('/api/voley/partidos/'+id+'/resultado',{method:'PUT',body:JSON.stringify({resultado_local:parseInt(l),resultado_visitante:parseInt(v)})});
+  cargarPartidos();
+}
+
+async function cargarNoticias() {
+  try {
+    const d = await api('/api/voley/noticias');
+    document.getElementById('noticiasBody').innerHTML = Array.isArray(d) && d.length
+      ? d.map(n => '<tr><td><strong>'+n.titulo+'</strong></td><td style="max-width:250px">'+(n.contenido||'').substring(0,100)+'</td><td>'+(n.autor||'')+'</td><td>'+(n.destacado?'⭐ Sí':'No')+'</td><td>'+(n.created_at?new Date(n.created_at).toLocaleDateString():'')+'</td><td><button class="btn btn-sm btn-danger" onclick="eliminar(\'noticias\','+n.id+')">🗑️</button></td></tr>').join('')
+      : '<tr><td colspan="6" class="loading-cell">Sin noticias</td></tr>';
+  } catch(e) { document.getElementById('noticiasBody').innerHTML = '<tr><td colspan="6" class="error-cell">Error</td></tr>'; }
+}
+async function crearNoticia() {
+  const t=prompt('Título:'); if(!t)return;
+  await api('/api/voley/noticias',{method:'POST',body:JSON.stringify({titulo:t,contenido:prompt('Contenido:'),destacado:confirm('¿Destacada?')})});
+  cargarNoticias(); cargarDashboard();
+}
+
+async function cargarSocios() {
+  try {
+    const d = await api('/api/voley/socios');
+    document.getElementById('sociosBody').innerHTML = Array.isArray(d) && d.length
+      ? d.map(m => '<tr><td><strong>'+m.nombre+'</strong></td><td>'+(m.rol||'')+'</td><td>'+(m.email||'')+'</td><td>'+(m.telefono||'')+'</td><td>'+(m.activo?'✅ Sí':'❌ No')+'</td><td><button class="btn btn-sm btn-danger" onclick="eliminar(\'socios\','+m.id+')">🗑️</button></td></tr>').join('')
+      : '<tr><td colspan="6" class="loading-cell">Sin socios</td></tr>';
+  } catch(e) { document.getElementById('sociosBody').innerHTML = '<tr><td colspan="6" class="error-cell">Error</td></tr>'; }
+}
+async function crearSocio() {
+  const n=prompt('Nombre:'); if(!n)return;
+  await api('/api/voley/socios',{method:'POST',body:JSON.stringify({nombre:n,rol:prompt('Rol:'),email:prompt('Email:'),telefono:prompt('Teléfono:')})});
+  cargarSocios(); cargarDashboard();
+}
+
+async function cargarSolicitudes() {
+  try {
+    const d = await api('/api/voley/solicitudes');
+    document.getElementById('solicitudesBody').innerHTML = Array.isArray(d) && d.length
+      ? d.map(s => '<tr><td>'+s.solicitante_nombre+'</td><td>'+(s.email||'')+'</td><td>'+(s.tipo||'')+'</td><td style="max-width:200px">'+(s.mensaje||'').substring(0,80)+'</td><td><span class="badge badge-'+(s.estado==='aprobado'?'activo':s.estado==='rechazado'?'suspendido':'pendiente')+'">'+s.estado+'</span></td><td>'+(s.created_at?new Date(s.created_at).toLocaleDateString():'')+'</td><td>'+
+        (s.estado==='pendiente'?'<button class="btn btn-sm btn-success" onclick="gestionar('+s.id+',\'aprobado\')">✅</button><button class="btn btn-sm btn-danger" onclick="gestionar('+s.id+',\'rechazado\')">❌</button>':'—')+'</td></tr>').join('')
+      : '<tr><td colspan="7" class="loading-cell">Sin solicitudes</td></tr>';
+  } catch(e) { document.getElementById('solicitudesBody').innerHTML = '<tr><td colspan="7" class="error-cell">Error</td></tr>'; }
+}
+async function gestionar(id,est) {
+  await api('/api/voley/solicitudes/estado',{method:'POST',body:JSON.stringify({solicitud_id:id,estado:est})});
+  cargarSolicitudes(); cargarDashboard();
+}
+
+async function eliminar(col,id) {
+  if(!confirm('¿Eliminar?')) return;
+  await api('/api/voley/'+col+'/'+id,{method:'DELETE'});
+  (window['cargar'+col.charAt(0).toUpperCase()+col.slice(1)]||function(){})();
+  cargarDashboard();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  cargarDashboard(); cargarTorneos(); cargarPartidos(); cargarNoticias(); cargarSocios(); cargarSolicitudes();
+});
 </script>
