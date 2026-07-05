@@ -8,14 +8,12 @@ const BANCO_API = process.env.BANCO_API_URL || 'https://api.banco.laplaceta.org'
 let cache = { data: null, expiresAt: 0 };
 const CACHE_TTL = 30_000; // 30 segundos
 
+const CRM_KEY = process.env.CRM_READ_KEY || 'crm-gdlp-shared-key-2026';
+
 async function fetchBancoState(req) {
   if (cache.data && Date.now() < cache.expiresAt) return cache.data;
-  // Usar el token PlacetaID de la sesión para autenticar
-  const token = req.session?.placetaidToken || req.session?.usuario?.placetaid_token;
-  const headers = { 'Content-Type': 'application/json' };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-  headers['X-Placeta-App-ID'] = 'gdlp-crm';
-  const res = await fetch(`${BANCO_API}/api/state`, { headers });
+  const headers = { 'Content-Type': 'application/json', 'X-CRM-Key': CRM_KEY };
+  const res = await fetch(`${BANCO_API}/api/crm-state`, { headers });
   if (!res.ok) throw new Error(`Banco API respondió ${res.status}`);
   const data = await res.json();
   cache = { data, expiresAt: Date.now() + CACHE_TTL };
