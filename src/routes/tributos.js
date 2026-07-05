@@ -20,7 +20,8 @@ import {
   sbGetDailyBalances,
   sbUpsertDailyBalance,
   sbClearDailyBalances,
-  sbCalculateDeclarationFromDailyBalances
+  sbCalculateDeclarationFromDailyBalances,
+  sbFindSolicitante
 } from '../config/db-supabase.js';
 
 const router = Router();
@@ -89,6 +90,46 @@ router.post('/contributors', verificarSesion, verificarRol('administrador', 'jun
   } catch (err) {
     console.error('[Tributos] Error crear contributor:', err.message);
     return res.status(500).json({ error: 'error_crear_contribuyente' });
+  }
+});
+
+// ── Alta rápida desde PlacetaID (busca por DIP y crea contribuyente) ──────
+router.post('/contributors/alta-rapida', verificarSesion, verificarRol('administrador', 'junta', 'fiscal'), async (req, res) => {
+  try {
+    const { dip, tipo_sujeto, eip } = req.body;
+    if (!dip) return res.status(400).json({ error: 'DIP requerido' });
+
+    // Buscar en Supabase
+    const usuario = await sbFindSolicitante(dip);
+    if (!usuario) return res.status(404).json({ error: 'Usuario no encontrado en PlacetaID' });
+
+    const placetaId = usuario.placeid || `PLID-${usuario.dip}`;
+    const nombre = usuario.nombre_real || usuario.alias || `Usuario ${dip}`;
+    const tipo = tipo_sujeto || 'Fisico';
+
+    // Verificar si ya existe
+    try {
+      const existente = await sbGetTributosContributorByPlacetaId(placetaId);
+      if (existente) return res.json({ success: true, yaExiste: true, contributor: existente });
+    } catch {}
+
+    const contributor = await sbCreateTributosContributor({
+      id: crypto.randomUUID?.() || String(Date.now()),
+      placeta_id: placetaId,
+      dip,
+      nombre,
+      tipo_sujeto: tipo,
+      estado_fiscal: 'Al Dia',
+      fecha_alta_tributos: new Date().toISOString(),
+      roles_json: ['ciudadano'],
+      iban: null,
+      eip: tipo === 'Empresa' ? (eip || null) : null
+    });
+
+    return res.json({ success: true, contributor });
+  } catch (err) {
+    console.error('[Tributos] Error alta rapida:', err.message);
+    return res.status(500).json({ error: err.message });
   }
 });
 
