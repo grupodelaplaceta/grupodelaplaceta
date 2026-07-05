@@ -1063,7 +1063,8 @@ function ejecutarMigracionesSqlite(database) {
   database.run(`CREATE TABLE IF NOT EXISTS voley_noticias (id INTEGER PRIMARY KEY AUTOINCREMENT, titulo TEXT NOT NULL, contenido TEXT, autor TEXT, imagen_url TEXT, destacado INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime('now')))`);
   database.run(`CREATE TABLE IF NOT EXISTS voley_miembros (id INTEGER PRIMARY KEY AUTOINCREMENT, nombre TEXT NOT NULL, rol TEXT, email TEXT, telefono TEXT, activo INTEGER DEFAULT 1, created_at TEXT DEFAULT (datetime('now')))`);
   database.run(`CREATE TABLE IF NOT EXISTS voley_solicitudes (id INTEGER PRIMARY KEY AUTOINCREMENT, solicitante_nombre TEXT NOT NULL, email TEXT, tipo TEXT, mensaje TEXT, estado TEXT DEFAULT 'pendiente', gestionado_por INTEGER, gestionado_en TEXT, created_at TEXT DEFAULT (datetime('now')))`);
-  
+  database.run(`CREATE TABLE IF NOT EXISTS entidades (id INTEGER PRIMARY KEY AUTOINCREMENT, nombre TEXT NOT NULL, tipo TEXT NOT NULL, eip TEXT UNIQUE NOT NULL, representante_dip TEXT, email TEXT, cif TEXT, descripcion TEXT, creado_en TEXT DEFAULT (datetime('now')))`);
+
   database.run('CREATE INDEX IF NOT EXISTS idx_cuentas_usuario ON cuentas_bancarias(usuario_id)');
   database.run('CREATE INDEX IF NOT EXISTS idx_notificaciones_usuario ON notificaciones(usuario_id)');
   database.run('CREATE INDEX IF NOT EXISTS idx_tramites_estado ON documentos_tramites(estado)');

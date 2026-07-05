@@ -253,13 +253,58 @@ router.post('/tramites/alta-entidad', async (req, res) => {
     }
 
     const eip = `EIP-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+
+    // 1) Guardar en Supabase
     await sbCreateEntidad({ nombre: nombre_entidad, tipo, eip, representante_id: rep.id, cif: cif || '', descripcion: descripcion || '', email });
+
+    // 2) Guardar en SQLite para PDF
+    const db = getDb();
+    const sqlResult = db.prepare(
+      `INSERT INTO entidades (nombre, tipo, eip, representante_dip, email, cif, descripcion, creado_en)
+       VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))`
+    ).run(nombre_entidad, tipo, eip, representante_dip, email, cif || '', descripcion || '');
+    const entidadId = sqlResult.lastInsertRowid;
+
+    // 3) Registrar en tributos (backend-banco) para que el banco pueda validar el EIP
+    const API_BANCO = process.env.BANCO_API_URL || 'http://localhost:3003';
+    const placetaId = rep.placeid || `PLID-${rep.dip}`;
+    try {
+      await fetch(`${API_BANCO}/api/v1/tributos/alta`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          placeta_id: placetaId,
+          dip: rep.dip,
+          nombre: nombre_entidad,
+          tipo_sujeto: 'Empresa',
+          eip,
+          iban: `GDLP-EIP-${eip.slice(-4)}`
+        })
+      });
+    } catch (apiErr) {
+      console.warn('[Tributos] No se pudo registrar en backend-banco:', apiErr.message);
+    }
+
+    // 4) Generar PDF certificado
+    let pdfBuffer = null;
+    try {
+      const { generarPDFEntidad } = await import('../services/tramitePDFs.js');
+      const datosEntidad = { id: entidadId, nombre: nombre_entidad, tipo, eip, representante_dip, email, cif: cif || '', descripcion: descripcion || '' };
+      pdfBuffer = await generarPDFEntidad(datosEntidad);
+    } catch (pdfErr) {
+      console.warn('[Entidad] Error generando PDF:', pdfErr.message);
+    }
 
     res.render('public/tramites/alta-entidad', {
       titulo: 'Alta Entidad', layout: 'layouts/publico', pathActual: '/tramites',
-      resultado: { eip, message: `Solicitud de ${tipo} "${nombre_entidad}" registrada con EIP: ${eip}` }
+      resultado: {
+        eip,
+        entidadId,
+        message: `Solicitud de ${tipo} "${nombre_entidad}" registrada con EIP: ${eip}`
+      }
     });
   } catch (err) {
+    console.error('[Entidad] Error alta:', err);
     res.render('public/tramites/alta-entidad', { titulo: 'Alta Entidad', layout: 'layouts/publico', pathActual: '/tramites', error: 'Error al procesar.', resultado: null });
   }
 });

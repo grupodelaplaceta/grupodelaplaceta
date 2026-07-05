@@ -15,11 +15,16 @@
 
       <% if (typeof resultado !== 'undefined' && resultado) { %>
       <div class="alert alert-success">
-        <strong>✅ Solicitud registrada</strong><br><br>
-        <strong>EIP:</strong> <%= resultado.eip %><br>
+        <strong>✅ Entidad registrada</strong><br><br>
+        <strong>EIP:</strong> <code style="font-size:18px;letter-spacing:2px;"><%= resultado.eip %></code><br>
         <strong><%= resultado.message %></strong>
       </div>
-      <a href="/tramites" class="btn btn-primary btn-block">Volver a Trámites</a>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <a href="/api/tramites/pdf?tipo=entidad&id=<%= resultado.entidadId %>" target="_blank" class="btn btn-primary" style="flex:1;text-decoration:none">
+          📄 Descargar certificado PDF
+        </a>
+        <a href="/tramites" class="btn btn-ghost" style="flex:1">Volver a Trámites</a>
+      </div>
       <% } else { %>
       <form method="POST" action="/tramites/alta-entidad">
         <div class="form-group">
