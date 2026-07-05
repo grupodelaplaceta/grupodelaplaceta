@@ -306,16 +306,16 @@ async function cargarTransacciones() {
 }
 
 async function cargarCiudadanos() {
-  const d = await tryFetch('/api/bancario-proxy/usuarios') || MOCK.usuarios;
+  const d = await tryFetch('/api/admin/tramites/ciudadanos') || MOCK.usuarios;
   const tbody = document.getElementById('ciudadanosBody');
-  if (!d.length) { tbody.innerHTML = '<tr><td colspan="6" class="loading-cell">Sin ciudadanos</td></tr>'; return; }
+  if (!d.length) { tbody.innerHTML = '<tr><td colspan="6" class="loading-cell">Sin ciudadanos registrados en GDLP</td></tr>'; return; }
   tbody.innerHTML = d.map(u => '<tr>' +
     '<td><strong>' + (u.dip || '—') + '</strong></td>' +
-    '<td>' + (u.displayName || '—') + '</td>' +
-    '<td>' + (u.placetaId || '—') + '</td>' +
+    '<td>' + (u.alias || u.nombre_real || '—') + '</td>' +
+    '<td>' + (u.placeid || '—') + '</td>' +
     '<td>' + (u.email || '—') + '</td>' +
-    '<td>' + (u.phone || '—') + '</td>' +
-    '<td><button class="btn btn-sm btn-outline" onclick="alert(\'DIP: ' + (u.dip||'') + '\\nPlacetaID: ' + (u.placetaId||'') + '\')">🔍 Ver</button></td></tr>'
+    '<td>' + (u.telefono || '—') + '</td>' +
+    '<td><span class="badge badge-' + (u.estado === 'activo' ? 'activo' : 'pendiente') + '">' + (u.estado || '—') + '</span> · ' + (u.total_tramites || 0) + ' trámites</td></tr>'
   ).join('');
 }
 

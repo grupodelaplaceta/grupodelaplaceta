@@ -296,4 +296,18 @@ router.get('/vigilancia/stats', verificarSesion, verificarRol('administrador', '
   }
 });
 
+// ── Ciudadanos (desde SQLite) ───────────────────────────────────────────────
+router.get('/ciudadanos', verificarSesion, verificarRol('administrador', 'junta', 'fiscal'), (req, res) => {
+  try {
+    const db = getDb();
+    const ciudadanos = db.prepare(`
+      SELECT s.*, (SELECT COUNT(*) FROM documentos_tramites d WHERE d.usuario_id = s.id) as total_tramites
+      FROM solicitantes s ORDER BY s.creado_en DESC LIMIT 200
+    `).all();
+    res.json(ciudadanos);
+  } catch (err) {
+    res.json([]);
+  }
+});
+
 export default router;
