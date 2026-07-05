@@ -38,11 +38,18 @@ router.post('/login', async (req, res) => {
         if (sqliteUser) {
           try { validPassword = await bcrypt.compare(password, sqliteUser.password_hash); } catch (e) { validPassword = false; }
           if (validPassword) usuario = sqliteUser;
+        } else {
+          console.warn(`  ⚠️  Login: Usuario "${alias}" no encontrado en SQLite`);
         }
-      } catch (e) { /* ignore */ }
+      } catch (e) {
+        console.error(`  ⚠️  Login: Error en fallback SQLite para "${alias}":`, e.message);
+      }
     }
 
-    if (!usuario || !validPassword) return res.status(401).json({ error: 'Credenciales inválidas' });
+    if (!usuario || !validPassword) {
+      console.warn(`  ⚠️  Login 401: alias="${alias}", encontrado=${!!usuario}, password_valido=${validPassword}`);
+      return res.status(401).json({ error: 'Credenciales inválidas' });
+    }
 
     // Verificar estado
     if (usuario.estado === 'expulsado') return res.status(403).json({ error: 'Cuenta expulsada. Contacte a la Junta Directiva.' });

@@ -71,6 +71,11 @@ app.use(express.urlencoded({ extended: true }));
 app.use(session(sessionConfig));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// ── Favicon ───────────────────────────────────────────────────────────────────
+app.get('/favicon.ico', (req, res) => {
+  res.redirect('/img/favicon.png');
+});
+
 // Rate limiting general API
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
