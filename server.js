@@ -16,6 +16,7 @@ import { buildPlacetaidAuthUrl } from './src/services/placetaidAuth.js';
 import authRoutes from './src/routes/auth.js';
 import identidadRoutes from './src/routes/identidad.js';
 import bancarioRoutes from './src/routes/bancario.js';
+import bancarioProxyRoutes from './src/routes/bancario-proxy.js';
 import fiscalRoutes from './src/routes/fiscal.js';
 import ocioRoutes from './src/routes/ocio.js';
 import recursosRoutes from './src/routes/recursos.js';
@@ -138,6 +139,7 @@ app.get('/api/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/identidad', identidadRoutes);
 app.use('/api/bancario', bancarioRoutes);
+app.use('/api/bancario-proxy', bancarioProxyRoutes);
 app.use('/api/fiscal', fiscalRoutes);
 app.use('/api/ocio', ocioRoutes);
 app.use('/api/recursos', recursosRoutes);
