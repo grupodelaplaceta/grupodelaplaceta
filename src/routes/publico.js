@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { getDb } from '../config/db.js';
 import crypto from 'crypto';
+import path from 'path';
+import fs from 'fs';
 import PDFDocument from 'pdfkit';
 import { generarPDFDIP, generarPDFPlacetaID, generarPDFQueja, generarPDFControlParental, generarPDFEntidad } from '../services/tramitePDFs.js';
 import {
@@ -725,8 +727,37 @@ router.post('/api/tramites/submit/:tramite', async (req, res) => {
         const rep = await sbFindSolicitanteByDip(data.representante_dip);
         if (!rep || rep.estado !== 'activo') return res.json({ ok: false, error: 'Representante no encontrado.' });
         const eip = `EIP-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
-        await sbCreateEntidad({ nombre: data.nombre_entidad, tipo: data.tipo, eip, representante_id: rep.id, cif: data.cif || '', descripcion: data.descripcion || '', email: data.email });
-        ok = true; msg = `Entidad "${data.nombre_entidad}" registrada. EIP: ${eip}`;
+        const entidadData = { nombre: data.nombre_entidad, tipo: data.tipo, eip, representante_id: rep.id, cif: data.cif || '', descripcion: data.descripcion || '', email: data.email };
+        await sbCreateEntidad(entidadData);
+        // Guardar en SQLite para PDF y trazabilidad
+        const db2 = getDb();
+        const ins = db2.prepare(`INSERT INTO entidades (nombre, tipo, eip, representante_dip, email, cif, descripcion, creado_en) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))`);
+        const r2 = ins.run(data.nombre_entidad, data.tipo, eip, data.representante_dip, data.email, data.cif || '', data.descripcion || '');
+        // Guardar como documento de trámite para que quede rastro
+        const usuarioId = req.session.usuario?.id || rep.id || 0;
+        try { await sbCreateDocumentoTramite({ usuario_id: usuarioId, tipo: 'entidad', referencia: eip }); } catch {}
+        // Generar PDF
+        let pdfUrl = '';
+        try {
+          const { generarPDFEntidad } = await import('../services/tramitePDFs.js');
+          const pdfBuf = await generarPDFEntidad({ id: r2.lastInsertRowid, ...entidadData, representante_dip: data.representante_dip });
+          if (pdfBuf && pdfBuf.length > 0) {
+            const pdfDir = path.join(process.cwd(), 'public', 'pdfs');
+            if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
+            const pdfName = `entidad-${eip}.pdf`;
+            fs.writeFileSync(path.join(pdfDir, pdfName), pdfBuf);
+            pdfUrl = `/pdfs/${pdfName}`;
+          }
+        } catch (pdfErr) { console.warn('[Entidad] PDF error:', pdfErr.message); }
+        msg = `Entidad "${data.nombre_entidad}" registrada. EIP: ${eip}`;
+        html = `<div style="background:var(--p);color:var(--w);border-radius:12px;padding:20px;text-align:center;margin-top:12px">
+          <div style="font-size:12px;opacity:.8">EIP ASIGNADO</div>
+          <div style="font-size:24px;font-weight:900;letter-spacing:3px;font-family:monospace;margin:8px 0">${eip}</div>
+          <div style="font-size:13px;opacity:.9">${data.nombre_entidad} · ${data.tipo}</div>
+        </div>
+        <p style="font-size:13px;color:var(--tm);margin-top:12px">Registrado correctamente. Guarda tu EIP para vincularlo a tu cuenta bancaria.</p>
+        ${pdfUrl ? `<div style="text-align:center;margin-top:10px"><a href="${pdfUrl}" target="_blank" class="btn btn-sm" style="background:var(--p);color:#fff;padding:8px 18px;border-radius:8px;text-decoration:none">📄 Descargar certificado PDF</a></div>` : ''}`;
+        ok = true;
         break;
       }
       case 'alta-tributos': {
