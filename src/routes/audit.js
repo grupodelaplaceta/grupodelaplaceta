@@ -8,7 +8,7 @@ const router = Router();
 
 // Helper: intenta API banco, fallback a SQLite
 async function conBanco(req, fnBanco, fnSqlite) {
-  const token = req.session?.usuario?.placetaid_token || req.headers.authorization?.replace('Bearer ', '');
+  const token = req.session?.placetaidToken || req.session?.usuario?.placetaid_token || req.headers.authorization?.replace('Bearer ', '');
   if (token) {
     try {
       const res = await fnBanco(token);
@@ -22,7 +22,7 @@ async function conBanco(req, fnBanco, fnSqlite) {
 router.get('/bancario/resumen', verificarSesion, verificarRol('administrador', 'junta'), async (req, res) => {
   try {
     // Intentar desde API banco primero
-    const token = req.session?.usuario?.placetaid_token;
+    const token = req.session?.placetaidToken || req.session?.usuario?.placetaid_token;
     if (token) {
       try {
         const state = await getBankState(token);
