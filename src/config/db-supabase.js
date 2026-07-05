@@ -318,6 +318,29 @@ export async function sbCreateEntidad(data) {
   return result;
 }
 
+export async function sbListEntidades(estado) {
+  const sb = checkSupabase();
+  let q = sb.from('entidades').select('*, representante:solicitantes!entidades_representante_id_fkey(alias, dip, email)');
+  if (estado) q = q.eq('estado', estado);
+  const { data, error } = await q.order('creado_en', { ascending: false }).limit(200);
+  if (error) return [];
+  return data || [];
+}
+
+export async function sbUpdateEntidad(id, data) {
+  const sb = checkSupabase();
+  const { data: result, error } = await sb.from('entidades').update(data).eq('id', id).select().single();
+  if (error) throw new Error(`Supabase update entidad: ${error.message}`);
+  return result;
+}
+
+export async function sbDeleteEntidad(id) {
+  const sb = checkSupabase();
+  const { error } = await sb.from('entidades').delete().eq('id', id);
+  if (error) throw new Error(`Supabase delete entidad: ${error.message}`);
+  return true;
+}
+
 // ── DOCUMENTOS TRÁMITES ─────────────────────────────────────────────────────
 
 export async function sbCreateDocumentoTramite(data) {

@@ -310,4 +310,36 @@ router.get('/ciudadanos', verificarSesion, verificarRol('administrador', 'junta'
   }
 });
 
+// ── Entidades / EIP (desde Supabase) ────────────────────────────────────────
+router.get('/entidades', verificarSesion, verificarRol('administrador', 'junta', 'fiscal'), async (req, res) => {
+  try {
+    const { sbListEntidades } = await import('../config/db-supabase.js');
+    const entidades = await sbListEntidades(req.query.estado);
+    res.json(entidades);
+  } catch (err) {
+    res.json([]);
+  }
+});
+
+router.post('/entidades/delete/:id', verificarSesion, verificarRol('administrador', 'junta'), async (req, res) => {
+  try {
+    const { sbDeleteEntidad } = await import('../config/db-supabase.js');
+    await sbDeleteEntidad(parseInt(req.params.id));
+    res.json({ ok: true, message: 'Entidad eliminada' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/entidades/baja/:id', verificarSesion, verificarRol('administrador', 'junta'), async (req, res) => {
+  try {
+    const { sbUpdateEntidad } = await import('../config/db-supabase.js');
+    const { motivo } = req.body;
+    await sbUpdateEntidad(parseInt(req.params.id), { estado: 'baja', descripcion: motivo || 'Baja solicitada' });
+    res.json({ ok: true, message: 'Entidad dada de baja' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;

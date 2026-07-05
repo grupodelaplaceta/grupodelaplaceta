@@ -53,7 +53,13 @@
     <div class="section-header"><div><h2>🏢 Empresas y EIP</h2></div>
       <input type="search" id="searchEmpresas" oninput="filtrarTabla('searchEmpresas','empresasBody')" placeholder="🔍 Buscar empresa o EIP..." style="width:220px;padding:8px 12px;border:2px solid var(--line);border-radius:var(--radius);font-family:var(--font);font-size:13px">
     </div>
-    <div class="table-container"><table class="data-table"><thead><tr><th>Nombre</th><th>DIP Repr.</th><th>IBAN</th><th>EIP</th><th>Estado Tributos</th><th>Saldo</th><th>Vínculo</th><th>Acción</th></tr></thead>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button class="btn btn-sm btn-primary" onclick="cargarEmpresas()">🔄 Refrescar</button>
+      <button class="btn btn-sm btn-outline" onclick="cargarEmpresas('pendiente')">⏳ Pendientes</button>
+      <button class="btn btn-sm btn-outline" onclick="cargarEmpresas('activo')">✅ Activas</button>
+      <button class="btn btn-sm btn-outline" onclick="cargarEmpresas('baja')">📪 Bajas</button>
+    </div>
+    <div class="table-container"><table class="data-table"><thead><tr><th>ID</th><th>Nombre</th><th>Tipo</th><th>EIP</th><th>Representante</th><th>Email</th><th>Estado</th><th>Acción</th></tr></thead>
       <tbody id="empresasBody"><tr><td colspan="8" class="loading-cell">Cargando...</td></tr></tbody></table></div>
   </div>
 
@@ -287,52 +293,56 @@ function filtrarTramitesPorDip(dip) {
 }
 
 // ── EMPRESAS Y EIP ─────────────────────────────────────────────────────────
-async function cargarEmpresas() {
+async function cargarEmpresas(estado) {
   try {
-    const r = await fetch('/api/bancario-proxy/cuentas?tipo=Business');
-    if (!r.ok) throw new Error('HTTP ' + r.status + ' — el backend-banco no está disponible');
-    const cuentas = await r.json();
+    const url = '/api/admin/tramites/entidades' + (estado ? '?estado=' + estado : '');
+    const r = await fetch(url);
+    const entidades = await r.json();
     const tbody = document.getElementById('empresasBody');
-    if (!cuentas.length) { tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">Sin empresas registradas</td></tr>'; return; }
-    document.getElementById('totalEmpresas').textContent = cuentas.length;
-    tbody.innerHTML = cuentas.map(c => '<tr>' +
-      '<td><strong>' + (c.displayName || '—') + '</strong></td>' +
-      '<td>' + (c.dip || '—') + '</td>' +
-      '<td style="font-size:12px">' + (c.iban || '—') + '</td>' +
-      '<td><span class="pill pill-' + (c.eip ? 'success' : 'danger') + '">' + (c.eip || '❌ Sin EIP') + '</span></td>' +
-      '<td><span class="badge badge-' + (c.tributosCensusDate ? 'activo' : 'pendiente') + '">' + (c.tributosCensusDate ? '✅ Alta' : '⏳ Pendiente') + '</span></td>' +
-      '<td>' + Number(c.balancePz || 0).toLocaleString('es-ES') + ' Pz</td>' +
-      '<td>' + (c.placetaId || '—') + '</td>' +
-      (!c.eip ? '<td><button class="btn btn-sm btn-primary" onclick="asignarEIP(\'' + c.id + '\',\'' + (c.displayName||c.id) + '\')">🔑 Asignar EIP</button></td>' : '<td><span style="color:var(--success);font-size:12px">✅ OK</span></td>') +
-      '</tr>'
+    if (!entidades.length) { tbody.innerHTML = '<tr><td colspan="8" class="loading-cell">Sin entidades registradas</td></tr>'; return; }
+    document.getElementById('totalEmpresas').textContent = entidades.length;
+    tbody.innerHTML = entidades.map(e => '<tr>' +
+      '<td style="font-size:11px">#' + e.id + '</td>' +
+      '<td><strong>' + (e.nombre || '—') + '</strong></td>' +
+      '<td><span class="pill pill-purple">' + (e.tipo || '—') + '</span></td>' +
+      '<td><span class="pill pill-' + (e.eip ? 'success' : 'danger') + '">' + (e.eip || '❌ Sin EIP') + '</span></td>' +
+      '<td style="font-size:12px">' + (e.representante?.alias || e.representante?.dip || e.representante_dip || '—') + '</td>' +
+      '<td style="font-size:12px">' + (e.email || '—') + '</td>' +
+      '<td><span class="badge badge-' + (e.estado === 'activo' ? 'activo' : e.estado === 'baja' ? 'suspendido' : 'pendiente') + '">' + (e.estado || 'pendiente') + '</span></td>' +
+      '<td style="display:flex;gap:4px">' +
+        '<button class="btn btn-sm btn-outline" onclick="alert(\'EIP: ' + (e.eip||'') + '\\nNombre: ' + (e.nombre||'') + '\\nTipo: ' + (e.tipo||'') + '\\nCIF: ' + (e.cif||'') + '\\nEmail: ' + (e.email||'') + '\\nDesc: ' + ((e.descripcion||'').slice(0,80)) + '\')">🔍</button>' +
+        (e.estado !== 'baja' ? '<button class="btn btn-sm btn-warning" onclick="solicitarBaja(' + e.id + ',\'' + (e.nombre||'') + '\')">📪</button>' : '') +
+        '<button class="btn btn-sm btn-danger" onclick="eliminarEntidad(' + e.id + ',\'' + (e.nombre||'') + '\')">🗑️</button>' +
+      '</td></tr>'
     ).join('');
   } catch(e) {
-    document.getElementById('empresasBody').innerHTML = '<tr><td colspan="8" class="error-cell">' + e.message + '</td></tr>';
+    document.getElementById('empresasBody').innerHTML = '<tr><td colspan="8" class="error-cell">' + (e.message || 'Error') + '</td></tr>';
     document.getElementById('totalEmpresas').textContent = '⚠️';
   }
 }
 
-async function asignarEIP(cuentaId, nombre) {
-  const eip = prompt('Introduce EIP manual (o vacío para generar automático):', '');
-  if (eip !== null && eip.trim() === '') {
-    // Auto-generar
-    try {
-      const r = await apiFetch('/api/bancario-proxy/admin-cuentas', {
-        method: 'POST', body: JSON.stringify({ action: 'asignar-eip', accountId: cuentaId, motivo: 'Asignación desde Tramitación' })
-      });
-      alert('✅ EIP ' + r.eip + ' asignado a ' + nombre);
-      cargarEmpresas();
-    } catch(e) { alert('❌ ' + e.message); }
-  } else if (eip && eip.trim()) {
-    try {
-      const r = await apiFetch('/api/bancario-proxy/admin-cuentas', {
-        method: 'POST', body: JSON.stringify({ action: 'asignar-eip', accountId: cuentaId, eip: eip.trim().toUpperCase(), motivo: 'Asignación manual desde Tramitación' })
-      });
-      alert('✅ EIP ' + r.eip + ' asignado a ' + nombre);
-      cargarEmpresas();
-    } catch(e) { alert('❌ ' + e.message); }
-  }
+async function solicitarBaja(id, nombre) {
+  const motivo = prompt('Motivo de la baja para "' + nombre + '":', 'Baja voluntaria');
+  if (!motivo) return;
+  try {
+    const r = await fetch('/api/admin/tramites/entidades/baja/' + id, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ motivo }) });
+    const d = await r.json();
+    alert(d.ok ? '✅ ' + d.message : '❌ ' + (d.error || 'Error'));
+    cargarEmpresas();
+  } catch(e) { alert('❌ ' + e.message); }
 }
+
+async function eliminarEntidad(id, nombre) {
+  if (!confirm('¿Eliminar PERMANENTEMENTE "' + nombre + '"? No se puede deshacer.')) return;
+  try {
+    const r = await fetch('/api/admin/tramites/entidades/delete/' + id, { method: 'POST' });
+    const d = await r.json();
+    alert(d.ok ? '✅ ' + d.message : '❌ ' + (d.error || 'Error'));
+    cargarEmpresas();
+  } catch(e) { alert('❌ ' + e.message); }
+}
+
+
 
 // ── EXPEDIENTES ─────────────────────────────────────────────────────────────
 async function cargarExpedientes() {
