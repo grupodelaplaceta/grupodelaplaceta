@@ -81,20 +81,27 @@ app.get('/favicon.ico', (req, res) => {
 });
 
 // Rate limiting general API
+const keyGenerator = (req) => {
+  const fwd = req.headers['x-forwarded-for'];
+  const ip = fwd ? fwd.split(',')[0].trim() : (req.ip || req.socket?.remoteAddress || 'unknown');
+  return ip;
+};
+
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 200,
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
+  keyGenerator
 });
 app.use('/api/', limiter);
 
-// Rate limiting específico para auth (login/register)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator,
   message: { error: 'Demasiados intentos. Intenta de nuevo más tarde.' }
 });
 app.use('/api/auth/login', authLimiter);

@@ -31,6 +31,10 @@ async function initSqlite() {
 
   initPromise = (async () => {
     try {
+      // En Vercel serverless, sql.js WASM no está disponible
+      if (process.env.VERCEL) {
+        throw new Error('SQLite no disponible en Vercel serverless');
+      }
       const SQL = await initSqlJs();
       const dbPath = process.env.DB_PATH || path.join(__dirname, '../../data/gdlp-crm.db');
       const dbDir = path.dirname(dbPath);
