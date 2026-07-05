@@ -300,7 +300,7 @@ router.post('/logout', async (req, res) => {
   if (usuarioId) {
     await sbCreateLog({ usuario_id: usuarioId, accion: 'logout', detalle: 'Cierre de sesión' }).catch(() => {});
   }
-  req.session.destroy();
+  req.session = null;
   res.json({ success: true });
 });
 

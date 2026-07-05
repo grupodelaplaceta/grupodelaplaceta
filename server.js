@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
-import session from 'express-session';
+import cookieSession from 'cookie-session';
 import helmet from 'helmet';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
@@ -43,21 +43,19 @@ const PORT = process.env.PORT || 3001;
 // ── Inicializar BD (se hace en startServer) ─────────────────────────────────
 // (la BD se inicializa al arrancar en la función startServer)
 
-// ── Configuración de Sesión ─────────────────────────────────────────────────
+// ── Configuración de Sesión (cookie-session para Vercel serverless) ────────
 const sessionSecret = process.env.SESSION_SECRET;
 if (!sessionSecret || sessionSecret === 'cambiar_esto_por_un_secreto_seguro' || sessionSecret.length < 16) {
   console.warn('  ⚠️  SESSION_SECRET débil o no configurado. Usar secreto seguro en .env');
 }
 const sessionConfig = {
-  secret: sessionSecret || crypto.randomBytes(32).toString('hex'),
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    httpOnly: true,
-    sameSite: 'lax',
-    maxAge: 24 * 60 * 60 * 1000 // 24 horas
-  }
+  name: 'gdlp-session',
+  secret: sessionSecret || 'gdlp-default-secret-change-me',
+  maxAge: 24 * 60 * 60 * 1000, // 24 horas
+  httpOnly: true,
+  sameSite: 'lax',
+  secure: process.env.NODE_ENV === 'production',
+  overwrite: true
 };
 
 // ── Middleware Global ─────────────────────────────────────────────────────────
@@ -72,7 +70,7 @@ app.use(cors({ origin: corsOrigins, credentials: true }));
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
-app.use(session(sessionConfig));
+app.use(cookieSession(sessionConfig));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ── Favicon ───────────────────────────────────────────────────────────────────

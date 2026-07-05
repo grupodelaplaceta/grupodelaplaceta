@@ -97,7 +97,7 @@ router.post('/logout', (req, res) => {
   if (usuarioId) {
     sbCreateLog({ usuario_id: usuarioId, accion: 'logout', detalle: 'Cierre de sesión' }).catch(() => {});
   }
-  req.session.destroy();
+  req.session = null;
   res.redirect('/login');
 });
 
@@ -106,7 +106,7 @@ router.get('/logout', (req, res) => {
   if (usuarioId) {
     sbCreateLog({ usuario_id: usuarioId, accion: 'logout', detalle: 'Cierre de sesión' }).catch(() => {});
   }
-  req.session.destroy();
+  req.session = null;
   res.redirect('/login');
 });
 
