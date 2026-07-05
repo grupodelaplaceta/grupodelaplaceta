@@ -131,6 +131,11 @@ app.use((req, res, next) => {
   next();
 });
 
+// ── Health Check ─────────────────────────────────────────────────────────────
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', version: '1.0.0', timestamp: new Date().toISOString() });
+});
+
 // ── Rutas API ────────────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
 app.use('/api/identidad', identidadRoutes);
@@ -182,7 +187,7 @@ function getPlacetaidConfig(req) {
     ? process.env.PLACETAID_API_URL
     : defaultApiUrl;
   const authBaseUrl = process.env.PLACETAID_AUTH_URL || process.env.PLACETAID_BASE_URL || apiUrl.replace(/\/api$/, '');
-  const clientId = process.env.PLACETAID_CLIENT_ID || process.env.PLACETAID_API_KEY || 'ccb611655030bdadf7218418dc195dcb';
+  const clientId = process.env.PLACETAID_API_KEY || 'ccb611655030bdadf7218418dc195dcb';
   const redirectUri = `${protocol}://${host}/placetid/callback`;
 
   return {
@@ -207,7 +212,7 @@ app.get('/login', (req, res) => {
   return res.render('auth/login', {
     titulo: 'PlacetaID - Iniciar Sesión',
     layout: false,
-    placetaidAuthUrl: placetaidConfig.authBaseUrl,
+    placetaidAuthUrl: placetaidConfig.authUrl,
     placetaidClientId: placetaidConfig.clientId,
     placetaidRedirectUri: placetaidConfig.redirectUri
   });

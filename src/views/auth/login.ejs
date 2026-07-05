@@ -61,8 +61,6 @@
 
   <script>
     const placetaidAuthUrl = '<%= placetaidAuthUrl %>';
-    const placetaidClientId = '<%= placetaidClientId %>';
-    const placetaidRedirectUri = '<%= placetaidRedirectUri %>';
 
     function mostrarError(mensaje) {
       const card = document.getElementById('loginCard');
@@ -79,18 +77,7 @@
     }
 
     function irAPlacetaID() {
-      const url = new URL(placetaidAuthUrl || 'https://id.laplaceta.org');
-      url.searchParams.set('client_id', placetaidClientId || 'ccb611655030bdadf7218418dc195dcb');
-      url.searchParams.set('redirect_uri', placetaidRedirectUri || (window.location.origin + '/placetid/callback'));
-      url.searchParams.set('platform', 'web');
-      url.searchParams.set('state', crypto.randomUUID());
-      window.location.href = url.toString();
-      // Si tras 5s sigue aquí, mostrar error
-      setTimeout(function() {
-        mostrarError('PlacetaID remoto no disponible. Usa los botones de acceso rápido.');
-        document.getElementById('loginButtons').style.display = 'block';
-        document.getElementById('loginLoading').classList.remove('active');
-      }, 5000);
+      window.location.href = placetaidAuthUrl;
     }
 
     function demoLogin(tipo) {
