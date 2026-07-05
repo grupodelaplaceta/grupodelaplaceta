@@ -14,13 +14,37 @@ const CRM_KEY = process.env.CRM_READ_KEY || 'crm-gdlp-shared-key-2026';
 
 async function fetchBancoState(req) {
   if (cache.data && Date.now() < cache.expiresAt) return cache.data;
+  const url = `${BANCO_API}/api/crm-state`;
   const headers = { 'Content-Type': 'application/json', 'X-CRM-Key': CRM_KEY };
-  const res = await fetch(`${BANCO_API}/api/crm-state`, { headers });
-  if (!res.ok) throw new Error(`Banco API respondió ${res.status}`);
+  let res;
+  try { res = await fetch(url, { headers }); }
+  catch (e) { throw new Error(`No se puede conectar con ${BANCO_API} — ${e.message}`); }
+  if (!res.ok) {
+    let msg = `Banco API (${url}) respondió ${res.status}`;
+    try { const err = await res.json(); if (err.error) msg += `: ${err.error}`; } catch {}
+    throw new Error(msg);
+  }
   const data = await res.json();
   cache = { data, expiresAt: Date.now() + CACHE_TTL };
   return data;
 }
+
+// ── Diagnóstico de conexión ────────────────────────────────────────────────
+router.get('/status', verificarSesion, verificarRol('administrador', 'junta', 'fiscal'), async (req, res) => {
+  try {
+    const url = `${BANCO_API}/api/crm-state`;
+    const test = await fetch(url, { headers: { 'X-CRM-Key': CRM_KEY } });
+    const info = { bancoApi: BANCO_API, crmKeySet: !!CRM_KEY, status: test.status, ok: test.ok };
+    if (!test.ok) {
+      let detail = '';
+      try { const e = await test.json(); detail = e.error || ''; } catch {}
+      info.error = detail;
+    }
+    res.json(info);
+  } catch (e) {
+    res.json({ bancoApi: BANCO_API, crmKeySet: !!CRM_KEY, status: 0, ok: false, error: e.message });
+  }
+});
 
 // ── Resumen bancario ────────────────────────────────────────────────────────
 router.get('/resumen', verificarSesion, verificarRol('administrador', 'junta', 'fiscal'), async (req, res) => {

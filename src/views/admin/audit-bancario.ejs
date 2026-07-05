@@ -185,8 +185,29 @@
 // ── Utilidades ──────────────────────────────────────────────────────────────
 async function apiFetch(url, opts) {
   const r = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...opts });
-  if (!r.ok) throw new Error('HTTP ' + r.status);
+  if (!r.ok) {
+    let msg = 'HTTP ' + r.status;
+    try { const e = await r.json(); if (e.error) msg += ': ' + e.error; } catch {}
+    throw new Error(msg);
+  }
   return r.json();
+}
+
+// ── Diagnóstico inicial ─────────────────────────────────────────────────────
+async function diagnosticar() {
+  try {
+    const s = await apiFetch('/api/bancario-proxy/status');
+    if (!s.ok) {
+      const banner = document.createElement('div');
+      banner.style.cssText = 'background:#fef2f2;border:2px solid #dc2626;border-radius:12px;padding:16px 20px;margin-bottom:20px;font-size:14px';
+      banner.innerHTML = '<strong style="color:#dc2626">⚠️ Error de conexión con el banco</strong><br>' +
+        '<span style="color:#666">Endpoint: ' + (s.bancoApi || '?') + '</span><br>' +
+        '<span style="color:#666">API Key configurada: ' + (s.crmKeySet ? '✅ Sí' : '❌ No') + '</span><br>' +
+        '<span style="color:#666">Estado: ' + (s.status || 'sin conexión') + ' — ' + (s.error || '') + '</span><br>' +
+        '<span style="font-size:12px;color:#999">Asegúrate de haber desplegado backend-banco en Vercel con CRM_READ_KEY configurada.</span>';
+      document.querySelector('.dashboard-header')?.after(banner);
+    }
+  } catch(e) { console.error('diagnóstico:', e); }
 }
 function formatPz(n) { return Number(n || 0).toLocaleString('es-ES', { minimumFractionDigits: 2 }) + ' Pz'; }
 function txIdShort(id) { return (id || '').length > 12 ? id.slice(0,12) + '…' : id || '—'; }
@@ -421,11 +442,11 @@ function cargarTodo() {
   cargarTransacciones();
   cargarCiudadanos();
   cargarCumplimiento();
-  cargarAlertas();
   cargarAuditLogs();
   cargarTransacciones();
   cargarCiudadanos();
   cargarCumplimiento();
   cargarAlertas();
 }
+document.addEventListener('DOMContentLoaded', function() { diagnosticar(); cargarTodo(); });
 </script>
