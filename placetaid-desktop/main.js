@@ -6,6 +6,7 @@ const http = require('http');
 
 const PLACETAID_API = process.env.PLACETAID_API_URL || 'https://id.laplaceta.org/api';
 const PROTOCOL = 'placetaid-desktop://';
+const CLIENT_ID = 'placetaid-desktop';
 
 let mainWindow = null;
 let pendingRequests = [];
@@ -78,6 +79,8 @@ function createWindow(params = {}) {
 
   mainWindow.loadFile('index.html');
   mainWindow.setMenu(null);
+  // Identificar la app para que plid26 detecte el origen desktop
+  mainWindow.webContents.setUserAgent(`placetaid-desktop/${require('./package.json').version} Electron`);
 
   if (params.action) {
     mainWindow.webContents.once('did-finish-load', () => {
