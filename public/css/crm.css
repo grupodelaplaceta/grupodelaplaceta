@@ -495,6 +495,20 @@ input:focus, select:focus, textarea:focus {
 .stat-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
 .stat-card:hover::before { opacity: 1; }
 
+/* ── Card genérico ─────────────────────────────────────────────────────── */
+.card { background: #fff; border-radius: 14px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+
+/* ── Pestañas ──────────────────────────────────────────────────────────── */
+.tab-btn { padding:10px 18px; border:none; background:none; font-weight:600; font-size:14px; font-family:var(--font); cursor:pointer; color:var(--text-light); transition:all .15s; border-bottom:3px solid transparent; margin-bottom:-2px }
+.tab-btn:hover { color:var(--p500); background:var(--p050); border-radius:8px 8px 0 0 }
+.tab-btn.active { color:var(--p500); border-bottom-color:var(--p500) }
+.tab-content { display:block }
+.section-tabs { display:flex; gap:2px; margin:16px 0; border-bottom:2px solid var(--line); flex-wrap:wrap }
+
+/* ── Inputs ────────────────────────────────────────────────────────────── */
+.form-input { width:100%; padding:10px 14px; border:2px solid var(--line); border-radius:10px; font-family:var(--font); font-size:14px; outline:none; transition:border .15s; box-sizing:border-box }
+.form-input:focus { border-color:var(--p500) }
+
 .stat-icon { font-size: 38px; line-height: 1; }
 .stat-content { flex: 1; }
 .stat-value { font-size: 34px; font-weight: 900; display: block; letter-spacing: -1px; line-height: 1; }
@@ -504,6 +518,7 @@ input:focus, select:focus, textarea:focus {
 .stat-success .stat-value { color: var(--green); }
 .stat-warning .stat-value { color: var(--warning); }
 .stat-info .stat-value { color: var(--info); }
+.stat-danger .stat-value { color: var(--red); }
 
 /* ═══════════════════════════════════════════════════════════════════════════
    SECTIONS & QUICK ACTIONS
