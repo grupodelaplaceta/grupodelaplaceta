@@ -16,19 +16,19 @@
     <p class="section-subtitle">Gestiones oficiales de la Asociación con plena validez jurídica real.</p>
     <div class="tramite-grid">
       <div class="tramite-group-label">📋 Documentación y registro</div>
-      <a class="tramite-card" onclick="abrirModal('control-parental')">
+      <a class="tramite-card" onclick="abrirTramite('control-parental')">
         <div class="tramite-icon">👨‍👩‍👧‍👦</div>
         <h3>Control Parental</h3>
         <p>Registro oficial de tutor legal para menores de 16. Genera código de vinculación.</p>
         <span class="tag tag-legal">⚖️ Asociación</span>
       </a>
-      <a class="tramite-card" onclick="abrirModal('recuperar-codigo')">
+      <a class="tramite-card" onclick="abrirTramite('recuperar-codigo')">
         <div class="tramite-icon">🔍</div>
         <h3>Recuperar Código</h3>
         <p>Recupera el código de vinculación de un menor usando tu DNI.</p>
         <span class="tag tag-legal">⚖️ Asociación</span>
       </a>
-      <a class="tramite-card" onclick="abrirModal('quejas')">
+      <a class="tramite-card" onclick="abrirTramite('quejas')">
         <div class="tramite-icon">💬</div>
         <h3>Quejas y Sugerencias</h3>
         <p>Canal oficial con la Junta Directiva. Registro y respuesta en plazo legal.</p>
@@ -50,19 +50,19 @@
     <h2>🆔 Identidad y <span class="a">Acceso</span></h2>
     <p class="section-subtitle">Gestiona tu identidad digital y credenciales en La Placeta.</p>
     <div class="tramite-grid">
-      <a class="tramite-card" onclick="abrirModal('alta-dip')">
+      <a class="tramite-card" onclick="abrirTramite('alta-dip')">
         <div class="tramite-icon">🪪</div>
         <h3>Alta DIP</h3>
         <p>Solicita tu Documento de Identidad de La Placeta.</p>
         <span class="tag tag-eco">🎭 Ecosistema</span>
       </a>
-      <a class="tramite-card" onclick="abrirModal('alta-placetid')">
+      <a class="tramite-card" onclick="abrirTramite('alta-placetid')">
         <div class="tramite-icon">🔑</div>
         <h3>Alta PlacetaID</h3>
         <p>Activa tu identidad digital con un DIP provisional.</p>
         <span class="tag tag-eco">🎭 Ecosistema</span>
       </a>
-      <a class="tramite-card" onclick="abrirModal('alta-entidad')">
+      <a class="tramite-card" onclick="abrirTramite('alta-entidad')">
         <div class="tramite-icon">🏢</div>
         <h3>Alta Entidad (EIP)</h3>
         <p>Registra tu empresa simulada y obtén tu EIP.</p>
@@ -84,13 +84,13 @@
     <h2>🧾 Fiscal y <span class="a">Tributos</span></h2>
     <p class="section-subtitle">Gestiona tus obligaciones fiscales en el ecosistema: censo, facturación e impuestos.</p>
     <div class="tramite-grid">
-      <a class="tramite-card" onclick="abrirModal('alta-tributos')">
+      <a class="tramite-card" onclick="abrirTramite('alta-tributos')">
         <div class="tramite-icon">🧾</div>
         <h3>Alta en Tributos</h3>
         <p>Regístrate en el censo de contribuyentes. Obligatorio para operar con tu cuenta bancaria.</p>
         <span class="tag tag-eco">💰 TLP</span>
       </a>
-      <a class="tramite-card" onclick="abrirModal('solicitar-factura')">
+      <a class="tramite-card" onclick="abrirTramite('solicitar-factura')">
         <div class="tramite-icon">📄</div>
         <h3>Solicitar Factura</h3>
         <p>Emite una factura con IVA del 12% y recibe tu CSV de verificación único.</p>
@@ -146,9 +146,9 @@
 <% } %>
 
 <!-- Modal container -->
-<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)cerrarModal()">
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)cerrarTramite()">
   <div class="modal-box" id="modalBox">
-    <button class="modal-close" onclick="cerrarModal()">✕</button>
+    <button class="modal-close" onclick="cerrarTramite()">✕</button>
     <div id="modalContent"><div style="text-align:center;padding:20px;color:var(--tm)">Cargando...</div></div>
   </div>
 </div>
@@ -156,7 +156,7 @@
 <div class="toast-container" id="toastContainer"></div>
 
 <script>
-function abrirModal(tramite) {
+function abrirTramite(tramite) {
   document.getElementById('modalOverlay').classList.add('open');
   document.getElementById('modalContent').innerHTML = '<div style="text-align:center;padding:30px;color:var(--tm)">⏳ Cargando formulario...</div>';
   fetch('/api/tramites/form/' + tramite)
@@ -171,7 +171,7 @@ function abrirModal(tramite) {
     })
     .catch(() => document.getElementById('modalContent').innerHTML = '<div class="alert alert-e">Error al cargar el formulario.</div>');
 }
-function cerrarModal() { document.getElementById('modalOverlay').classList.remove('open'); }
+function cerrarTramite() { document.getElementById('modalOverlay').classList.remove('open'); }
 function mostrarToast(tipo, texto) {
   const c = document.getElementById('toastContainer');
   const t = document.createElement('div');

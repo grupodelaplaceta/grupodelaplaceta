@@ -397,6 +397,49 @@ router.post('/tramites/alta-tributos', async (req, res) => {
   }
 });
 
+// ── API Pública de Tributos (consulta para usuarios autenticados) ──────────
+router.get('/api/tributos/mi-perfil', async (req, res) => {
+  const usuario = req.session.usuario;
+  if (!usuario) return res.status(401).json({ error: 'No autenticado' });
+  try {
+    const { sbGetTributosContributorByPlacetaId } = await import('../config/db-supabase.js');
+    const placetaId = usuario.placeid || `PLID-${usuario.dip}`;
+    const perfil = await sbGetTributosContributorByPlacetaId(placetaId).catch(() => null);
+    res.json(perfil || null);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/api/tributos/mis-declaraciones', async (req, res) => {
+  const usuario = req.session.usuario;
+  if (!usuario) return res.status(401).json({ error: 'No autenticado' });
+  try {
+    const { sbListTributosDeclarations } = await import('../config/db-supabase.js');
+    const todas = await sbListTributosDeclarations(100);
+    const dip = usuario.dip;
+    const alias = usuario.alias;
+    const misDecls = todas.filter(d => d.dip === dip || d.placeta_id === `PLID-${dip}` || d.placeta_id === `PID-${alias?.toUpperCase()}`);
+    res.json(misDecls);
+  } catch (err) {
+    res.json([]);
+  }
+});
+
+router.get('/api/tributos/mis-facturas', async (req, res) => {
+  const usuario = req.session.usuario;
+  if (!usuario) return res.status(401).json({ error: 'No autenticado' });
+  try {
+    const { sbListTributosInvoices } = await import('../config/db-supabase.js');
+    const todas = await sbListTributosInvoices(parseInt(req.query.limit) || 20);
+    const placetaId = usuario.placeid || `PLID-${usuario.dip}`;
+    const misFacts = todas.filter(f => f.emisor_placeta_id === placetaId || f.receptor_placeta_id === placetaId);
+    res.json(misFacts);
+  } catch (err) {
+    res.json([]);
+  }
+});
+
 router.get('/tramites/solicitar-factura', (req, res) => {
   const usuario = req.session.usuario || null;
   res.render('public/tramites/solicitar-factura', {

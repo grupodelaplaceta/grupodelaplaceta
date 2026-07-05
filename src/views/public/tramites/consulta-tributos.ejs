@@ -32,17 +32,16 @@
     const alias = '<%= usuario.alias %>';
 
     // Cargar contribuyente
-    const contribResp = await fetch('/api/admin/tributos/contributors').catch(() => null);
-    const contribs = contribResp ? await contribResp.json() : [];
-    const miContrib = Array.isArray(contribs) ? contribs.find(c => c.dip === dip || c.placeta_id === 'PID-' + alias.toUpperCase()) : null;
+    const contribResp = await fetch('/api/tributos/mi-perfil').catch(() => null);
+    const miContrib = contribResp?.ok ? await contribResp.json() : null;
 
     // Cargar declaraciones
-    const declResp = await fetch('/api/admin/tributos/declarations').catch(() => null);
-    const decls = declResp ? await declResp.json() : [];
+    const declResp = await fetch('/api/tributos/mis-declaraciones').catch(() => null);
+    const decls = declResp?.ok ? await declResp.json() : [];
 
     // Cargar facturas
-    const factResp = await fetch('/api/admin/tributos/invoices?limit=20').catch(() => null);
-    const facts = factResp ? await factResp.json() : [];
+    const factResp = await fetch('/api/tributos/mis-facturas?limit=20').catch(() => null);
+    const facts = factResp?.ok ? await factResp.json() : [];
 
     document.getElementById('consultaLoading').style.display = 'none';
     document.getElementById('consultaContent').style.display = 'block';
