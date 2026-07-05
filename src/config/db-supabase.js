@@ -11,6 +11,7 @@
  * usan estas funciones Supabase.
  */
 
+import crypto from 'crypto';
 import initSqlJs from 'sql.js';
 import path from 'path';
 import fs from 'fs';
@@ -701,6 +702,117 @@ export async function sbDeactivatePlacetaidToken(token) {
     .update({ activo: 0 }).eq('token', token);
   if (error) throw new Error(error.message);
   return true;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  TRIBUTOS — Funciones adicionales
+// ═══════════════════════════════════════════════════════════════════════════
+
+export async function sbUpdateTributosContributor(placetaId, data) {
+  const sb = checkSupabase();
+  const { data: result, error } = await sb.from('tributos_contribuyentes')
+    .update(data).eq('placeta_id', placetaId).select().single();
+  if (error) throw new Error(error.message);
+  return result;
+}
+
+export async function sbGetTributosContributorByPlacetaId(placetaId) {
+  const sb = checkSupabase();
+  const { data, error } = await sb.from('tributos_contribuyentes')
+    .select('*').eq('placeta_id', placetaId).limit(1).single();
+  if (error && error.code !== 'PGRST116') return null;
+  return data;
+}
+
+export async function sbCreateTributosDeclaration(data) {
+  const sb = checkSupabase();
+  const { data: result, error } = await sb.from('tributos_declaraciones')
+    .insert({
+      id: data.id,
+      mes_periodo: data.mes_periodo,
+      cuenta_id_blp: data.cuenta_id_blp || '',
+      patrimonio_medio: data.patrimonio_medio || 0,
+      indice_acumulacion: data.indice_acumulacion || 0,
+      cuota_irm: data.cuota_irm || 0,
+      cuota_igf: data.cuota_igf || 0,
+      exencion_aplicada: data.exencion_aplicada || false,
+      dias_declarados_banco: data.dias_declarados_banco || 0,
+      dias_reconstruidos_crm: data.dias_reconstruidos_crm || 0,
+      dias_activos_mes: data.dias_activos_mes || 30,
+      estado_pago: data.estado_pago || 'Borrador',
+      bypass_junta_directiva: data.bypass_junta_directiva || false,
+      id_permiso_junta: data.id_permiso_junta || null,
+      is_rectified: data.is_rectified || false
+    }).select().single();
+  if (error) throw new Error(error.message);
+  return result;
+}
+
+export async function sbGetTributosInhibition() {
+  const sb = checkSupabase();
+  const now = new Date();
+  const mesPeriodo = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const { data, error } = await sb.from('tributos_control_recaudacion')
+    .select('*').eq('mes_periodo', mesPeriodo).limit(1).single();
+  if (error && error.code !== 'PGRST116') {
+    return { mes_periodo: mesPeriodo, estado_inhibicion_global: true };
+  }
+  return data || { mes_periodo: mesPeriodo, estado_inhibicion_global: true };
+}
+
+export async function sbSetTributosInhibition(estado, operadorId) {
+  const sb = checkSupabase();
+  const now = new Date();
+  const mesPeriodo = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const { data: existing } = await sb.from('tributos_control_recaudacion')
+    .select('*').eq('mes_periodo', mesPeriodo).limit(1).single();
+
+  if (existing) {
+    const { data, error } = await sb.from('tributos_control_recaudacion')
+      .update({
+        estado_inhibicion_global: estado,
+        fecha_ultima_modificacion: new Date().toISOString(),
+        operador_responsable_id: operadorId
+      }).eq('mes_periodo', mesPeriodo).select().single();
+    if (error) throw new Error(error.message);
+    return data;
+  }
+
+  const { data, error } = await sb.from('tributos_control_recaudacion')
+    .insert({
+      id: crypto.randomUUID?.() || String(Date.now()),
+      mes_periodo: mesPeriodo,
+      estado_inhibicion_global: estado,
+      operador_responsable_id: operadorId
+    }).select().single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function sbListTributosRectifications(limit = 50) {
+  const sb = checkSupabase();
+  const { data, error } = await sb.from('tributos_rectificaciones')
+    .select('*')
+    .order('fecha_rectificacion', { ascending: false }).limit(limit);
+  if (error) return [];
+  return data || [];
+}
+
+export async function sbCreateTributosRectification(data) {
+  const sb = checkSupabase();
+  const { data: result, error } = await sb.from('tributos_rectificaciones')
+    .insert(data).select().single();
+  if (error) throw new Error(error.message);
+  return result;
+}
+
+export async function sbListTributosAuditLogs(limit = 50) {
+  const sb = checkSupabase();
+  const { data, error } = await sb.from('tributos_audit_logs')
+    .select('*')
+    .order('created_at', { ascending: false }).limit(limit);
+  if (error) return [];
+  return data || [];
 }
 
 // ── Migraciones SQLite (solo tablas NO-Supabase) ──────────────────────────
