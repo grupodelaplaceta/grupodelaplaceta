@@ -3,7 +3,8 @@ import { Router } from 'express';
 const router = Router();
 const API = 'https://id.laplaceta.org/api';
 const API_KEY = process.env.PLACETAID_API_KEY || 'ccb611655030bdadf7218418dc195dcb';
-const DEMO_USER = { dip: '11111111D', password: 'Demo1234!' };
+const ADMIN_DIP = process.env.PLACETAID_ADMIN_DIP || '23749931M';
+const ADMIN_PASSWORD = process.env.PLACETAID_ADMIN_PASSWORD || 'Admin23749931!';
 
 let _token = null;
 let _exp = 0;
@@ -11,7 +12,7 @@ let _exp = 0;
 async function getToken() {
   if (_token && Date.now() < _exp) return _token;
 
-  // Usar API Key directamente (plid26 acepta ccb611... como admin)
+  // 1) API Key directa (plid26 acepta ccb611... como admin si PLACETAID_ADMIN_KEYS configurado)
   try {
     const r = await fetch(`${API}/admin/stats`, {
       headers: { 'X-API-Key': API_KEY }
@@ -19,23 +20,23 @@ async function getToken() {
     if (r.ok) { _token = API_KEY; _exp = Date.now() + 3600000; return _token; }
   } catch {}
 
-  // Fallback: login OAuth demo
+  // 2) Login OAuth con usuario administrador (2FA desactivado)
   try {
     const f1 = await fetch(`${API}/auth/fase1`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dip: DEMO_USER.dip, password: DEMO_USER.password })
+      body: JSON.stringify({ dip: ADMIN_DIP, password: ADMIN_PASSWORD })
     });
     if (f1.ok) {
       const d = await f1.json();
       const t = d.tokenSesion || d.token || d.accessToken;
       if (t) {
-        const test = await fetch(`${API}/admin/stats`, { headers: { 'Authorization': `Bearer ${t}`, 'X-API-Key': API_KEY } });
-        if (test.ok || test.status === 403) { _token = t; _exp = Date.now() + 300000; return _token; }
+        const test = await fetch(`${API}/admin/stats`, { headers: { 'Authorization': `Bearer ${t}` } });
+        if (test.ok) { _token = t; _exp = Date.now() + 300000; return _token; }
       }
     }
   } catch {}
 
-  throw new Error('No se pudo autenticar contra PlacetaID. Verifica PLACETAID_API_KEY.');
+  throw new Error('No se pudo autenticar contra PlacetaID. Verifica PLACETAID_ADMIN_DIP y PLACETAID_ADMIN_PASSWORD.');
 }
 
 async function call(path) {
