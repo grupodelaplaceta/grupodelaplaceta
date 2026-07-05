@@ -2,15 +2,20 @@ import { Router } from 'express';
 import { verificarSesion, verificarRol } from '../middleware/auth.js';
 
 const router = Router();
-const BANCO_API = process.env.BANCO_API_URL || 'http://localhost:3003';
+const BANCO_API = process.env.BANCO_API_URL || 'https://api.banco.laplaceta.org';
 
 // ── Cache simple ────────────────────────────────────────────────────────────
 let cache = { data: null, expiresAt: 0 };
 const CACHE_TTL = 30_000; // 30 segundos
 
-async function fetchBancoState() {
+async function fetchBancoState(req) {
   if (cache.data && Date.now() < cache.expiresAt) return cache.data;
-  const res = await fetch(`${BANCO_API}/api/state`);
+  // Usar el token PlacetaID de la sesión para autenticar
+  const token = req.session?.placetaidToken || req.session?.usuario?.placetaid_token;
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  headers['X-Placeta-App-ID'] = 'gdlp-crm';
+  const res = await fetch(`${BANCO_API}/api/state`, { headers });
   if (!res.ok) throw new Error(`Banco API respondió ${res.status}`);
   const data = await res.json();
   cache = { data, expiresAt: Date.now() + CACHE_TTL };
@@ -20,7 +25,7 @@ async function fetchBancoState() {
 // ── Resumen bancario ────────────────────────────────────────────────────────
 router.get('/resumen', verificarSesion, verificarRol('administrador', 'junta', 'fiscal'), async (req, res) => {
   try {
-    const state = await fetchBancoState();
+    const state = await fetchBancoState(req);
     res.json({
       totalUsuarios: (state.users || []).length,
       totalCuentas: Object.keys(state.accounts || {}).length,
@@ -37,7 +42,7 @@ router.get('/resumen', verificarSesion, verificarRol('administrador', 'junta', '
 // ── Listar cuentas ──────────────────────────────────────────────────────────
 router.get('/cuentas', verificarSesion, verificarRol('administrador', 'junta', 'fiscal'), async (req, res) => {
   try {
-    const state = await fetchBancoState();
+    const state = await fetchBancoState(req);
     const cuentas = Object.values(state.accounts || {});
     const { tipo, search } = req.query;
     let filtered = cuentas;
@@ -56,7 +61,7 @@ router.get('/cuentas', verificarSesion, verificarRol('administrador', 'junta', '
 // ── Listar usuarios ─────────────────────────────────────────────────────────
 router.get('/usuarios', verificarSesion, verificarRol('administrador', 'junta', 'fiscal'), async (req, res) => {
   try {
-    const state = await fetchBancoState();
+    const state = await fetchBancoState(req);
     const { search } = req.query;
     let usuarios = state.users || [];
     if (search) usuarios = usuarios.filter(u =>
@@ -73,7 +78,7 @@ router.get('/usuarios', verificarSesion, verificarRol('administrador', 'junta', 
 // ── Últimos movimientos ─────────────────────────────────────────────────────
 router.get('/movimientos', verificarSesion, verificarRol('administrador', 'junta', 'fiscal'), async (req, res) => {
   try {
-    const state = await fetchBancoState();
+    const state = await fetchBancoState(req);
     const limit = Math.min(parseInt(req.query.limit) || 50, 200);
     const txs = (state.transactions || [])
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
@@ -87,7 +92,7 @@ router.get('/movimientos', verificarSesion, verificarRol('administrador', 'junta
 // ── Buscar cuenta por DIP/PlacetaId ─────────────────────────────────────────
 router.get('/buscar', verificarSesion, verificarRol('administrador', 'junta', 'fiscal'), async (req, res) => {
   try {
-    const state = await fetchBancoState();
+    const state = await fetchBancoState(req);
     const q = (req.query.q || '').toUpperCase();
     if (!q) return res.json({ usuarios: [], cuentas: [] });
 
