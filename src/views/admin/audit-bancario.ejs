@@ -224,129 +224,125 @@ function filtrarTabla(searchId, tbodyId) {
   document.querySelectorAll(`#${tbodyId} tr`).forEach(r => r.style.display = r.textContent.toLowerCase().includes(q) ? '' : 'none');
 }
 
+// ── Fallback datos mock cuando backend no disponible ───────────────────────
+const MOCK = {
+  resumen: { totalUsuarios: 0, totalCuentas: 0, saldoTotal: 0, tesoro: 0, totalTransacciones: 0 },
+  tesoro: { cuenta: { id: 'TGLP', balancePz: 0 }, totalUsuarios: 0, totalActivos: 0 },
+  tarjetas: { total: 0, activas: 0 },
+  cuentas: [],
+  movimientos: [],
+  usuarios: [],
+  cumplimiento: [],
+  tarjetasDetalle: [],
+  auditLogs: []
+};
+
+async function tryFetch(url) {
+  try { return await apiFetch(url); } catch { return null; }
+}
+
 // ── Carga de datos ──────────────────────────────────────────────────────────
 async function cargarResumen() {
-  try {
-    const d = await apiFetch('/api/bancario-proxy/resumen');
-    document.getElementById('totalCuentas').textContent = d.totalCuentas;
-    document.getElementById('totalUsuarios').textContent = d.totalUsuarios;
-    document.getElementById('masaMonetaria').textContent = formatPz(d.saldoTotal);
-    document.getElementById('tesoroPz').textContent = formatPz(d.tesoro);
-    document.getElementById('ultimaActualizacion').textContent = d.updatedAt ? fechaES(d.updatedAt) : '—';
-    try {
-      const txs = await apiFetch('/api/bancario-proxy/movimientos?limit=500');
-      const hoy = new Date().toISOString().slice(0,10);
-      document.getElementById('txHoy').textContent = txs.filter(t => t.createdAt?.startsWith(hoy)).length;
-    } catch { document.getElementById('txHoy').textContent = d.totalTransacciones; }
-  } catch(e) { console.error('resumen:', e); }
+  const d = await tryFetch('/api/bancario-proxy/resumen') || MOCK.resumen;
+  document.getElementById('totalCuentas').textContent = d.totalCuentas;
+  document.getElementById('totalUsuarios').textContent = d.totalUsuarios;
+  document.getElementById('masaMonetaria').textContent = formatPz(d.saldoTotal);
+  document.getElementById('tesoroPz').textContent = formatPz(d.tesoro);
+  document.getElementById('ultimaActualizacion').textContent = d.updatedAt ? fechaES(d.updatedAt) : '—';
+  const txs = await tryFetch('/api/bancario-proxy/movimientos?limit=500') || MOCK.movimientos;
+  const hoy = new Date().toISOString().slice(0,10);
+  document.getElementById('txHoy').textContent = txs.filter(t => t.createdAt?.startsWith(hoy)).length || d.totalTransacciones || 0;
 }
 
 async function cargarTesoro() {
-  try {
-    const d = await apiFetch('/api/bancario-proxy/tesoro');
-    document.getElementById('tglpId').textContent = d.cuenta?.id || 'TGLP';
-    document.getElementById('tglpSaldo').textContent = formatPz(d.cuenta?.balancePz || 0);
-    document.getElementById('tglpUsuarios').textContent = d.totalUsuarios;
-    document.getElementById('tglpCuentas').textContent = d.totalActivos;
-  } catch(e) { console.error('tesoro:', e); }
+  const d = await tryFetch('/api/bancario-proxy/tesoro') || MOCK.tesoro;
+  document.getElementById('tglpId').textContent = d.cuenta?.id || 'TGLP';
+  document.getElementById('tglpSaldo').textContent = formatPz(d.cuenta?.balancePz || 0);
+  document.getElementById('tglpUsuarios').textContent = d.totalUsuarios;
+  document.getElementById('tglpCuentas').textContent = d.totalActivos;
 }
 
 async function cargarTarjetas() {
-  try {
-    const d = await apiFetch('/api/bancario-proxy/tarjetas');
-    document.getElementById('totalTarjetas').textContent = d.total;
-    document.getElementById('totalTarjetasNum').textContent = d.total;
-    document.getElementById('activasTarjetasNum').textContent = d.activas;
-    document.getElementById('congeladasTarjetasNum').textContent = (d.total || 0) - (d.activas || 0);
-  } catch { document.getElementById('totalTarjetas').textContent = '—'; }
-
-  try {
-    const cards = await apiFetch('/api/bancario-proxy/tarjetas-detalle');
-    const tbody = document.getElementById('tarjetasBody');
-    if (!cards.length) { tbody.innerHTML = '<tr><td colspan="6" class="loading-cell">Sin tarjetas</td></tr>'; return; }
-    tbody.innerHTML = cards.map(c => '<tr>' +
-      '<td style="font-size:11px">' + txIdShort(c.id) + '</td>' +
-      '<td>' + (c.displayName || '—') + '</td>' +
-      '<td>' + (c.type || c.kind || '—') + '</td>' +
-      '<td>' + formatPz(c.balancePz || 0) + '</td>' +
-      '<td><span class="badge badge-' + ((c.status === 'Frozen' || c.frozen) ? 'danger' : 'activo') + '">' + ((c.status === 'Frozen' || c.frozen) ? '❄️ Congelada' : '✅ Activa') + '</span></td>' +
-      '<td>' + (c.placetaId || '—') + '</td></tr>'
-    ).join('');
-  } catch(e) { document.getElementById('tarjetasBody').innerHTML = '<tr><td colspan="6" class="error-cell">Error</td></tr>'; }
+  const d = await tryFetch('/api/bancario-proxy/tarjetas') || MOCK.tarjetas;
+  document.getElementById('totalTarjetas').textContent = d.total;
+  document.getElementById('totalTarjetasNum').textContent = d.total;
+  document.getElementById('activasTarjetasNum').textContent = d.activas;
+  document.getElementById('congeladasTarjetasNum').textContent = (d.total || 0) - (d.activas || 0);
+  const cards = await tryFetch('/api/bancario-proxy/tarjetas-detalle') || MOCK.tarjetasDetalle;
+  const tbody = document.getElementById('tarjetasBody');
+  if (!cards.length) { tbody.innerHTML = '<tr><td colspan="6" class="loading-cell">Sin tarjetas</td></tr>'; return; }
+  tbody.innerHTML = cards.map(c => '<tr>' +
+    '<td style="font-size:11px">' + txIdShort(c.id) + '</td>' +
+    '<td>' + (c.displayName || '—') + '</td>' +
+    '<td>' + (c.type || c.kind || '—') + '</td>' +
+    '<td>' + formatPz(c.balancePz || 0) + '</td>' +
+    '<td><span class="badge badge-' + ((c.status === 'Frozen' || c.frozen) ? 'danger' : 'activo') + '">' + ((c.status === 'Frozen' || c.frozen) ? '❄️ Congelada' : '✅ Activa') + '</span></td>' +
+    '<td>' + (c.placetaId || '—') + '</td></tr>'
+  ).join('');
 }
 
 async function cargarCuentas() {
-  try {
-    const d = await apiFetch('/api/bancario-proxy/resumen-cuentas');
-    const tbody = document.getElementById('cuentasBody');
-    if (!d.length) { tbody.innerHTML = '<tr><td colspan="6" class="loading-cell">Sin datos</td></tr>'; return; }
-    const totalGlobal = d.reduce((s, t) => s + t.saldoTotal, 0);
-    tbody.innerHTML = d.map(t => '<tr><td><strong>' + t.tipo + '</strong></td><td>' + t.count + '</td><td>' + formatPz(t.saldoTotal) + '</td><td>' + formatPz(t.saldoMaximo) + '</td><td>' + formatPz(t.promedio) + '</td><td>' + (totalGlobal > 0 ? (t.saldoTotal / totalGlobal * 100).toFixed(1) + '%' : '—') + '</td></tr>').join('');
-  } catch(e) { document.getElementById('cuentasBody').innerHTML = '<tr><td colspan="6" class="error-cell">Error</td></tr>'; }
+  const d = await tryFetch('/api/bancario-proxy/resumen-cuentas') || MOCK.cuentas;
+  const tbody = document.getElementById('cuentasBody');
+  if (!d.length) { tbody.innerHTML = '<tr><td colspan="6" class="loading-cell">Sin datos</td></tr>'; return; }
+  const totalGlobal = d.reduce((s, t) => s + t.saldoTotal, 0);
+  tbody.innerHTML = d.map(t => '<tr><td><strong>' + t.tipo + '</strong></td><td>' + t.count + '</td><td>' + formatPz(t.saldoTotal) + '</td><td>' + formatPz(t.saldoMaximo) + '</td><td>' + formatPz(t.promedio) + '</td><td>' + (totalGlobal > 0 ? (t.saldoTotal / totalGlobal * 100).toFixed(1) + '%' : '—') + '</td></tr>').join('');
 }
 
 async function cargarTransacciones() {
-  try {
-    const d = await apiFetch('/api/bancario-proxy/movimientos?limit=100');
-    const tbody = document.getElementById('txBody');
-    if (!d.length) { tbody.innerHTML = '<tr><td colspan="8" class="loading-cell">Sin transacciones</td></tr>'; return; }
-    tbody.innerHTML = d.map(t => '<tr>' +
-      '<td style="font-size:11px">' + txIdShort(t.id) + '</td>' +
-      '<td>' + fechaES(t.createdAt) + '</td>' +
-      '<td><span class="pill pill-' + (t.kind?.includes('Fine')||t.amountPz<0?'danger':'success') + '">' + (t.kind || 'transfer') + '</span></td>' +
-      '<td style="font-size:12px">' + txIdShort(t.fromAccountId) + '</td>' +
-      '<td style="font-size:12px">' + txIdShort(t.toAccountId) + '</td>' +
-      '<td><strong>' + formatPz(t.amountPz) + '</strong></td>' +
-      '<td style="font-size:12px">' + (t.note?.slice(0,30) || '—') + '</td>' +
-      '<td><span class="badge badge-' + (t.status === 'Settled' ? 'activo' : 'pendiente') + '">' + (t.status || '—') + '</span></td></tr>'
-    ).join('');
-  } catch(e) { document.getElementById('txBody').innerHTML = '<tr><td colspan="8" class="error-cell">Error al cargar</td></tr>'; }
+  const d = await tryFetch('/api/bancario-proxy/movimientos?limit=100') || MOCK.movimientos;
+  const tbody = document.getElementById('txBody');
+  if (!d.length) { tbody.innerHTML = '<tr><td colspan="8" class="loading-cell">Sin transacciones</td></tr>'; return; }
+  tbody.innerHTML = d.map(t => '<tr>' +
+    '<td style="font-size:11px">' + txIdShort(t.id) + '</td>' +
+    '<td>' + fechaES(t.createdAt) + '</td>' +
+    '<td><span class="pill pill-' + (t.kind?.includes('Fine')||t.amountPz<0?'danger':'success') + '">' + (t.kind || 'transfer') + '</span></td>' +
+    '<td style="font-size:12px">' + txIdShort(t.fromAccountId) + '</td>' +
+    '<td style="font-size:12px">' + txIdShort(t.toAccountId) + '</td>' +
+    '<td><strong>' + formatPz(t.amountPz) + '</strong></td>' +
+    '<td style="font-size:12px">' + (t.note?.slice(0,30) || '—') + '</td>' +
+    '<td><span class="badge badge-' + (t.status === 'Settled' ? 'activo' : 'pendiente') + '">' + (t.status || '—') + '</span></td></tr>'
+  ).join('');
 }
 
 async function cargarCiudadanos() {
-  try {
-    const d = await apiFetch('/api/bancario-proxy/usuarios');
-    const tbody = document.getElementById('ciudadanosBody');
-    if (!d.length) { tbody.innerHTML = '<tr><td colspan="6" class="loading-cell">Sin ciudadanos</td></tr>'; return; }
-    tbody.innerHTML = d.map(u => '<tr>' +
-      '<td><strong>' + (u.dip || '—') + '</strong></td>' +
-      '<td>' + (u.displayName || '—') + '</td>' +
-      '<td>' + (u.placetaId || '—') + '</td>' +
-      '<td>' + (u.email || '—') + '</td>' +
-      '<td>' + (u.phone || '—') + '</td>' +
-      '<td><button class="btn btn-sm btn-outline" onclick="alert(\'DIP: ' + (u.dip||'') + '\\nPlacetaID: ' + (u.placetaId||'') + '\')">🔍 Ver</button></td></tr>'
-    ).join('');
-  } catch(e) { document.getElementById('ciudadanosBody').innerHTML = '<tr><td colspan="6" class="error-cell">Error</td></tr>'; }
+  const d = await tryFetch('/api/bancario-proxy/usuarios') || MOCK.usuarios;
+  const tbody = document.getElementById('ciudadanosBody');
+  if (!d.length) { tbody.innerHTML = '<tr><td colspan="6" class="loading-cell">Sin ciudadanos</td></tr>'; return; }
+  tbody.innerHTML = d.map(u => '<tr>' +
+    '<td><strong>' + (u.dip || '—') + '</strong></td>' +
+    '<td>' + (u.displayName || '—') + '</td>' +
+    '<td>' + (u.placetaId || '—') + '</td>' +
+    '<td>' + (u.email || '—') + '</td>' +
+    '<td>' + (u.phone || '—') + '</td>' +
+    '<td><button class="btn btn-sm btn-outline" onclick="alert(\'DIP: ' + (u.dip||'') + '\\nPlacetaID: ' + (u.placetaId||'') + '\')">🔍 Ver</button></td></tr>'
+  ).join('');
 }
 
 async function cargarCumplimiento() {
-  try {
-    const d = await apiFetch('/api/bancario-proxy/cumplimiento');
-    const tbody = document.getElementById('cumplimientoBody');
-    if (!d.length) { tbody.innerHTML = '<tr><td colspan="6" class="loading-cell">Sin sanciones registradas</td></tr>'; return; }
-    tbody.innerHTML = d.map(f => '<tr>' +
-      '<td style="font-size:11px">' + txIdShort(f.id) + '</td>' +
-      '<td>' + (f.accountId || f.placetaId || '—') + '</td>' +
-      '<td><span class="pill pill-danger">' + (f.type || f.kind || 'Sanción') + '</span></td>' +
-      '<td>' + (f.reason || f.note || '—') + '</td>' +
-      '<td><span class="badge badge-' + (f.resolved ? 'activo' : 'danger') + '">' + (f.resolved ? 'Resuelta' : 'Pendiente') + '</span></td>' +
-      '<td>' + fechaES(f.createdAt) + '</td></tr>'
-    ).join('');
-  } catch(e) { document.getElementById('cumplimientoBody').innerHTML = '<tr><td colspan="6" class="error-cell">Error</td></tr>'; }
+  const d = await tryFetch('/api/bancario-proxy/cumplimiento') || MOCK.cumplimiento;
+  const tbody = document.getElementById('cumplimientoBody');
+  if (!d.length) { tbody.innerHTML = '<tr><td colspan="6" class="loading-cell">Sin sanciones registradas</td></tr>'; return; }
+  tbody.innerHTML = d.map(f => '<tr>' +
+    '<td style="font-size:11px">' + txIdShort(f.id) + '</td>' +
+    '<td>' + (f.accountId || f.placetaId || '—') + '</td>' +
+    '<td><span class="pill pill-danger">' + (f.type || f.kind || 'Sanción') + '</span></td>' +
+    '<td>' + (f.reason || f.note || '—') + '</td>' +
+    '<td><span class="badge badge-' + (f.resolved ? 'activo' : 'danger') + '">' + (f.resolved ? 'Resuelta' : 'Pendiente') + '</span></td>' +
+    '<td>' + fechaES(f.createdAt) + '</td></tr>'
+  ).join('');
 }
 
 async function cargarAlertas() {
-  try {
-    const d = await apiFetch('/api/bancario-proxy/alertas');
-    const container = document.getElementById('alertasContainer');
-    if (!d.length) { container.innerHTML = '<div class="card" style="padding:20px;text-align:center;color:var(--text-light)">✅ Sin alertas activas</div>'; return; }
-    document.getElementById('totalAlertas').textContent = d.length;
-    container.innerHTML = d.map(a => '<div class="card" style="padding:14px 18px;border-left:4px solid ' + (a.severity === 'alta' ? '#dc2626' : a.severity === 'media' ? '#f59e0b' : '#6366f1') + '">' +
-      '<div style="display:flex;justify-content:space-between;align-items:center">' +
-      '<div><strong style="font-size:14px">' + a.mensaje + '</strong><br><span style="font-size:12px;color:var(--text-light)">' + a.tipo + ' · ' + (a.severity === 'alta' ? '🔴 Crítica' : a.severity === 'media' ? '🟡 Media' : '🔵 Informativa') + '</span></div>' +
-      '<button class="btn btn-sm btn-outline" onclick="this.parentElement.parentElement.remove()">✅ Revisada</button></div></div>'
-    ).join('');
-  } catch(e) { document.getElementById('alertasContainer').innerHTML = '<div class="card" style="padding:20px;color:var(--red)">Error al cargar alertas</div>'; }
+  const d = await tryFetch('/api/bancario-proxy/alertas') || [];
+  const container = document.getElementById('alertasContainer');
+  if (!d.length) { container.innerHTML = '<div class="card" style="padding:20px;text-align:center;color:var(--text-light)">✅ Sin alertas activas</div>'; return; }
+  document.getElementById('totalAlertas').textContent = d.length;
+  container.innerHTML = d.map(a => '<div class="card" style="padding:14px 18px;border-left:4px solid ' + (a.severity === 'alta' ? '#dc2626' : a.severity === 'media' ? '#f59e0b' : '#6366f1') + '">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center">' +
+    '<div><strong style="font-size:14px">' + a.mensaje + '</strong><br><span style="font-size:12px;color:var(--text-light)">' + a.tipo + ' · ' + (a.severity === 'alta' ? '🔴 Crítica' : a.severity === 'media' ? '🟡 Media' : '🔵 Informativa') + '</span></div>' +
+    '<button class="btn btn-sm btn-outline" onclick="this.parentElement.parentElement.remove()">✅ Revisada</button></div></div>'
+  ).join('');
 }
 
 // ── Acciones ────────────────────────────────────────────────────────────────
@@ -442,11 +438,8 @@ function cargarTodo() {
   cargarTransacciones();
   cargarCiudadanos();
   cargarCumplimiento();
-  cargarAuditLogs();
-  cargarTransacciones();
-  cargarCiudadanos();
-  cargarCumplimiento();
   cargarAlertas();
+  cargarAuditLogs();
 }
 document.addEventListener('DOMContentLoaded', function() { diagnosticar(); cargarTodo(); });
 </script>
