@@ -60,7 +60,7 @@
           <strong><%= n.accion.replace(/_/g, ' ') %></strong>
           <span><%= n.detalle ? n.detalle.substring(0, 140) : '—' %></span>
         </div>
-        <span class="notif-t"><%= new Date(n.creado_en + 'Z').toLocaleDateString('es-ES', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) %></span>
+        <span class="notif-t"><%= n.creado_en ? new Date(n.creado_en.endsWith('Z') ? n.creado_en : n.creado_en + 'Z').toLocaleDateString('es-ES', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) : '—' %></span>
       </div>
       <% }); %>
     </div>
@@ -78,15 +78,18 @@
       div.innerHTML = '<p style="color:var(--tm)">No has realizado trámites aún. <a href="/tramites" style="color:var(--p)">Ir a trámites</a></p>';
       return;
     }
-    var iconos = { dip:'🪪', placetid:'🔑', queja:'💬', 'control-parental':'👨‍👩‍👧‍👦', entidad:'🏢' };
-    var nombres = { dip:'Solicitud DIP', placetid:'Activación PlacetaID', queja:'Queja/Sugerencia', 'control-parental':'Control Parental', entidad:'Alta Entidad' };
-    div.innerHTML = '<div style="display:grid;gap:8px">' + docs.slice(0, 5).map(function(d) {
+    function fechaSegura(d) { try { if (!d) return '—'; const s = d.endsWith('Z') ? d : d + 'Z'; return new Date(s).toLocaleDateString('es-ES'); } catch { return '—'; } }
+    var iconos = { dip:'🪪', placetid:'🔑', queja:'💬', 'control-parental':'👨‍👩‍👧‍👦', entidad:'🏢', 'alta-tributos':'🧾', 'solicitar-factura':'📄' };
+    var nombres = { dip:'Solicitud DIP', placetid:'Activación PlacetaID', queja:'Queja/Sugerencia', 'control-parental':'Control Parental', entidad:'Alta Entidad', 'alta-tributos':'Alta en Tributos', 'solicitar-factura':'Factura' };
+    div.innerHTML = '<div style="display:grid;gap:8px">' + docs.slice(0, 10).map(function(d) {
       var icono = iconos[d.tipo] || '📄';
       var nombre = nombres[d.tipo] || d.tipo;
-      var fecha = new Date(d.creado_en + 'Z').toLocaleDateString('es-ES');
-      return '<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--bg);border-radius:10px">' +
+      var fecha = fechaSegura(d.creado_en);
+      var estClass = d.estado === 'aprobado' ? '#22c55e' : d.estado === 'rechazado' ? '#ef4444' : '#f59e0b';
+      var estLabel = d.estado === 'aprobado' ? '✅' : d.estado === 'rechazado' ? '❌' : '⏳';
+      return '<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--bg);border-radius:10px;border-left:3px solid ' + estClass + '">' +
         '<span style="font-size:22px">' + icono + '</span>' +
-        '<div style="flex:1"><strong>' + nombre + '</strong><br><span style="font-size:12px;color:var(--tm)">' + fecha + (d.referencia ? ' · ' + d.referencia : '') + '</span></div>' +
+        '<div style="flex:1"><strong>' + nombre + '</strong><br><span style="font-size:12px;color:var(--tm)">' + fecha + (d.referencia ? ' · ' + d.referencia : '') + ' · ' + estLabel + '</span></div>' +
         (d.pdf_url ? '<a href="' + d.pdf_url + '" target="_blank" class="btn btn-sm" style="background:var(--p);color:#fff;text-decoration:none;border-radius:8px;padding:5px 12px;font-size:12px">📄 PDF</a>' : '') +
         '</div>';
     }).join('') + '</div>';

@@ -168,4 +168,65 @@ function getSaldoMaximo(franja) {
   return limites[franja] || 500000;
 }
 
+// ── Importar desde PlacetaID ────────────────────────────────────────────────
+router.post('/importar-placetid', verificarSesion, verificarRol('administrador'), async (req, res) => {
+  try {
+    const API_KEY = process.env.PLACETAID_API_KEY || 'ccb611655030bdadf7218418dc195dcb';
+    const PLID = process.env.PLACETAID_API_URL || 'https://id.laplaceta.org';
+    const r = await fetch(`${PLID}/api/admin/registros`, { headers: { 'X-API-Key': API_KEY } });
+    if (!r.ok) return res.status(502).json({ error: `PlacetaID respondió ${r.status}`, imported: 0 });
+    const registros = await r.json();
+    const db = getDb();
+    let imported = 0;
+    const insert = db.prepare(`INSERT OR IGNORE INTO solicitantes (alias, nombre_real, email, telefono, dip, placeid, hash_credencial, rol, estado, franja_edad, creado_en) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+    for (const reg of registros) {
+      const alias = reg.nombre?.split(' ')[0] || reg.dip || 'importado';
+      const nombre = reg.nombre || '';
+      const email = reg.email || '';
+      const telefono = reg.telefono || '';
+      const placeid = reg.placeid || `PLID-${reg.dip}`;
+      const hash = uuidv4();
+      try {
+        insert.run(alias, nombre, email, telefono, reg.dip, placeid, hash, reg.rol || 'miembro', reg.activo ? 'activo' : 'pendiente', reg.franjaEdad || 'Alta_Plena', reg.creadoEn || new Date().toISOString());
+        imported++;
+      } catch (e) { /* duplicado, ignorar */ }
+    }
+    res.json({ ok: true, imported, total: registros.length, message: `Importados ${imported} de ${registros.length} registros` });
+  } catch (err) {
+    res.status(500).json({ error: err.message, imported: 0 });
+  }
+});
+
+// ── Enviar ciudadano a PlacetaID ────────────────────────────────────────────
+router.post('/enviar-placetid/:id', verificarSesion, verificarRol('administrador'), async (req, res) => {
+  try {
+    const db = getDb();
+    const user = db.prepare('SELECT * FROM solicitantes WHERE id = ?').get(req.params.id);
+    if (!user) return res.status(404).json({ error: 'Ciudadano no encontrado' });
+    const API_KEY = process.env.PLACETAID_API_KEY || 'ccb611655030bdadf7218418dc195dcb';
+    const PLID = process.env.PLACETAID_API_URL || 'https://id.laplaceta.org';
+    const bcrypt = await import('bcryptjs');
+    const body = {
+      dip: user.dip,
+      nombre: user.nombre_real || user.alias,
+      email: user.email || '',
+      telefono: user.telefono || '',
+      password: `temp-${uuidv4().slice(0,8)}`,
+      rol: user.rol || 'miembro',
+      franjaEdad: user.franja_edad
+    };
+    body.passwordHash = await bcrypt.hash(body.password, 10);
+    const r = await fetch(`${PLID}/api/admin/registros`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
+      body: JSON.stringify(body)
+    });
+    const data = await r.json();
+    if (!r.ok) return res.status(r.status).json({ error: data.error || 'Error en PlacetaID' });
+    res.json({ ok: true, message: `Enviado ${user.alias} a PlacetaID`, placetaid: data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;

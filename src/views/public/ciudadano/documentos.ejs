@@ -23,7 +23,7 @@
         <span style="font-size:26px;flex-shrink:0"><%= iconos[d.tipo] || '📄' %></span>
         <div style="flex:1;min-width:0">
           <strong style="font-size:14px"><%= nombres[d.tipo] || d.tipo || 'Documento' %></strong>
-          <span style="display:block;font-size:12px;color:var(--tm)"><%= new Date(d.creado_en + 'Z').toLocaleDateString('es-ES', { day:'numeric', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit' }) %><%= d.referencia ? ' · ' + d.referencia : '' %></span>
+          <span style="display:block;font-size:12px;color:var(--tm)"><%= d.creado_en ? new Date((d.creado_en.endsWith('Z') ? d.creado_en : d.creado_en + 'Z')).toLocaleDateString('es-ES', { day:'numeric', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '—' %><%= d.referencia ? ' · ' + d.referencia : '' %></span>
         </div>
         <% if (d.pdf_url) { %>
         <a href="<%= d.pdf_url %>" target="_blank" class="btn btn-sm" style="background:var(--p);color:#fff;text-decoration:none;border-radius:8px;padding:6px 14px;font-size:12px;flex-shrink:0">📄 PDF</a>
