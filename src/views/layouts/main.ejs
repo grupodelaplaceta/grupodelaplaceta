@@ -8,48 +8,141 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏛️</text></svg>">
 </head>
 <body>
-  <nav class="navbar">
-    <div class="nav-container">
-      <a href="/admin/dashboard" class="nav-brand">
-        <span class="nav-logo">🏛️</span>
-        <span class="nav-title">GDLP CRM</span>
-        <span class="nav-subtitle">Grupo de La Placeta</span>
+  <% if (usuario) { %>
+  <!-- ── Sidebar ──────────────────────────────────────────────────────────── -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <a href="/admin/dashboard" class="sidebar-brand">
+        <span class="sidebar-logo">🏛️</span>
+        <span class="sidebar-title">GDLP CRM</span>
       </a>
-      <% if (usuario) { %>
-      <div class="nav-menu">
-        <a href="/admin/dashboard" class="nav-link <%= pathActual.startsWith('/admin/dashboard') ? 'active' : '' %>">Dashboard</a>
-        <a href="/admin/identidad" class="nav-link <%= pathActual.startsWith('/admin/identidad') ? 'active' : '' %>">Identidad</a>
-        <a href="/admin/bancario" class="nav-link <%= pathActual.startsWith('/admin/bancario') ? 'active' : '' %>">Bancario</a>
-        <a href="/admin/fiscal" class="nav-link <%= pathActual.startsWith('/admin/fiscal') ? 'active' : '' %>">Fiscal</a>
-        <a href="/admin/tributos" class="nav-link <%= pathActual.startsWith('/admin/tributos') ? 'active' : '' %>">Tributos</a>
-        <a href="/admin/ocio" class="nav-link <%= pathActual.startsWith('/admin/ocio') ? 'active' : '' %>">Ocio</a>
-        <a href="/admin/recursos" class="nav-link <%= pathActual.startsWith('/admin/recursos') ? 'active' : '' %>">Recursos</a>
-        <a href="/admin/justicia" class="nav-link <%= pathActual.startsWith('/admin/justicia') ? 'active' : '' %>">Justicia</a>
-        <a href="/admin/rgpd" class="nav-link <%= pathActual.startsWith('/admin/rgpd') ? 'active' : '' %>">RGPD</a>
-        <a href="/admin/pdf" class="nav-link <%= pathActual.startsWith('/admin/pdf') ? 'active' : '' %>">PDF</a>
-        <a href="/admin/firmas" class="nav-link <%= pathActual.startsWith('/admin/firmas') ? 'active' : '' %>">Firmas</a>
-      </div>
-      <div class="nav-user">
-        <span class="user-badge"><%= usuario.alias %></span>
-        <span class="user-rol"><%= usuario.rol %></span>
-        <form action="/api/auth/logout" method="POST" style="display:inline">
-          <button type="submit" class="btn-logout">Salir</button>
-        </form>
-      </div>
-      <% } %>
+      <button class="sidebar-toggle" onclick="document.getElementById('sidebar').classList.toggle('collapsed')" aria-label="Colapsar menú">☰</button>
     </div>
-  </nav>
 
+    <nav class="sidebar-nav">
+      <!-- Panel -->
+      <div class="sidebar-group">
+        <div class="sidebar-group-title">Panel</div>
+        <a href="/admin/dashboard" class="sidebar-link <%= pathActual === '/admin/dashboard' ? 'active' : '' %>">
+          <span class="sl-icon">📊</span> Dashboard
+        </a>
+      </div>
+
+      <!-- Identidad -->
+      <div class="sidebar-group">
+        <div class="sidebar-group-title">Identidad</div>
+        <a href="/admin/identidad" class="sidebar-link <%= pathActual.startsWith('/admin/identidad') ? 'active' : '' %>">
+          <span class="sl-icon">🆔</span> Gestión de Altas
+        </a>
+      </div>
+
+      <!-- Económico-Financiero -->
+      <div class="sidebar-group">
+        <div class="sidebar-group-title">Económico-Financiero</div>
+        <a href="/admin/bancario" class="sidebar-link <%= pathActual.startsWith('/admin/bancario') ? 'active' : '' %>">
+          <span class="sl-icon">🏦</span> Bancario
+        </a>
+        <a href="/admin/tributos" class="sidebar-link sidebar-sub <%= pathActual.startsWith('/admin/tributos') ? 'active' : '' %>">
+          <span class="sl-icon">🧾</span> Tributos
+        </a>
+        <a href="/admin/fiscal" class="sidebar-link <%= pathActual.startsWith('/admin/fiscal') ? 'active' : '' %>">
+          <span class="sl-icon">💰</span> Fiscal
+        </a>
+      </div>
+
+      <!-- Ocio y Cultura -->
+      <div class="sidebar-group">
+        <div class="sidebar-group-title">Ocio y Cultura</div>
+        <a href="/admin/ocio" class="sidebar-link <%= pathActual.startsWith('/admin/ocio') ? 'active' : '' %>">
+          <span class="sl-icon">🎲</span> Ocio y Loterías
+        </a>
+      </div>
+
+      <!-- Recursos -->
+      <div class="sidebar-group">
+        <div class="sidebar-group-title">Recursos</div>
+        <a href="/admin/recursos" class="sidebar-link <%= pathActual.startsWith('/admin/recursos') ? 'active' : '' %>">
+          <span class="sl-icon">🔧</span> Recursos Digitales
+        </a>
+      </div>
+
+      <!-- Justicia -->
+      <div class="sidebar-group">
+        <div class="sidebar-group-title">Justicia</div>
+        <a href="/admin/justicia" class="sidebar-link <%= pathActual.startsWith('/admin/justicia') ? 'active' : '' %>">
+          <span class="sl-icon">⚖️</span> Expedientes
+        </a>
+      </div>
+
+      <!-- Secretaría -->
+      <div class="sidebar-group">
+        <div class="sidebar-group-title">Secretaría</div>
+        <a href="/admin/rgpd" class="sidebar-link <%= pathActual.startsWith('/admin/rgpd') ? 'active' : '' %>">
+          <span class="sl-icon">🔒</span> RGPD
+        </a>
+        <a href="/admin/pdf" class="sidebar-link <%= pathActual.startsWith('/admin/pdf') ? 'active' : '' %>">
+          <span class="sl-icon">📄</span> Generar PDF
+        </a>
+        <a href="/admin/firmas" class="sidebar-link <%= pathActual.startsWith('/admin/firmas') ? 'active' : '' %>">
+          <span class="sl-icon">✍️</span> Firma Digital
+        </a>
+        <a href="/admin/contenidos" class="sidebar-link <%= pathActual.startsWith('/admin/contenidos') ? 'active' : '' %>">
+          <span class="sl-icon">📝</span> Contenidos
+        </a>
+      </div>
+
+      <!-- Voley Club -->
+      <div class="sidebar-group">
+        <div class="sidebar-group-title">Voley Club</div>
+        <a href="/admin/voley-club" class="sidebar-link <%= pathActual.startsWith('/admin/voley-club') ? 'active' : '' %>">
+          <span class="sl-icon">🏐</span> Voley Club
+        </a>
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <span class="sidebar-user-badge"><%= usuario.alias %></span>
+        <span class="sidebar-user-rol"><%= usuario.rol %></span>
+      </div>
+      <form action="/api/auth/logout" method="POST">
+        <button type="submit" class="sidebar-logout" title="Cerrar sesión">🚪 Salir</button>
+      </form>
+    </div>
+  </aside>
+
+  <!-- Overlay para móvil -->
+  <div class="sidebar-overlay" onclick="document.getElementById('sidebar').classList.remove('open')"></div>
+
+  <!-- ── Main Content ─────────────────────────────────────────────────────── -->
+  <div class="main-wrapper">
+    <!-- Top bar móvil -->
+    <div class="topbar-mobile">
+      <button class="hamburger" onclick="document.getElementById('sidebar').classList.toggle('open')" aria-label="Abrir menú">☰</button>
+      <span class="topbar-mobile-title">🏛️ GDLP CRM</span>
+      <form action="/api/auth/logout" method="POST" class="topbar-mobile-logout">
+        <button type="submit" class="btn-logout btn-sm">Salir</button>
+      </form>
+    </div>
+
+    <main class="main-content">
+      <%- body %>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-content">
+        <span>Grupo de La Placeta · Normativa Institucional Unificada v5.0</span>
+        <span>Año <%= anoActual %> · Sistema CRM v1.0</span>
+      </div>
+    </footer>
+  </div>
+
+  <% } else { %>
+  <!-- Sin sesión: layout mínimo -->
   <main class="main-content">
     <%- body %>
   </main>
-
-  <footer class="footer">
-    <div class="footer-content">
-      <span>Grupo de La Placeta · Normativa Institucional Unificada v5.0</span>
-      <span>Año <%= anoActual %> · Sistema CRM v1.0</span>
-    </div>
-  </footer>
+  <% } %>
 
   <script src="/js/crm.js"></script>
 </body>
