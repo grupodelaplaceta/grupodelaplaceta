@@ -101,7 +101,7 @@ function fechaES(d) { return d ? new Date(d).toLocaleString('es-ES') : '—'; }
 // ── TRÁMITES ────────────────────────────────────────────────────────────────
 async function cargarTramites() {
   try {
-    const r = await fetch('/api/admin/tramites/tramites');
+    const r = await fetch('/api/admin/tramites');
     tramitesData = await r.json();
     if (!Array.isArray(tramitesData)) tramitesData = [];
     renderTramites(tramitesData);
@@ -240,7 +240,7 @@ function mostrarTipos() {
 async function cargarExpedientes() {
   // Por ahora muestra los trámites como expedientes (se puede ampliar con justicia/expedientes disciplinarios)
   try {
-    const r = await fetch('/api/admin/tramites/tramites?limit=200');
+    const r = await fetch('/api/admin/tramites?limit=200');
     const datos = await r.json();
     const tbody = document.getElementById('expedientesBody');
     if (!Array.isArray(datos) || !datos.length) { tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">Sin expedientes</td></tr>'; return; }
