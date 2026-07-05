@@ -38,15 +38,6 @@
 
     <div id="loginButtons">
       <button class="pl-btn" onclick="irAPlacetaID()">🔑 Continuar con PlacetaID</button>
-
-      <div style="margin-top:20px;padding-top:16px;border-top:1px solid #eee">
-        <p style="font-size:12px;color:#aaa;margin-bottom:10px">Acceso rápido (demo)</p>
-        <div style="display:flex;gap:8px">
-          <button class="pl-btn" style="padding:10px;font-size:13px;background:#d7a02d;color:#000" onclick="demoLogin('ciudadano')">👤 Demo Ciudadano</button>
-          <button class="pl-btn" style="padding:10px;font-size:13px;background:#1c005f" onclick="demoLogin('admin')">⚙️ Demo Admin</button>
-        </div>
-      </div>
-
       <span class="pl-reg">¿No tienes cuenta? <a href="/registro">Solicitar DIP</a></span>
     </div>
 
@@ -78,34 +69,6 @@
 
     function irAPlacetaID() {
       window.location.href = placetaidAuthUrl;
-    }
-
-    function demoLogin(tipo) {
-      const alias = tipo === 'admin' ? 'admin' : 'admin';
-      const password = 'admin123';
-      const label = tipo === 'admin' ? 'Administrador' : 'Ciudadano';
-
-      document.getElementById('loginButtons').style.display = 'none';
-      document.getElementById('loginLoading').classList.add('active');
-      document.getElementById('loginLoading').querySelector('p').textContent = 'Iniciando sesión como ' + label + '...';
-
-      fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ alias, password })
-      }).then(r => r.json()).then(data => {
-        if (data.success && data.redirect) window.location.href = data.redirect;
-        else if (data.token) window.location.href = '/';
-        else {
-          mostrarError(data.error || 'Error al iniciar sesión');
-          document.getElementById('loginButtons').style.display = 'block';
-          document.getElementById('loginLoading').classList.remove('active');
-        }
-      }).catch(function(err) {
-        mostrarError('Error de conexión: ' + (err.message || 'Inténtalo de nuevo'));
-        document.getElementById('loginButtons').style.display = 'block';
-        document.getElementById('loginLoading').classList.remove('active');
-      });
     }
 
     // Si llegamos con token en URL (redirect desde PlacetaID)

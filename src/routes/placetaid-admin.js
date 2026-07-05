@@ -62,4 +62,79 @@ router.post('/toggle/:dip', async (req, res) => {
   catch (e) { res.status(502).json({ error: e.message }); }
 });
 
+// ── Solicitantes (apps integradas en PlacetaID) ─────────────────────────────
+router.get('/solicitantes', async (req, res) => {
+  try { send(res, await call('/admin/solicitantes')); }
+  catch (e) { res.status(502).json({ error: e.message }); }
+});
+
+router.get('/solicitantes/:id', async (req, res) => {
+  try { send(res, await call(`/admin/solicitantes/${req.params.id}`)); }
+  catch (e) { res.status(502).json({ error: e.message }); }
+});
+
+router.post('/solicitantes', async (req, res) => {
+  try {
+    const token = await getToken();
+    const url = `${API}/admin/solicitantes`;
+    const result = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'X-API-Key': API_KEY },
+      body: JSON.stringify(req.body)
+    });
+    const txt = await result.text();
+    try { res.status(result.status).json(JSON.parse(txt)); }
+    catch { res.status(result.status).json({ raw: txt.substring(0,200) }); }
+  } catch (e) { res.status(502).json({ error: e.message }); }
+});
+
+router.post('/solicitantes/upload-logo', async (req, res) => {
+  try {
+    const token = await getToken();
+    const url = `${API}/admin/solicitantes/upload-logo`;
+    const result = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'X-API-Key': API_KEY },
+      body: JSON.stringify(req.body)
+    });
+    const txt = await result.text();
+    try { res.status(result.status).json(JSON.parse(txt)); }
+    catch { res.status(result.status).json({ raw: txt.substring(0,200) }); }
+  } catch (e) { res.status(502).json({ error: e.message }); }
+});
+
+router.patch('/solicitantes/:id/branding', async (req, res) => {
+  try {
+    const token = await getToken();
+    const url = `${API}/admin/solicitantes/${req.params.id}/branding`;
+    const result = await fetch(url, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'X-API-Key': API_KEY },
+      body: JSON.stringify(req.body)
+    });
+    const txt = await result.text();
+    try { res.status(result.status).json(JSON.parse(txt)); }
+    catch { res.status(result.status).json({ raw: txt.substring(0,200) }); }
+  } catch (e) { res.status(502).json({ error: e.message }); }
+});
+
+router.get('/solicitantes/:id/instrucciones', async (req, res) => {
+  try { send(res, await call(`/admin/solicitantes/${req.params.id}/instrucciones`)); }
+  catch (e) { res.status(502).json({ error: e.message }); }
+});
+
+router.delete('/solicitantes/:id', async (req, res) => {
+  try {
+    const token = await getToken();
+    const url = `${API}/admin/solicitantes/${req.params.id}`;
+    const result = await fetch(url, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}`, 'X-API-Key': API_KEY }
+    });
+    const txt = await result.text();
+    try { res.status(result.status).json(JSON.parse(txt)); }
+    catch { res.status(result.status).json({ raw: txt.substring(0,200) }); }
+  } catch (e) { res.status(502).json({ error: e.message }); }
+});
+
 export default router;

@@ -1,147 +1,426 @@
 <div class="dashboard">
   <div class="dashboard-header">
-    <h1>🏦 Auditoría Bancaria</h1>
-    <p class="dashboard-date">Control total del sistema financiero BLP</p>
+    <h1>🏛️ Panel de Gobierno — Gestión Bancaria</h1>
+    <p class="dashboard-date">Core Bancario y Divisa Placeta (Pz) · Actualizado: <span id="ultimaActualizacion">—</span></p>
   </div>
 
+  <!-- ═══════════ BARRA DE ESTADO EJECUTIVO ═══════════ -->
   <div class="stats-grid" id="resumenGrid">
-    <div class="stat-card stat-primary"><div class="stat-icon">🏦</div><div class="stat-content"><span class="stat-value" id="totalCuentas">—</span><span class="stat-label">Cuentas</span><span class="stat-detail">Total en el sistema</span></div></div>
-    <div class="stat-card stat-success"><div class="stat-icon">✅</div><div class="stat-content"><span class="stat-value" id="cuentasActivas">—</span><span class="stat-label">Activas</span><span class="stat-detail">Cuentas operativas</span></div></div>
-    <div class="stat-card stat-danger"><div class="stat-icon">🔴</div><div class="stat-content"><span class="stat-value" id="cuentasNegativas">—</span><span class="stat-label">En descubierto</span><span class="stat-detail">Saldo negativo</span></div></div>
-    <div class="stat-card stat-warning"><div class="stat-icon">💰</div><div class="stat-content"><span class="stat-value" id="masaMonetaria">—</span><span class="stat-label">Masa monetaria</span><span class="stat-detail">Pz en circulación</span></div></div>
-    <div class="stat-card stat-info"><div class="stat-icon">📊</div><div class="stat-content"><span class="stat-value" id="volumenTransacciones">—</span><span class="stat-label">Vol. transacciones</span><span class="stat-detail">Últimos 30 días</span></div></div>
-    <div class="stat-card stat-purple"><div class="stat-icon">🎁</div><div class="stat-content"><span class="stat-value" id="bonosPendientes">—</span><span class="stat-label">Bonos pendientes</span><span class="stat-detail">Bienvenida sin cobrar</span></div></div>
+    <div class="stat-card stat-primary"><div class="stat-icon">👥</div><div class="stat-content"><span class="stat-value" id="totalUsuarios">—</span><span class="stat-label">Ciudadanos</span><span class="stat-detail">Registrados en el core</span></div></div>
+    <div class="stat-card stat-success"><div class="stat-icon">🏦</div><div class="stat-content"><span class="stat-value" id="totalCuentas">—</span><span class="stat-label">Cuentas</span><span class="stat-detail">Activas en el sistema</span></div></div>
+    <div class="stat-card stat-warning"><div class="stat-icon">💰</div><div class="stat-content"><span class="stat-value" id="masaMonetaria">—</span><span class="stat-label">Masa Monetaria</span><span class="stat-detail">Total Pz circulando</span></div></div>
+    <div class="stat-card stat-info"><div class="stat-icon">🏛️</div><div class="stat-content"><span class="stat-value" id="tesoroPz">—</span><span class="stat-label">Tesoro Público</span><span class="stat-detail">Saldo TGLP</span></div></div>
+    <div class="stat-card"><div class="stat-icon">📊</div><div class="stat-content"><span class="stat-value" id="txHoy">—</span><span class="stat-label">Tx Hoy</span><span class="stat-detail">Transacciones del día</span></div></div>
+    <div class="stat-card stat-danger"><div class="stat-icon">⚠️</div><div class="stat-content"><span class="stat-value" id="totalAlertas">—</span><span class="stat-label">Alertas</span><span class="stat-detail">Pendientes de revisión</span></div></div>
   </div>
 
-  <div class="section-header" style="margin-top:16px"><div><h2>Acciones</h2></div>
-    <div style="display:flex;gap:8px">
-      <button class="btn btn-primary" onclick="cargarTodo()">🔄 Refrescar</button>
-      <a href="/admin/dashboard" class="btn btn-secondary">← Volver</a>
-    </div>
+  <!-- ═══════════ PESTAÑAS ═══════════ -->
+  <div class="section-tabs" style="display:flex;gap:2px;margin:16px 0;border-bottom:2px solid var(--line);flex-wrap:wrap">
+    <button class="tab-btn active" data-tab="tabTesoro" onclick="switchTab(this,'tabTesoro')">🏛️ Tesorería</button>
+    <button class="tab-btn" data-tab="tabCuentas" onclick="switchTab(this,'tabCuentas')">🏦 Cuentas</button>
+    <button class="tab-btn" data-tab="tabTransacciones" onclick="switchTab(this,'tabTransacciones')">🔄 Transacciones</button>
+    <button class="tab-btn" data-tab="tabCiudadanos" onclick="switchTab(this,'tabCiudadanos')">👥 Ciudadanos</button>
+    <button class="tab-btn" data-tab="tabTarjetas" onclick="switchTab(this,'tabTarjetas')">💳 Tarjetas</button>
+    <button class="tab-btn" data-tab="tabCumplimiento" onclick="switchTab(this,'tabCumplimiento')">⚖️ Cumplimiento</button>
+    <button class="tab-btn" data-tab="tabAlertas" onclick="switchTab(this,'tabAlertas')">🚨 Alertas</button>
+    <button class="tab-btn" data-tab="tabGestion" onclick="switchTab(this,'tabGestion')">🔧 Gestión</button>
+    <button style="margin-left:auto"><button class="btn btn-sm btn-primary" onclick="cargarTodo()">🔄 Refrescar todo</button></button>
   </div>
 
-  <div style="display:flex;gap:4px;margin-bottom:16px;border-bottom:2px solid var(--line)">
-    <button class="tab-btn active" data-tab="tabTransacciones" onclick="switchTab(this,'tabTransacciones')" style="padding:10px 20px;border:none;background:none;font-weight:600;cursor:pointer;color:var(--p500);border-bottom:3px solid var(--p500)">🔄 Transacciones</button>
-    <button class="tab-btn" data-tab="tabDescubiertos" onclick="switchTab(this,'tabDescubiertos')" style="padding:10px 20px;border:none;background:none;font-weight:600;cursor:pointer;color:var(--text-light)">🔴 Descubiertos</button>
-    <button class="tab-btn" data-tab="tabSaldos" onclick="switchTab(this,'tabSaldos')" style="padding:10px 20px;border:none;background:none;font-weight:600;cursor:pointer;color:var(--text-light)">📊 Saldos diarios</button>
-    <button class="tab-btn" data-tab="tabAjustes" onclick="switchTab(this,'tabAjustes')" style="padding:10px 20px;border:none;background:none;font-weight:600;cursor:pointer;color:var(--text-light)">⚙️ Ajustes</button>
-  </div>
-
-  <div id="tabTransacciones" class="tab-content">
-    <div class="section-header"><div><h2>🔄 Últimas Transacciones</h2></div>
-      <input type="search" id="searchTx" oninput="filtrarTabla('searchTx','txBody')" placeholder="🔍 Buscar..." style="width:200px;padding:8px 12px;border:2px solid var(--line);border-radius:var(--radius);font-family:var(--font);font-size:13px"></div>
-    <div class="table-container"><table class="data-table"><thead><tr><th>ID</th><th>Fecha</th><th>Tipo</th><th>Origen</th><th>Destino</th><th>Cantidad</th><th>Concepto</th><th>Estado</th></tr></thead>
-      <tbody id="txBody"><tr><td colspan="8" class="loading-cell">Cargando...</td></tr></tbody></table></div>
-  </div>
-
-  <div id="tabDescubiertos" class="tab-content" style="display:none">
-    <div class="section-header"><div><h2>🔴 Cuentas en Descubierto</h2></div></div>
-    <div class="table-container"><table class="data-table"><thead><tr><th>ID Cuenta</th><th>Alias</th><th>DIP</th><th>Saldo</th><th>Límite</th><th>Estado</th><th>Acciones</th></tr></thead>
-      <tbody id="descubiertosBody"><tr><td colspan="7" class="loading-cell">Cargando...</td></tr></tbody></table></div>
-  </div>
-
-  <div id="tabSaldos" class="tab-content" style="display:none">
-    <div class="section-header"><div><h2>📊 Historial de Saldos Diarios</h2></div>
-      <button class="btn btn-sm btn-primary" onclick="cargarSaldos()">🔄</button></div>
-    <div class="table-container"><table class="data-table"><thead><tr><th>Fecha</th><th>Saldo Total</th><th>Cuentas Negativas</th></tr></thead>
-      <tbody id="saldosBody"><tr><td colspan="3" class="loading-cell">Cargando...</td></tr></tbody></table></div>
-  </div>
-
-  <div id="tabAjustes" class="tab-content" style="display:none">
-    <div class="card" style="padding:20px;max-width:500px">
-      <h3 style="margin:0 0 12px 0;color:var(--p900)">⚙️ Ajuste Manual de Saldo</h3>
-      <div style="display:grid;gap:10px">
-        <input type="number" id="ajusteCuentaId" placeholder="ID de cuenta" style="padding:10px;border:2px solid var(--line);border-radius:8px;font-family:var(--font)">
-        <input type="number" id="ajusteCantidad" placeholder="Cantidad (+/- Pz)" style="padding:10px;border:2px solid var(--line);border-radius:8px;font-family:var(--font)">
-        <input type="text" id="ajusteConcepto" placeholder="Concepto" style="padding:10px;border:2px solid var(--line);border-radius:8px;font-family:var(--font)">
-        <button class="btn btn-primary" onclick="ajustarSaldo()">💾 Aplicar Ajuste</button>
+  <!-- ═══════════ TAB 1: TESORERÍA ═══════════ -->
+  <div id="tabTesoro" class="tab-content">
+    <div class="grid-2" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+      <div class="card" style="padding:20px">
+        <h3 style="margin:0 0 12px 0;color:var(--p500)">🪙 Emitir Placetas</h3>
+        <div style="display:grid;gap:10px">
+          <input type="number" id="emitirCantidad" placeholder="Cantidad a emitir" class="form-input">
+          <input type="text" id="emitirDip" placeholder="DIP del destinatario" class="form-input">
+          <input type="text" id="emitirMotivo" placeholder="Motivo (opcional)" class="form-input">
+          <button class="btn btn-primary" onclick="emitirPz()">Emitir desde Tesoro</button>
+        </div>
+      </div>
+      <div class="card" style="padding:20px">
+        <h3 style="margin:0 0 12px 0;color:var(--red)">🔥 Quemar Placetas</h3>
+        <div style="display:grid;gap:10px">
+          <input type="text" id="quemarCuenta" placeholder="ID de Cuenta" class="form-input">
+          <input type="number" id="quemarCantidad" placeholder="Cantidad a retirar" class="form-input">
+          <input type="text" id="quemarMotivo" placeholder="Motivo (opcional)" class="form-input">
+          <button class="btn btn-danger" onclick="quemarPz()">Quemar (retirar)</button>
+        </div>
       </div>
     </div>
+    <div class="card" style="padding:20px">
+      <h3 style="margin:0 0 12px 0">📋 Estado del Tesoro</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px" id="tesoroInfo">
+        <div><strong>Cuenta TGLP:</strong> <span id="tglpId">—</span></div>
+        <div><strong>Saldo Tesoro:</strong> <span id="tglpSaldo">—</span></div>
+        <div><strong>Ciudadanos:</strong> <span id="tglpUsuarios">—</span></div>
+        <div><strong>Cuentas totales:</strong> <span id="tglpCuentas">—</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ TAB 2: CUENTAS ═══════════ -->
+  <div id="tabCuentas" class="tab-content" style="display:none">
+    <div class="section-header"><div><h2>Resumen por Tipo</h2></div>
+      <input type="search" id="searchCuentas" oninput="filtrarTabla('searchCuentas','cuentasBody')" placeholder="🔍 Buscar cuenta..." style="width:220px;padding:8px 12px;border:2px solid var(--line);border-radius:var(--radius);font-family:var(--font);font-size:13px">
+    </div>
+    <div class="table-container">
+      <table class="data-table"><thead><tr><th>Tipo</th><th>Nº Cuentas</th><th>Saldo Total</th><th>Saldo Máximo</th><th>Promedio</th><th>% del Total</th></tr></thead>
+        <tbody id="cuentasBody"><tr><td colspan="6" class="loading-cell">Cargando...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══════════ TAB 3: TRANSACCIONES ═══════════ -->
+  <div id="tabTransacciones" class="tab-content" style="display:none">
+    <div class="section-header"><div><h2>Movimientos del Core</h2></div>
+      <input type="search" id="searchTx" oninput="filtrarTabla('searchTx','txBody')" placeholder="🔍 Buscar..." style="width:220px;padding:8px 12px;border:2px solid var(--line);border-radius:var(--radius);font-family:var(--font);font-size:13px">
+    </div>
+    <div class="table-container">
+      <table class="data-table"><thead><tr><th>ID</th><th>Fecha</th><th>Tipo</th><th>Origen</th><th>Destino</th><th>Cantidad</th><th>Concepto</th><th>Estado</th></tr></thead>
+        <tbody id="txBody"><tr><td colspan="8" class="loading-cell">Cargando...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══════════ TAB 4: CIUDADANOS ═══════════ -->
+  <div id="tabCiudadanos" class="tab-content" style="display:none">
+    <div class="section-header"><div><h2>Padrón de Ciudadanos</h2></div>
+      <input type="search" id="searchCiudadanos" oninput="filtrarTabla('searchCiudadanos','ciudadanosBody')" placeholder="🔍 Buscar por DIP, nombre o PlacetaID..." style="width:320px;padding:8px 12px;border:2px solid var(--line);border-radius:var(--radius);font-family:var(--font);font-size:13px">
+    </div>
+    <div class="table-container">
+      <table class="data-table"><thead><tr><th>DIP</th><th>Nombre</th><th>PlacetaID</th><th>Email</th><th>Teléfono</th><th>Acciones</th></tr></thead>
+        <tbody id="ciudadanosBody"><tr><td colspan="6" class="loading-cell">Cargando...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══════════ TAB 5: TARJETAS ═══════════ -->
+  <div id="tabTarjetas" class="tab-content" style="display:none">
+    <div class="section-header"><div><h2>Tarjetas Digitales</h2></div>
+      <span>Total: <strong id="totalTarjetasNum">—</strong> · Activas: <strong id="activasTarjetasNum">—</strong> · Congeladas: <strong id="congeladasTarjetasNum">—</strong></span>
+    </div>
+    <div class="table-container">
+      <table class="data-table"><thead><tr><th>ID</th><th>Titular</th><th>Tipo</th><th>Saldo</th><th>Estado</th><th>PlacetaID</th></tr></thead>
+        <tbody id="tarjetasBody"><tr><td colspan="6" class="loading-cell">Cargando...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══════════ TAB 6: CUMPLIMIENTO ═══════════ -->
+  <div id="tabCumplimiento" class="tab-content" style="display:none">
+    <div class="section-header"><div><h2>⚖️ Sanciones y Cumplimiento</h2></div></div>
+    <div class="table-container">
+      <table class="data-table"><thead><tr><th>ID</th><th>Cuenta</th><th>Tipo</th><th>Motivo</th><th>Estado</th><th>Fecha</th></tr></thead>
+        <tbody id="cumplimientoBody"><tr><td colspan="6" class="loading-cell">Cargando...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══════════ TAB 7: GESTIÓN DE CUENTAS ═══════════ -->
+  <div id="tabGestion" class="tab-content" style="display:none">
+    <div class="section-header"><div><h2>🔧 Gestión Administrativa de Cuentas</h2></div></div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:24px">
+      <!-- Cambiar Tipo -->
+      <div class="card" style="padding:20px">
+        <h3 style="margin:0 0 4px 0">🏷️ Corregir Tipo</h3>
+        <p style="font-size:12px;color:var(--text-light);margin:0 0 12px 0">Cambia el tipo de cuenta (Personal ↔ Business)</p>
+        <div style="display:grid;gap:8px">
+          <input type="text" id="gestionAccountId" placeholder="ID de Cuenta" class="form-input">
+          <select id="gestionTipo" class="form-input" style="padding:10px">
+            <option value="Personal">Personal</option>
+            <option value="Business">Business</option>
+            <option value="Savings">Savings</option>
+            <option value="Current">Current</option>
+          </select>
+          <input type="text" id="gestionMotivo" placeholder="Motivo (obligatorio)" class="form-input">
+          <button class="btn btn-primary" onclick="gestionCambiarTipo()">📝 Corregir y documentar</button>
+        </div>
+      </div>
+      <!-- Asignar EIP -->
+      <div class="card" style="padding:20px">
+        <h3 style="margin:0 0 4px 0">🔑 Asignar EIP</h3>
+        <p style="font-size:12px;color:var(--text-light);margin:0 0 12px 0">Genera o asigna un EIP a una cuenta empresa</p>
+        <div style="display:grid;gap:8px">
+          <input type="text" id="gestionEipAccountId" placeholder="ID de Cuenta" class="form-input">
+          <input type="text" id="gestionEipValor" placeholder="EIP manual (o vacío = auto)" class="form-input">
+          <button class="btn btn-primary" onclick="gestionAsignarEip()">🔑 Asignar y documentar</button>
+        </div>
+      </div>
+      <!-- Alta Tributos -->
+      <div class="card" style="padding:20px">
+        <h3 style="margin:0 0 4px 0">🏛️ Alta en Tributos</h3>
+        <p style="font-size:12px;color:var(--text-light);margin:0 0 12px 0">Da de alta una cuenta manualmente en el censo</p>
+        <div style="display:grid;gap:8px">
+          <input type="text" id="gestionAltaAccountId" placeholder="ID de Cuenta o PlacetaID" class="form-input">
+          <input type="text" id="gestionAltaMotivo" placeholder="Motivo (obligatorio)" class="form-input">
+          <button class="btn btn-primary" onclick="gestionAltaTributos()">🏛️ Dar de alta y documentar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Resultado de operaciones -->
+    <div id="gestionResultado" style="display:none">
+      <div class="card" style="padding:20px;border-left:4px solid var(--p500)" id="gestionResultadoContent"></div>
+    </div>
+
+    <div class="section-header" style="margin-top:16px"><div><h2>📋 Últimas operaciones documentadas</h2></div></div>
+    <div class="table-container">
+      <table class="data-table"><thead><tr><th>ID</th><th>Acción</th><th>Admin</th><th>Detalle</th><th>Fecha</th></tr></thead>
+        <tbody id="gestionAuditBody"><tr><td colspan="5" class="loading-cell">Cargando...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══════════ TAB 8: ALERTAS ═══════════ -->
+  <div id="tabAlertas" class="tab-content" style="display:none">
+    <div class="section-header"><div><h2>🚨 Centro de Alertas</h2></div></div>
+    <div id="alertasContainer" style="display:grid;gap:8px"><p class="loading-cell">Cargando...</p></div>
   </div>
 </div>
 
 <script>
+// ── Utilidades ──────────────────────────────────────────────────────────────
+async function apiFetch(url, opts) {
+  const r = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...opts });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+function formatPz(n) { return Number(n || 0).toLocaleString('es-ES', { minimumFractionDigits: 2 }) + ' Pz'; }
+function txIdShort(id) { return (id || '').length > 12 ? id.slice(0,12) + '…' : id || '—'; }
+function fechaES(d) { return d ? new Date(d).toLocaleString('es-ES') : '—'; }
+
 function switchTab(btn, tabId) {
   document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
   document.getElementById(tabId).style.display = 'block';
   document.querySelectorAll('.tab-btn').forEach(b => { b.style.color = 'var(--text-light)'; b.style.borderBottom = '3px solid transparent'; });
   btn.style.color = 'var(--p500)'; btn.style.borderBottom = '3px solid var(--p500)';
 }
-
 function filtrarTabla(searchId, tbodyId) {
   const q = document.getElementById(searchId).value.toLowerCase();
   document.querySelectorAll(`#${tbodyId} tr`).forEach(r => r.style.display = r.textContent.toLowerCase().includes(q) ? '' : 'none');
 }
 
-async function apiFetch(url, opts) {
-  const r = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...opts });
-  if (!r.ok) throw new Error('HTTP ' + r.status);
-  return r.json();
-}
-
-function formatPz(n) { return Number(n || 0).toLocaleString('es-ES', { minimumFractionDigits: 2 }) + ' Pz'; }
-
-// ── Datos desde proxy bancario (backend-banco real) ──────────────────────
+// ── Carga de datos ──────────────────────────────────────────────────────────
 async function cargarResumen() {
   try {
     const d = await apiFetch('/api/bancario-proxy/resumen');
     document.getElementById('totalCuentas').textContent = d.totalCuentas;
-    document.getElementById('cuentasActivas').textContent = d.totalUsuarios;
+    document.getElementById('totalUsuarios').textContent = d.totalUsuarios;
     document.getElementById('masaMonetaria').textContent = formatPz(d.saldoTotal);
-    document.getElementById('volumenTransacciones').textContent = d.totalTransacciones;
-    document.getElementById('bonosPendientes').textContent = '—';
-  } catch(e) { console.error(e); }
+    document.getElementById('tesoroPz').textContent = formatPz(d.tesoro);
+    document.getElementById('ultimaActualizacion').textContent = d.updatedAt ? fechaES(d.updatedAt) : '—';
+    try {
+      const txs = await apiFetch('/api/bancario-proxy/movimientos?limit=500');
+      const hoy = new Date().toISOString().slice(0,10);
+      document.getElementById('txHoy').textContent = txs.filter(t => t.createdAt?.startsWith(hoy)).length;
+    } catch { document.getElementById('txHoy').textContent = d.totalTransacciones; }
+  } catch(e) { console.error('resumen:', e); }
+}
+
+async function cargarTesoro() {
+  try {
+    const d = await apiFetch('/api/bancario-proxy/tesoro');
+    document.getElementById('tglpId').textContent = d.cuenta?.id || 'TGLP';
+    document.getElementById('tglpSaldo').textContent = formatPz(d.cuenta?.balancePz || 0);
+    document.getElementById('tglpUsuarios').textContent = d.totalUsuarios;
+    document.getElementById('tglpCuentas').textContent = d.totalActivos;
+  } catch(e) { console.error('tesoro:', e); }
+}
+
+async function cargarTarjetas() {
+  try {
+    const d = await apiFetch('/api/bancario-proxy/tarjetas');
+    document.getElementById('totalTarjetas').textContent = d.total;
+    document.getElementById('totalTarjetasNum').textContent = d.total;
+    document.getElementById('activasTarjetasNum').textContent = d.activas;
+    document.getElementById('congeladasTarjetasNum').textContent = (d.total || 0) - (d.activas || 0);
+  } catch { document.getElementById('totalTarjetas').textContent = '—'; }
+
+  try {
+    const cards = await apiFetch('/api/bancario-proxy/tarjetas-detalle');
+    const tbody = document.getElementById('tarjetasBody');
+    if (!cards.length) { tbody.innerHTML = '<tr><td colspan="6" class="loading-cell">Sin tarjetas</td></tr>'; return; }
+    tbody.innerHTML = cards.map(c => '<tr>' +
+      '<td style="font-size:11px">' + txIdShort(c.id) + '</td>' +
+      '<td>' + (c.displayName || '—') + '</td>' +
+      '<td>' + (c.type || c.kind || '—') + '</td>' +
+      '<td>' + formatPz(c.balancePz || 0) + '</td>' +
+      '<td><span class="badge badge-' + ((c.status === 'Frozen' || c.frozen) ? 'danger' : 'activo') + '">' + ((c.status === 'Frozen' || c.frozen) ? '❄️ Congelada' : '✅ Activa') + '</span></td>' +
+      '<td>' + (c.placetaId || '—') + '</td></tr>'
+    ).join('');
+  } catch(e) { document.getElementById('tarjetasBody').innerHTML = '<tr><td colspan="6" class="error-cell">Error</td></tr>'; }
+}
+
+async function cargarCuentas() {
+  try {
+    const d = await apiFetch('/api/bancario-proxy/resumen-cuentas');
+    const tbody = document.getElementById('cuentasBody');
+    if (!d.length) { tbody.innerHTML = '<tr><td colspan="6" class="loading-cell">Sin datos</td></tr>'; return; }
+    const totalGlobal = d.reduce((s, t) => s + t.saldoTotal, 0);
+    tbody.innerHTML = d.map(t => '<tr><td><strong>' + t.tipo + '</strong></td><td>' + t.count + '</td><td>' + formatPz(t.saldoTotal) + '</td><td>' + formatPz(t.saldoMaximo) + '</td><td>' + formatPz(t.promedio) + '</td><td>' + (totalGlobal > 0 ? (t.saldoTotal / totalGlobal * 100).toFixed(1) + '%' : '—') + '</td></tr>').join('');
+  } catch(e) { document.getElementById('cuentasBody').innerHTML = '<tr><td colspan="6" class="error-cell">Error</td></tr>'; }
 }
 
 async function cargarTransacciones() {
   try {
-    const d = await apiFetch('/api/bancario-proxy/movimientos?limit=200');
+    const d = await apiFetch('/api/bancario-proxy/movimientos?limit=100');
     const tbody = document.getElementById('txBody');
     if (!d.length) { tbody.innerHTML = '<tr><td colspan="8" class="loading-cell">Sin transacciones</td></tr>'; return; }
     tbody.innerHTML = d.map(t => '<tr>' +
-      '<td style="font-size:11px">' + t.id.slice(0,12) + '…</td>' +
-      '<td>' + (t.createdAt ? new Date(t.createdAt).toLocaleString('es-ES') : '—') + '</td>' +
+      '<td style="font-size:11px">' + txIdShort(t.id) + '</td>' +
+      '<td>' + fechaES(t.createdAt) + '</td>' +
       '<td><span class="pill pill-' + (t.kind?.includes('Fine')||t.amountPz<0?'danger':'success') + '">' + (t.kind || 'transfer') + '</span></td>' +
-      '<td style="font-size:12px">' + (t.fromAccountId ? t.fromAccountId.slice(0,16) : '—') + '</td>' +
-      '<td style="font-size:12px">' + (t.toAccountId ? t.toAccountId.slice(0,16) : '—') + '</td>' +
+      '<td style="font-size:12px">' + txIdShort(t.fromAccountId) + '</td>' +
+      '<td style="font-size:12px">' + txIdShort(t.toAccountId) + '</td>' +
       '<td><strong>' + formatPz(t.amountPz) + '</strong></td>' +
       '<td style="font-size:12px">' + (t.note?.slice(0,30) || '—') + '</td>' +
       '<td><span class="badge badge-' + (t.status === 'Settled' ? 'activo' : 'pendiente') + '">' + (t.status || '—') + '</span></td></tr>'
     ).join('');
-  } catch(e) { document.getElementById('txBody').innerHTML = '<tr><td colspan="8" class="error-cell">Error: conexión con banco</td></tr>'; }
+  } catch(e) { document.getElementById('txBody').innerHTML = '<tr><td colspan="8" class="error-cell">Error al cargar</td></tr>'; }
 }
 
-async function cargarDescubiertos() {
+async function cargarCiudadanos() {
   try {
-    const d = await apiFetch('/api/bancario-proxy/cuentas?tipo=Current');
-    const negativas = d.filter(c => (c.balancePz || 0) < 0);
-    const tbody = document.getElementById('descubiertosBody');
-    if (!negativas.length) { tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">Sin cuentas en descubierto</td></tr>'; return; }
-    tbody.innerHTML = negativas.slice(0,50).map(c => '<tr>' +
-      '<td style="font-size:11px">' + (c.iban?.slice(0,14) || c.id.slice(0,10)) + '</td>' +
-      '<td>' + (c.displayName || '—') + '</td>' +
-      '<td>' + (c.placetaId || '—') + '</td>' +
-      '<td style="color:#dc2626;font-weight:700">' + formatPz(c.balancePz) + '</td>' +
-      '<td>—</td>' +
-      '<td><span class="badge badge-danger">Descubierto</span></td>' +
-      '<td><span style="color:var(--tm);font-size:11px">Gestionar desde banco</span></td></tr>'
+    const d = await apiFetch('/api/bancario-proxy/usuarios');
+    const tbody = document.getElementById('ciudadanosBody');
+    if (!d.length) { tbody.innerHTML = '<tr><td colspan="6" class="loading-cell">Sin ciudadanos</td></tr>'; return; }
+    tbody.innerHTML = d.map(u => '<tr>' +
+      '<td><strong>' + (u.dip || '—') + '</strong></td>' +
+      '<td>' + (u.displayName || '—') + '</td>' +
+      '<td>' + (u.placetaId || '—') + '</td>' +
+      '<td>' + (u.email || '—') + '</td>' +
+      '<td>' + (u.phone || '—') + '</td>' +
+      '<td><button class="btn btn-sm btn-outline" onclick="alert(\'DIP: ' + (u.dip||'') + '\\nPlacetaID: ' + (u.placetaId||'') + '\')">🔍 Ver</button></td></tr>'
     ).join('');
-  } catch(e) { document.getElementById('descubiertosBody').innerHTML = '<tr><td colspan="7" class="error-cell">Error</td></tr>'; }
+  } catch(e) { document.getElementById('ciudadanosBody').innerHTML = '<tr><td colspan="6" class="error-cell">Error</td></tr>'; }
 }
 
-async function cargarSaldos() {
-  // No disponible desde proxy - mostrar mensaje
-  document.getElementById('saldosBody').innerHTML = '<tr><td colspan="3" class="loading-cell">Historial disponible en el panel del banco</td></tr>';
+async function cargarCumplimiento() {
+  try {
+    const d = await apiFetch('/api/bancario-proxy/cumplimiento');
+    const tbody = document.getElementById('cumplimientoBody');
+    if (!d.length) { tbody.innerHTML = '<tr><td colspan="6" class="loading-cell">Sin sanciones registradas</td></tr>'; return; }
+    tbody.innerHTML = d.map(f => '<tr>' +
+      '<td style="font-size:11px">' + txIdShort(f.id) + '</td>' +
+      '<td>' + (f.accountId || f.placetaId || '—') + '</td>' +
+      '<td><span class="pill pill-danger">' + (f.type || f.kind || 'Sanción') + '</span></td>' +
+      '<td>' + (f.reason || f.note || '—') + '</td>' +
+      '<td><span class="badge badge-' + (f.resolved ? 'activo' : 'danger') + '">' + (f.resolved ? 'Resuelta' : 'Pendiente') + '</span></td>' +
+      '<td>' + fechaES(f.createdAt) + '</td></tr>'
+    ).join('');
+  } catch(e) { document.getElementById('cumplimientoBody').innerHTML = '<tr><td colspan="6" class="error-cell">Error</td></tr>'; }
 }
 
-async function bloquearCuenta(id) {
-  alert('🔒 Gestiona bloqueos desde el panel del banco.');
+async function cargarAlertas() {
+  try {
+    const d = await apiFetch('/api/bancario-proxy/alertas');
+    const container = document.getElementById('alertasContainer');
+    if (!d.length) { container.innerHTML = '<div class="card" style="padding:20px;text-align:center;color:var(--text-light)">✅ Sin alertas activas</div>'; return; }
+    document.getElementById('totalAlertas').textContent = d.length;
+    container.innerHTML = d.map(a => '<div class="card" style="padding:14px 18px;border-left:4px solid ' + (a.severity === 'alta' ? '#dc2626' : a.severity === 'media' ? '#f59e0b' : '#6366f1') + '">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center">' +
+      '<div><strong style="font-size:14px">' + a.mensaje + '</strong><br><span style="font-size:12px;color:var(--text-light)">' + a.tipo + ' · ' + (a.severity === 'alta' ? '🔴 Crítica' : a.severity === 'media' ? '🟡 Media' : '🔵 Informativa') + '</span></div>' +
+      '<button class="btn btn-sm btn-outline" onclick="this.parentElement.parentElement.remove()">✅ Revisada</button></div></div>'
+    ).join('');
+  } catch(e) { document.getElementById('alertasContainer').innerHTML = '<div class="card" style="padding:20px;color:var(--red)">Error al cargar alertas</div>'; }
 }
 
-async function ajustarSaldo() {
-  alert('⚙️ Ajusta saldos desde el panel del banco.');
+// ── Acciones ────────────────────────────────────────────────────────────────
+async function emitirPz() {
+  const cantidad = parseInt(document.getElementById('emitirCantidad').value);
+  const dip = document.getElementById('emitirDip').value.trim().toUpperCase();
+  const motivo = document.getElementById('emitirMotivo').value.trim() || 'Emisión administrativa';
+  if (!cantidad || !dip) return alert('Completa cantidad y DIP');
+  try {
+    const r = await apiFetch('/api/bancario-proxy/emitir', { method: 'POST', body: JSON.stringify({ cantidad, dip, motivo }) });
+    alert('✅ ' + (r.message || 'Emitido')); cargarTodo();
+  } catch(e) { alert('❌ Error: ' + e.message); }
+}
+async function quemarPz() {
+  const cuentaId = document.getElementById('quemarCuenta').value.trim();
+  const cantidad = parseInt(document.getElementById('quemarCantidad').value);
+  const motivo = document.getElementById('quemarMotivo').value.trim() || 'Quema administrativa';
+  if (!cuentaId || !cantidad) return alert('Completa cuenta y cantidad');
+  try {
+    const r = await apiFetch('/api/bancario-proxy/quemar', { method: 'POST', body: JSON.stringify({ cuentaId, cantidad, motivo }) });
+    alert('🔥 ' + (r.message || 'Quemado')); cargarTodo();
+  } catch(e) { alert('❌ Error: ' + e.message); }
 }
 
-function cargarTodo() { cargarResumen(); cargarTransacciones(); cargarDescubiertos(); cargarSaldos(); }
-document.addEventListener('DOMContentLoaded', cargarTodo);
+// ── Gestión de cuentas ──────────────────────────────────────────────────────
+async function gestionCambiarTipo() {
+  const accountId = document.getElementById('gestionAccountId').value.trim();
+  const tipo = document.getElementById('gestionTipo').value;
+  const motivo = document.getElementById('gestionMotivo').value.trim();
+  if (!accountId) return alert('Introduce el ID de cuenta');
+  if (!motivo) return alert('El motivo es obligatorio (requisito normativo)');
+  try {
+    const r = await apiFetch('/api/bancario-proxy/admin-cuentas', {
+      method: 'POST', body: JSON.stringify({ action: 'cambiar-tipo', accountId, tipo, motivo })
+    });
+    document.getElementById('gestionResultadoContent').innerHTML =
+      '<strong>✅ ' + r.message + '</strong><br><small>Audit: ' + (r.auditLogId || '—') + '</small>';
+    document.getElementById('gestionResultado').style.display = 'block';
+    cargarAuditLogs();
+  } catch(e) { alert('❌ ' + e.message); }
+}
+async function gestionAsignarEip() {
+  const accountId = document.getElementById('gestionEipAccountId').value.trim();
+  const eip = document.getElementById('gestionEipValor').value.trim().toUpperCase() || undefined;
+  if (!accountId) return alert('Introduce el ID de cuenta');
+  try {
+    const body = { action: 'asignar-eip', accountId, motivo: 'Asignación administrativa EIP' };
+    if (eip) body.eip = eip;
+    const r = await apiFetch('/api/bancario-proxy/admin-cuentas', { method: 'POST', body: JSON.stringify(body) });
+    document.getElementById('gestionResultadoContent').innerHTML =
+      '<strong>✅ ' + r.message + '</strong><br><small>EIP: ' + r.eip + ' · Audit: ' + (r.auditLogId || '—') + '</small>';
+    document.getElementById('gestionResultado').style.display = 'block';
+    cargarAuditLogs();
+  } catch(e) { alert('❌ ' + e.message); }
+}
+async function gestionAltaTributos() {
+  const accountId = document.getElementById('gestionAltaAccountId').value.trim();
+  const motivo = document.getElementById('gestionAltaMotivo').value.trim();
+  if (!accountId) return alert('Introduce ID de cuenta o PlacetaID');
+  if (!motivo) return alert('El motivo es obligatorio (requisito normativo)');
+  try {
+    const r = await apiFetch('/api/bancario-proxy/admin-cuentas', {
+      method: 'POST', body: JSON.stringify({ action: 'alta-tributos', accountId, motivo })
+    });
+    document.getElementById('gestionResultadoContent').innerHTML =
+      '<strong>✅ ' + r.message + '</strong><br><small>' +
+      (r.eip ? 'EIP: ' + r.eip + ' · ' : '') +
+      'Alta: ' + (r.tributosCensusDate ? new Date(r.tributosCensusDate).toLocaleString('es-ES') : '—') +
+      ' · Audit: ' + (r.auditLogId || '—') + '</small>';
+    document.getElementById('gestionResultado').style.display = 'block';
+    cargarAuditLogs();
+  } catch(e) { alert('❌ ' + e.message); }
+}
+async function cargarAuditLogs() {
+  try {
+    const state = await apiFetch('/api/bancario-proxy/resumen'); // para state
+    const d = await apiFetch('/api/bancario-proxy/movimientos?limit=20');
+    // Leer audit logs del state directamente
+    let logs = [];
+    try {
+      const stateFull = await fetch('/api/bancario-proxy/cuentas?tipo=Personal&limit=1').then(r => r.json()).catch(()=>[]);
+      // No podemos leer audit logs desde el proxy actualmente, mostrar mensaje
+    } catch {}
+    const tbody = document.getElementById('gestionAuditBody');
+    tbody.innerHTML = '<tr><td colspan="5" class="loading-cell">Audit logs disponibles en el panel de auditoría</td></tr>';
+  } catch(e) { document.getElementById('gestionAuditBody').innerHTML = '<tr><td colspan="5" class="error-cell">Error</td></tr>'; }
+}
+function cargarTodo() {
+  cargarResumen();
+  cargarTesoro();
+  cargarTarjetas();
+  cargarCuentas();
+  cargarTransacciones();
+  cargarCiudadanos();
+  cargarCumplimiento();
+  cargarAlertas();
+}
 </script>

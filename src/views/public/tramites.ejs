@@ -1,7 +1,23 @@
+<% if (!usuario) { %>
+<script>window.location.href='/login?redirect=/tramites';</script>
+<% } %>
+
 <section class="hero-sm">
   <h1>📋 Trámites</h1>
   <p>Gestiona tus trámites legales y del ecosistema. Todos los archivos se guardan en <strong>Mis Documentos</strong>.</p>
 </section>
+
+<% if (usuario) { %>
+<div style="background:rgba(63,0,216,.1);border-radius:12px;padding:14px 20px;margin-bottom:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+  <span style="font-size:24px">👤</span>
+  <div style="flex:1">
+    <strong><%= usuario.alias || usuario.dip || 'Ciudadano' %></strong>
+    <% if (usuario.dip) { %><span style="font-size:12px;color:var(--text-light)"> · DIP: <%= usuario.dip %></span><% } %>
+    <% if (usuario.rol) { %><span class="pill pill-purple" style="font-size:11px"><%= usuario.rol %></span><% } %>
+  </div>
+  <a href="/ciudadano" class="btn btn-outline btn-sm">📁 Mis Documentos</a>
+</div>
+<% } %>
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
      SECCIÓN: TRÁMITES LEGALES (Asociación real)

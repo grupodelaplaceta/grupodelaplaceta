@@ -1,39 +1,116 @@
 <div class="dashboard">
   <div class="dashboard-header">
     <h1>📋 Tramitación</h1>
-    <p class="dashboard-date">Gestión completa de trámites y solicitudes</p>
+    <p class="dashboard-date">Gestión avanzada de trámites, expedientes y ciudadanos</p>
   </div>
 
+  <!-- ═══════ BARRA DE ESTADO ═══════ -->
   <div class="stats-grid" id="statsGrid">
     <div class="stat-card stat-warning"><div class="stat-icon">⏳</div><div class="stat-content"><span class="stat-value" id="totalPendientes">—</span><span class="stat-label">Pendientes</span></div></div>
     <div class="stat-card stat-success"><div class="stat-icon">✅</div><div class="stat-content"><span class="stat-value" id="totalAprobados">—</span><span class="stat-label">Aprobados</span></div></div>
     <div class="stat-card stat-danger"><div class="stat-icon">❌</div><div class="stat-content"><span class="stat-value" id="totalRechazados">—</span><span class="stat-label">Rechazados</span></div></div>
-    <div class="stat-card stat-info"><div class="stat-icon">📄</div><div class="stat-content"><span class="stat-value" id="totalTramites">—</span><span class="stat-label">Total</span></div></div>
+    <div class="stat-card stat-info"><div class="stat-icon">📄</div><div class="stat-content"><span class="stat-value" id="totalTramites">—</span><span class="stat-label">Total trámites</span></div></div>
+    <div class="stat-card stat-primary"><div class="stat-icon">🏢</div><div class="stat-content"><span class="stat-value" id="totalEmpresas">—</span><span class="stat-label">Empresas EIP</span></div></div>
+    <div class="stat-card"><div class="stat-icon">📋</div><div class="stat-content"><span class="stat-value" id="totalExpedientes">—</span><span class="stat-label">Expedientes</span></div></div>
   </div>
 
-  <div class="section-header"><div><h2>Acciones</h2></div>
-    <div style="display:flex;gap:8px">
-      <button class="btn btn-primary" onclick="cargarTramites()">🔄 Refrescar</button>
-      <button class="btn btn-secondary" onclick="mostrarTipos()">📋 Tipos de trámite</button>
+  <!-- ═══════ PESTAÑAS ═══════ -->
+  <div style="display:flex;gap:2px;margin:16px 0;border-bottom:2px solid var(--line);flex-wrap:wrap">
+    <button class="tab-btn active" data-tab="tramitesTab" onclick="switchTab(this,'tramitesTab')">📋 Trámites</button>
+    <button class="tab-btn" data-tab="ciudadanosTab" onclick="switchTab(this,'ciudadanosTab');cargarCiudadanos()">👥 Ciudadanos</button>
+    <button class="tab-btn" data-tab="empresasTab" onclick="switchTab(this,'empresasTab');cargarEmpresas()">🏢 Empresas y EIP</button>
+    <button class="tab-btn" data-tab="expedientesTab" onclick="switchTab(this,'expedientesTab');cargarExpedientes()">📁 Expedientes</button>
+    <button style="margin-left:auto"><button class="btn btn-sm btn-primary" onclick="cargarTodo()">🔄 Refrescar</button></button>
+  </div>
+
+  <!-- ═══════ TAB 1: TRÁMITES ═══════ -->
+  <div id="tramitesTab" class="tab-content">
+    <div class="section-header"><div><h2>Solicitudes y trámites</h2></div>
+      <input type="search" id="searchTramites" oninput="filtrarTramites()" placeholder="🔍 Buscar..." style="width:220px;padding:8px 12px;border:2px solid var(--line);border-radius:var(--radius);font-family:var(--font);font-size:13px">
+      <button class="btn btn-secondary btn-sm" onclick="mostrarTipos()">📋 Tipos</button>
+    </div>
+    <div style="display:flex;gap:4px;margin-bottom:12px">
+      <button class="filter-btn active" onclick="filtrarEstado(this,'todos')">📋 Todos</button>
+      <button class="filter-btn" onclick="filtrarEstado(this,'pendiente')">⏳ Pendientes</button>
+      <button class="filter-btn" onclick="filtrarEstado(this,'aprobado')">✅ Aprobados</button>
+      <button class="filter-btn" onclick="filtrarEstado(this,'rechazado')">❌ Rechazados</button>
+    </div>
+    <div class="table-container"><table class="data-table"><thead><tr><th>ID</th><th>Fecha</th><th>Usuario</th><th>Tipo</th><th>Estado</th><th>Contenido</th><th>Seguimiento</th><th>Acciones</th></tr></thead>
+      <tbody id="tramitesBody"><tr><td colspan="8" class="loading-cell">Cargando...</td></tr></tbody></table></div>
+  </div>
+
+  <!-- ═══════ TAB 2: CIUDADANOS ═══════ -->
+  <div id="ciudadanosTab" class="tab-content" style="display:none">
+    <div class="section-header"><div><h2>👥 Ciudadanos</h2></div>
+      <input type="search" id="searchCiudadanos" oninput="filtrarTabla('searchCiudadanos','ciudadanosBody')" placeholder="🔍 Buscar por DIP, nombre..." style="width:220px;padding:8px 12px;border:2px solid var(--line);border-radius:var(--radius);font-family:var(--font);font-size:13px">
+    </div>
+    <div class="table-container"><table class="data-table"><thead><tr><th>DIP</th><th>Nombre</th><th>Email / Teléfono</th><th>Trámites</th><th>Exp. Abiertos</th><th>Última actividad</th><th>Acción</th></tr></thead>
+      <tbody id="ciudadanosBody"><tr><td colspan="7" class="loading-cell">Cargando...</td></tr></tbody></table></div>
+  </div>
+
+  <!-- ═══════ TAB 3: EMPRESAS Y EIP ═══════ -->
+  <div id="empresasTab" class="tab-content" style="display:none">
+    <div class="section-header"><div><h2>🏢 Empresas y EIP</h2></div>
+      <input type="search" id="searchEmpresas" oninput="filtrarTabla('searchEmpresas','empresasBody')" placeholder="🔍 Buscar empresa o EIP..." style="width:220px;padding:8px 12px;border:2px solid var(--line);border-radius:var(--radius);font-family:var(--font);font-size:13px">
+    </div>
+    <div class="table-container"><table class="data-table"><thead><tr><th>Nombre</th><th>DIP Repr.</th><th>IBAN</th><th>EIP</th><th>Estado Tributos</th><th>Saldo</th><th>Vínculo</th></tr></thead>
+      <tbody id="empresasBody"><tr><td colspan="7" class="loading-cell">Cargando...</td></tr></tbody></table></div>
+  </div>
+
+  <!-- ═══════ TAB 4: EXPEDIENTES ═══════ -->
+  <div id="expedientesTab" class="tab-content" style="display:none">
+    <div class="section-header"><div><h2>📁 Expedientes y seguimiento</h2></div>
+      <input type="search" id="searchExpedientes" oninput="filtrarTabla('searchExpedientes','expedientesBody')" placeholder="🔍 Buscar..." style="width:220px;padding:8px 12px;border:2px solid var(--line);border-radius:var(--radius);font-family:var(--font);font-size:13px">
+    </div>
+    <div class="table-container"><table class="data-table"><thead><tr><th>Código</th><th>Infractor</th><th>Tipo</th><th>Estado</th><th>Inicio</th><th>Vencimiento</th><th>Sanción</th></tr></thead>
+      <tbody id="expedientesBody"><tr><td colspan="7" class="loading-cell">Cargando...</td></tr></tbody></table></div>
+  </div>
+</div>
+
+<!-- ═══════ MODAL RESOLUCIÓN ═══════ -->
+<div id="modalResolucion" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:16px;padding:28px;max-width:600px;width:90%;max-height:90vh;overflow-y:auto">
+    <h3 id="modalResolucionTitulo" style="margin:0 0 16px 0">📄 Resolución de trámite</h3>
+    <div style="display:grid;gap:12px">
+      <div><strong>Trámite:</strong> <span id="modalTramiteInfo">—</span></div>
+      <div><strong>Ciudadano:</strong> <span id="modalTramiteCiudadano">—</span></div>
+      <div><strong>Teléfono:</strong> <span id="modalTramiteTelefono">—</span></div>
+      <div><strong>DIP:</strong> <span id="modalTramiteDip">—</span></div>
+      <label><strong>Observaciones / Motivación</strong></label>
+      <textarea id="modalObs" rows="3" style="width:100%;padding:12px;border:2px solid var(--line);border-radius:8px;font-family:var(--font);resize:vertical"></textarea>
+      <label><strong>📱 Mensaje WhatsApp para el ciudadano</strong><br><span style="font-size:12px;color:var(--text-light)">Copia este texto y pégalo en WhatsApp para notificar al ciudadano</span></label>
+      <textarea id="modalWhatsAppText" rows="4" style="width:100%;padding:12px;border:2px solid var(--p200);border-radius:8px;font-family:var(--font);background:#faf8ff;resize:vertical;font-size:14px" readonly onclick="this.select();navigator.clipboard?.writeText(this.value).then(()=>this.style.borderColor='#22c55e').catch(()=>{})"></textarea>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+        <button class="btn btn-secondary" onclick="cerrarModalResolucion()">Cancelar</button>
+        <button class="btn btn-success" id="modalBtnConfirmar" onclick="">✅ Confirmar y resolver</button>
+      </div>
     </div>
   </div>
-
-  <div style="display:flex;gap:4px;margin-bottom:16px;border-bottom:2px solid var(--line)">
-    <button class="tab-btn active" onclick="filtrarEstado(this,'todos')" style="padding:10px 20px;border:none;background:none;font-weight:600;cursor:pointer;color:var(--p500);border-bottom:3px solid var(--p500)">📋 Todos</button>
-    <button class="tab-btn" onclick="filtrarEstado(this,'pendiente')" style="padding:10px 20px;border:none;background:none;font-weight:600;cursor:pointer;color:var(--text-light)">⏳ Pendientes</button>
-    <button class="tab-btn" onclick="filtrarEstado(this,'aprobado')" style="padding:10px 20px;border:none;background:none;font-weight:600;cursor:pointer;color:var(--text-light)">✅ Aprobados</button>
-    <button class="tab-btn" onclick="filtrarEstado(this,'rechazado')" style="padding:10px 20px;border:none;background:none;font-weight:600;cursor:pointer;color:var(--text-light)">❌ Rechazados</button>
-  </div>
-
-  <div class="section-header"><div><h2>Trámites</h2></div>
-    <input type="search" id="searchTramites" oninput="filtrarTramites()" placeholder="🔍 Buscar..." style="width:200px;padding:8px 12px;border:2px solid var(--line);border-radius:var(--radius);font-family:var(--font);font-size:13px"></div>
-  <div class="table-container"><table class="data-table"><thead><tr><th>ID</th><th>Fecha</th><th>Usuario</th><th>Tipo</th><th>Estado</th><th>Contenido</th><th>Observaciones</th><th>Acciones</th></tr></thead>
-    <tbody id="tramitesBody"><tr><td colspan="8" class="loading-cell">Cargando...</td></tr></tbody></table></div>
 </div>
+
+<style>
+.filter-btn { padding:8px 16px;border:2px solid var(--line);border-radius:20px;background:transparent;cursor:pointer;font-size:13px;font-weight:500;font-family:var(--font);color:var(--text-light);transition:all .2s }
+.filter-btn.active { border-color:var(--p500);color:var(--p500);background:var(--p50) }
+.filter-btn:hover { border-color:var(--p300) }
+</style>
 
 <script>
 let tramitesData = [];
 
+// ── Utilidades ──────────────────────────────────────────────────────────────
+function switchTab(btn, tabId) {
+  document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+  document.getElementById(tabId).style.display = 'block';
+  document.querySelectorAll('.tab-btn').forEach(b => { b.style.color = 'var(--text-light)'; b.style.borderBottom = '3px solid transparent'; });
+  btn.style.color = 'var(--p500)'; btn.style.borderBottom = '3px solid var(--p500)';
+}
+function filtrarTabla(searchId, tbodyId) {
+  const q = document.getElementById(searchId).value.toLowerCase();
+  document.querySelectorAll(`#${tbodyId} tr`).forEach(r => r.style.display = r.textContent.toLowerCase().includes(q) ? '' : 'none');
+}
+function fechaES(d) { return d ? new Date(d).toLocaleString('es-ES') : '—'; }
+
+// ── TRÁMITES ────────────────────────────────────────────────────────────────
 async function cargarTramites() {
   try {
     const r = await fetch('/api/admin/tramites/tramites');
@@ -54,53 +131,101 @@ function renderTramites(lista) {
   tbody.innerHTML = lista.map(t => {
     const estClass = t.estado === 'aprobado' ? 'badge-activo' : t.estado === 'rechazado' ? 'badge-suspendido' : 'badge-pendiente';
     const estLabel = t.estado === 'aprobado' ? '✅ Aprobado' : t.estado === 'rechazado' ? '❌ Rechazado' : '⏳ Pendiente';
+    const seguimiento = t.estado === 'aprobado' ? '✅ Resuelto ' + fechaES(t.resuelto_en) : t.estado === 'rechazado' ? '❌ Rechazado ' + fechaES(t.resuelto_en) : (t.created_at ? '🕐 ' + Math.floor((Date.now() - new Date(t.created_at).getTime())/86400000) + 'd espera' : '—');
     return '<tr data-estado="' + (t.estado || 'pendiente') + '">' +
       '<td>#' + t.id + '</td>' +
-      '<td>' + (t.created_at ? new Date(t.created_at).toLocaleString('es-ES') : '—') + '</td>' +
+      '<td>' + fechaES(t.created_at) + '</td>' +
       '<td><strong>' + (t.alias || '—') + '</strong><br><span style="font-size:11px">' + (t.dip || '') + '</span></td>' +
       '<td><span class="pill pill-purple">' + (t.tipo || '—') + '</span></td>' +
       '<td><span class="badge ' + estClass + '">' + estLabel + '</span></td>' +
-      '<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (t.contenido || '—') + '</td>' +
-      '<td style="max-width:150px;font-size:12px">' + (t.observaciones || '—') + '</td>' +
+      '<td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (t.contenido || '—') + '</td>' +
+      '<td style="font-size:12px;color:var(--text-light)">' + seguimiento + '</td>' +
       '<td style="display:flex;gap:4px">' +
         (!t.estado || t.estado === 'pendiente' ?
-          '<button class="btn btn-success btn-sm" onclick="aprobar(' + t.id + ')">✅</button>' +
-          '<button class="btn btn-danger btn-sm" onclick="rechazar(' + t.id + ')">❌</button>' : '') +
-        '<button class="btn btn-sm btn-primary" onclick="generarPDF(' + t.id + ')">📄</button>' +
+          '<button class="btn btn-success btn-sm" onclick="abrirModalAprobar(' + t.id + ')">✅</button>' +
+          '<button class="btn btn-danger btn-sm" onclick="abrirModalRechazar(' + t.id + ')">❌</button>' : '') +
+        '<button class="btn btn-sm btn-outline" onclick="generarPDF(' + t.id + ')">📄</button>' +
       '</td></tr>';
   }).join('');
 }
 
 function filtrarEstado(btn, estado) {
-  document.querySelectorAll('.tab-btn').forEach(b => { b.style.color = 'var(--text-light)'; b.style.borderBottom = '3px solid transparent'; });
-  btn.style.color = 'var(--p500)'; btn.style.borderBottom = '3px solid var(--p500)';
-  const rows = document.querySelectorAll('#tramitesBody tr');
-  rows.forEach(r => {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('#tramitesBody tr').forEach(r => {
     if (estado === 'todos') r.style.display = '';
     else r.style.display = r.getAttribute('data-estado') === estado ? '' : 'none';
   });
 }
-
 function filtrarTramites() {
   const q = document.getElementById('searchTramites').value.toLowerCase();
   document.querySelectorAll('#tramitesBody tr').forEach(r => { r.style.display = r.textContent.toLowerCase().includes(q) ? '' : 'none'; });
 }
 
-async function aprobar(id) {
-  const obs = prompt('Observaciones (opcional):');
-  try {
-    await fetch('/api/admin/tramites/aprobar/' + id, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ observaciones: obs || '' }) });
-    alert('✅ Trámite #' + id + ' aprobado');
-    cargarTramites();
-  } catch(e) { alert('Error: ' + e.message); }
+// ── MODAL DE RESOLUCIÓN CON WHATSAPP ────────────────────────────────────────
+let modalTramiteId = null;
+let modalAccion = null;
+
+function abrirModalAprobar(id) {
+  modalTramiteId = id;
+  modalAccion = 'aprobar';
+  const t = tramitesData.find(x => x.id === id);
+  if (!t) return;
+  document.getElementById('modalResolucionTitulo').textContent = '✅ Aprobar trámite #' + id;
+  document.getElementById('modalTramiteInfo').textContent = (t.tipo || '—') + ' — ' + (t.contenido || '').slice(0,80);
+  document.getElementById('modalTramiteCiudadano').textContent = t.alias || '—';
+  document.getElementById('modalTramiteTelefono').textContent = t.telefono || t.phone || '📱 No disponible';
+  document.getElementById('modalTramiteDip').textContent = t.dip || '—';
+  document.getElementById('modalObs').value = '';
+  const waMsg = generarWhatsAppText(t, 'aprobado');
+  document.getElementById('modalWhatsAppText').value = waMsg;
+  document.getElementById('modalBtnConfirmar').onclick = confirmarResolucion;
+  document.getElementById('modalResolucion').style.display = 'flex';
 }
 
-async function rechazar(id) {
-  const motivo = prompt('Motivo del rechazo (obligatorio):');
-  if (!motivo) return alert('Debes indicar un motivo');
+function abrirModalRechazar(id) {
+  modalTramiteId = id;
+  modalAccion = 'rechazar';
+  const t = tramitesData.find(x => x.id === id);
+  if (!t) return;
+  document.getElementById('modalResolucionTitulo').textContent = '❌ Rechazar trámite #' + id;
+  document.getElementById('modalTramiteInfo').textContent = (t.tipo || '—') + ' — ' + (t.contenido || '').slice(0,80);
+  document.getElementById('modalTramiteCiudadano').textContent = t.alias || '—';
+  document.getElementById('modalTramiteTelefono').textContent = t.telefono || t.phone || '📱 No disponible';
+  document.getElementById('modalTramiteDip').textContent = t.dip || '—';
+  document.getElementById('modalObs').value = '';
+  const waMsg = generarWhatsAppText(t, 'rechazado');
+  document.getElementById('modalWhatsAppText').value = waMsg;
+  document.getElementById('modalBtnConfirmar').onclick = confirmarResolucion;
+  document.getElementById('modalResolucion').style.display = 'flex';
+}
+
+function generarWhatsAppText(tramite, nuevoEstado) {
+  const nombre = tramite.alias || 'ciudadano';
+  const tipo = tramite.tipo || 'trámite';
+  const ref = '#' + tramite.id;
+  const fecha = new Date().toLocaleDateString('es-ES', { day:'numeric', month:'long', year:'numeric' });
+  if (nuevoEstado === 'aprobado') {
+    return `🟢 *Grupo de La Placeta — Notificación de Trámite*\n\nHola *${nombre}*, 👋\n\nTe informamos que tu *${tipo}* (${ref}) ha sido *APROBADO* ✅.\n\nPuedes consultar el documento oficial y los detalles en tu panel de ciudadano.\n\n📅 ${fecha}\n🏛️ Grupo de La Placeta · Administración`;
+  } else {
+    return `🔴 *Grupo de La Placeta — Notificación de Trámite*\n\nHola *${nombre}*, 👋\n\nLamentamos informarte que tu *${tipo}* (${ref}) ha sido *RECHAZADO* ❌.\n\nSi necesitas más información, puedes consultar los detalles en tu panel de ciudadano o contactar con la administración.\n\n📅 ${fecha}\n🏛️ Grupo de La Placeta · Administración`;
+  }
+}
+
+function cerrarModalResolucion() {
+  document.getElementById('modalResolucion').style.display = 'none';
+  modalTramiteId = null;
+}
+
+async function confirmarResolucion() {
+  if (!modalTramiteId) return;
+  const obs = document.getElementById('modalObs').value.trim();
+  const id = modalTramiteId;
+  cerrarModalResolucion();
   try {
-    await fetch('/api/admin/tramites/rechazar/' + id, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ observaciones: motivo }) });
-    alert('❌ Trámite #' + id + ' rechazado');
+    const endpoint = modalAccion === 'aprobar' ? '/api/admin/tramites/aprobar/' : '/api/admin/tramites/rechazar/';
+    await fetch(endpoint + id, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ observaciones: obs || '' }) });
+    alert((modalAccion === 'aprobar' ? '✅' : '❌') + ' Trámite #' + id + ' ' + modalAccion + 'do');
     cargarTramites();
   } catch(e) { alert('Error: ' + e.message); }
 }
@@ -115,9 +240,94 @@ async function generarPDF(id) {
 
 function mostrarTipos() {
   fetch('/api/admin/tramites/tipos').then(r=>r.json()).then(d => {
-    alert('Tipos disponibles:\n' + d.map(t => '• ' + t.nombre + ': ' + t.descripcion).join('\n'));
-  });
+    alert('📋 Tipos de trámite disponibles:\n\n' + d.map(t => '• ' + t.nombre + ': ' + t.descripcion).join('\n'));
+  }).catch(() => alert('Error al cargar tipos'));
 }
 
-document.addEventListener('DOMContentLoaded', cargarTramites);
+// ── CIUDADANOS ──────────────────────────────────────────────────────────────
+async function cargarCiudadanos() {
+  try {
+    const r = await fetch('/api/admin/tramites/tramites?limit=500');
+    const tramites = await r.json();
+    const usuarios = {};
+    (Array.isArray(tramites) ? tramites : []).forEach(t => {
+      const key = t.dip || t.alias || 'anon';
+      if (!usuarios[key]) usuarios[key] = { dip: t.dip, alias: t.alias, telefono: t.telefono || t.phone || '—', email: t.email || '—', tramites: [], expedientes: 0, ultima: null };
+      usuarios[key].tramites.push(t);
+      if (t.created_at && (!usuarios[key].ultima || t.created_at > usuarios[key].ultima)) usuarios[key].ultima = t.created_at;
+    });
+    const tbody = document.getElementById('ciudadanosBody');
+    const entries = Object.values(usuarios);
+    document.getElementById('totalExpedientes').textContent = entries.length;
+    if (!entries.length) { tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">Sin datos</td></tr>'; return; }
+    tbody.innerHTML = entries.map(u => '<tr>' +
+      '<td><strong>' + (u.dip || '—') + '</strong></td>' +
+      '<td>' + (u.alias || '—') + '</td>' +
+      '<td style="font-size:12px">' + (u.email || '—') + '<br>' + (u.telefono || '—') + '</td>' +
+      '<td>' + u.tramites.length + ' trámites</td>' +
+      '<td>' + (u.expedientes || 0) + '</td>' +
+      '<td style="font-size:12px">' + (u.ultima ? fechaES(u.ultima) : '—') + '</td>' +
+      '<td><button class="btn btn-sm btn-outline" onclick="filtrarTramitesPorDip(\'' + (u.dip||'') + '\')">🔍 Ver trámites</button></td></tr>'
+    ).join('');
+  } catch(e) { document.getElementById('ciudadanosBody').innerHTML = '<tr><td colspan="7" class="error-cell">Error</td></tr>'; }
+}
+function filtrarTramitesPorDip(dip) {
+  switchTab(document.querySelector('[data-tab="tramitesTab"]'), 'tramitesTab');
+  document.getElementById('searchTramites').value = dip;
+  filtrarTramites();
+}
+
+// ── EMPRESAS Y EIP ─────────────────────────────────────────────────────────
+async function cargarEmpresas() {
+  try {
+    const r = await fetch('/api/bancario-proxy/cuentas?tipo=Business');
+    const cuentas = await r.json();
+    const tbody = document.getElementById('empresasBody');
+    if (!cuentas.length) { tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">Sin empresas registradas</td></tr>'; return; }
+    document.getElementById('totalEmpresas').textContent = cuentas.length;
+    tbody.innerHTML = cuentas.map(c => '<tr>' +
+      '<td><strong>' + (c.displayName || '—') + '</strong></td>' +
+      '<td>' + (c.dip || '—') + '</td>' +
+      '<td style="font-size:12px">' + (c.iban || '—') + '</td>' +
+      '<td><span class="pill pill-' + (c.eip ? 'success' : 'danger') + '">' + (c.eip || '❌ Sin EIP') + '</span></td>' +
+      '<td><span class="badge badge-' + (c.tributosCensusDate ? 'activo' : 'pendiente') + '">' + (c.tributosCensusDate ? '✅ Alta' : '⏳ Pendiente') + '</span></td>' +
+      '<td>' + Number(c.balancePz || 0).toLocaleString('es-ES') + ' Pz</td>' +
+      '<td>' + (c.placetaId || '—') + '</td></tr>'
+    ).join('');
+  } catch(e) { document.getElementById('empresasBody').innerHTML = '<tr><td colspan="7" class="error-cell">Error al cargar</td></tr>'; }
+}
+
+// ── EXPEDIENTES ─────────────────────────────────────────────────────────────
+async function cargarExpedientes() {
+  // Por ahora muestra los trámites como expedientes (se puede ampliar con justicia/expedientes disciplinarios)
+  try {
+    const r = await fetch('/api/admin/tramites/tramites?limit=200');
+    const datos = await r.json();
+    const tbody = document.getElementById('expedientesBody');
+    if (!Array.isArray(datos) || !datos.length) { tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">Sin expedientes</td></tr>'; return; }
+    const expedientes = datos.map(t => ({
+      codigo: 'EXP-' + String(t.id).padStart(4,'0'),
+      infractor: t.alias || '—',
+      tipo: t.tipo || 'General',
+      estado: t.estado || 'pendiente',
+      inicio: t.created_at,
+      vencimiento: t.estado === 'pendiente' ? new Date(Date.now() + 30*86400000).toISOString() : t.resuelto_en,
+      sancion: t.estado === 'aprobado' ? 'Resuelto' : t.estado === 'rechazado' ? 'Denegado' : 'En curso'
+    }));
+    document.getElementById('totalExpedientes').textContent = expedientes.length;
+    tbody.innerHTML = expedientes.map(e => '<tr>' +
+      '<td><strong>' + e.codigo + '</strong></td>' +
+      '<td>' + e.infractor + '</td>' +
+      '<td><span class="pill pill-purple">' + e.tipo + '</span></td>' +
+      '<td><span class="badge badge-' + (e.estado === 'aprobado' ? 'activo' : e.estado === 'rechazado' ? 'suspendido' : 'pendiente') + '">' + (e.estado === 'aprobado' ? '✅' : e.estado === 'rechazado' ? '❌' : '⏳') + ' ' + (e.estado || 'pendiente') + '</span></td>' +
+      '<td style="font-size:12px">' + fechaES(e.inicio) + '</td>' +
+      '<td style="font-size:12px">' + fechaES(e.vencimiento) + '</td>' +
+      '<td>' + e.sancion + '</td></tr>'
+    ).join('');
+  } catch(e) { document.getElementById('expedientesBody').innerHTML = '<tr><td colspan="7" class="error-cell">Error</td></tr>'; }
+}
+
+// ── INICIO ──────────────────────────────────────────────────────────────────
+function cargarTodo() { cargarTramites(); cargarEmpresas(); }
+document.addEventListener('DOMContentLoaded', cargarTodo);
 </script>

@@ -14,7 +14,7 @@ router.get('/tramites', verificarSesion, verificarRol('administrador', 'junta'),
   try {
     const db = getDb();
     const tramites = db.prepare(`
-      SELECT d.*, s.alias, s.dip, s.nombre_real
+      SELECT d.*, s.alias, s.dip, s.nombre_real, s.email, s.telefono
       FROM documentos_tramites d
       JOIN solicitantes s ON d.usuario_id = s.id
       ORDER BY d.created_at DESC LIMIT 200

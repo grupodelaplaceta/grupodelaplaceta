@@ -33,7 +33,8 @@ router.get('/galeria', (req, res) => {
 });
 
 router.get('/tramites', (req, res) => {
-  res.render('public/tramites', { titulo: 'Trámites', layout: 'layouts/publico', pathActual: '/tramites' });
+  const usuario = req.session.usuario || null;
+  res.render('public/tramites', { titulo: 'Trámites', layout: 'layouts/publico', pathActual: '/tramites', usuario });
 });
 
 // ── TRÁMITES LEGALES (Asociación) ───────────────────────────────────────────
