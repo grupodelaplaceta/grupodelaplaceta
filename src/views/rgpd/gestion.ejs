@@ -1,5 +1,43 @@
-<h1>Protección de Datos (RGPD / LOPDGDD)</h1>
-<p class="dashboard-date">Módulo 7: Cumplimiento Real de Privacidad</p>
+<div class="dashboard">
+  <div class="dashboard-header">
+    <h1>Protección de Datos (RGPD / LOPDGDD)</h1>
+    <p class="dashboard-date">Módulo 7: Cumplimiento Real de Privacidad</p>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card stat-primary">
+      <div class="stat-icon">🔒</div>
+      <div class="stat-content">
+        <span class="stat-value" id="kpiArco">—</span>
+        <span class="stat-label">Solicitudes ARCO</span>
+        <span class="stat-detail">Totales recibidas</span>
+      </div>
+    </div>
+    <div class="stat-card stat-success">
+      <div class="stat-icon">✅</div>
+      <div class="stat-content">
+        <span class="stat-value" id="kpiArcoOk">—</span>
+        <span class="stat-label">Completadas</span>
+        <span class="stat-detail">Resueltas en plazo</span>
+      </div>
+    </div>
+    <div class="stat-card stat-warning">
+      <div class="stat-icon">⏳</div>
+      <div class="stat-content">
+        <span class="stat-value" id="kpiArcoPend">—</span>
+        <span class="stat-label">Pendientes</span>
+        <span class="stat-detail">Dentro del plazo legal</span>
+      </div>
+    </div>
+    <div class="stat-card stat-info">
+      <div class="stat-icon">📋</div>
+      <div class="stat-content">
+        <span class="stat-value" id="kpiRat">—</span>
+        <span class="stat-label">RAT</span>
+        <span class="stat-detail">Registros de tratamiento</span>
+      </div>
+    </div>
+  </div>
 
 <div class="stats-grid">
   <div class="stat-card">
@@ -132,3 +170,4 @@
   cargarStatsARCO();
   cargarSolicitudesARCO();
 </script>
+</div>

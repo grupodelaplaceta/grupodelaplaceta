@@ -1,5 +1,43 @@
-<h1>Gestión de Recursos Digitales</h1>
-<p class="dashboard-date">Módulo 5: Permisos, Credenciales y Offboarding</p>
+<div class="dashboard">
+  <div class="dashboard-header">
+    <h1>Gestión de Recursos Digitales</h1>
+    <p class="dashboard-date">Módulo 5: Permisos, Credenciales y Offboarding</p>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card stat-primary">
+      <div class="stat-icon">🔧</div>
+      <div class="stat-content">
+        <span class="stat-value" id="kpiRecursos">—</span>
+        <span class="stat-label">Recursos</span>
+        <span class="stat-detail">Asignados total</span>
+      </div>
+    </div>
+    <div class="stat-card stat-success">
+      <div class="stat-icon">✅</div>
+      <div class="stat-content">
+        <span class="stat-value" id="kpiRecActivos">—</span>
+        <span class="stat-label">Activos</span>
+        <span class="stat-detail">En uso actual</span>
+      </div>
+    </div>
+    <div class="stat-card stat-warning">
+      <div class="stat-icon">⏳</div>
+      <div class="stat-content">
+        <span class="stat-value" id="kpiRecPend">—</span>
+        <span class="stat-label">Pendientes</span>
+        <span class="stat-detail">Por gestionar</span>
+      </div>
+    </div>
+    <div class="stat-card stat-info">
+      <div class="stat-icon">📋</div>
+      <div class="stat-content">
+        <span class="stat-value" id="kpiRecTipos">—</span>
+        <span class="stat-label">Tipos</span>
+        <span class="stat-detail">Categorías distintas</span>
+      </div>
+    </div>
+  </div>
 
 <div class="stats-grid">
   <div class="stat-card">
@@ -92,3 +130,4 @@
 
   cargarRecursos();
 </script>
+</div>

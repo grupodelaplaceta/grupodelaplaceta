@@ -1,56 +1,116 @@
-<h1>Gestión de Identidad y Registro</h1>
-<p class="dashboard-date">Módulo 1: PlacetaID, DIP y Control de Acceso</p>
-
-<div class="section">
-  <h2>Solicitudes Pendientes de Alta</h2>
-  <div class="table-container">
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>Alias</th>
-          <th>Nombre Real</th>
-          <th>Email</th>
-          <th>Edad</th>
-          <th>Franja</th>
-          <th>Aval</th>
-          <th>Fecha Solicitud</th>
-          <th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody id="pendientesTable">
-        <tr><td colspan="8" class="loading-cell">Cargando solicitudes...</td></tr>
-      </tbody>
-    </table>
+<div class="dashboard">
+  <div class="dashboard-header">
+    <h1>Gestión de Identidad y Registro</h1>
+    <p class="dashboard-date">Módulo 1: PlacetaID, DIP y Control de Acceso</p>
   </div>
-</div>
 
-<div class="section">
-  <h2>Buscar Usuarios</h2>
-  <div class="quick-actions" style="margin-bottom:16px">
-    <input type="text" id="searchUser" placeholder="Buscar por alias, DIP o email..." style="padding:10px 14px;border:2px solid var(--border);border-radius:var(--radius);font-size:14px;flex:1">
-    <button class="btn btn-primary" onclick="buscarUsuarios()">Buscar</button>
+  <div class="stats-grid">
+    <div class="stat-card stat-primary">
+      <div class="stat-icon">👥</div>
+      <div class="stat-content">
+        <span class="stat-value" id="totalUsuarios">—</span>
+        <span class="stat-label">Usuarios Registrados</span>
+        <span class="stat-detail">En el sistema</span>
+      </div>
+    </div>
+    <div class="stat-card stat-warning">
+      <div class="stat-icon">⏳</div>
+      <div class="stat-content">
+        <span class="stat-value" id="totalPendientes">—</span>
+        <span class="stat-label">Pendientes</span>
+        <span class="stat-detail">Solicitudes de alta sin revisar</span>
+      </div>
+    </div>
+    <div class="stat-card stat-success">
+      <div class="stat-icon">✅</div>
+      <div class="stat-content">
+        <span class="stat-value" id="totalActivos">—</span>
+        <span class="stat-label">Activos</span>
+        <span class="stat-detail">Usuarios con acceso completo</span>
+      </div>
+    </div>
+    <div class="stat-card stat-info">
+      <div class="stat-icon">🔑</div>
+      <div class="stat-content">
+        <span class="stat-value" id="totalPlacetaid">—</span>
+        <span class="stat-label">PlacetaID Activados</span>
+        <span class="stat-detail">Identidades digitales activas</span>
+      </div>
+    </div>
   </div>
-  <div class="table-container">
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>Alias</th>
-          <th>DIP</th>
-          <th>Franja</th>
-          <th>Estado</th>
-          <th>Rol</th>
-          <th>Cuenta</th>
-          <th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody id="usuariosTable">
-        <tr><td colspan="7" class="loading-cell">Cargando usuarios...</td></tr>
-      </tbody>
-    </table>
+
+  <div class="section">
+    <div class="section-header">
+      <div>
+        <h2>⏳ Solicitudes Pendientes de Alta</h2>
+        <p class="section-desc">Revisa y aprueba las nuevas solicitudes de registro</p>
+      </div>
+    </div>
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Alias</th>
+            <th>Nombre Real</th>
+            <th>Email</th>
+            <th>Edad</th>
+            <th>Franja</th>
+            <th>Aval</th>
+            <th>Fecha Solicitud</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="pendientesTable">
+          <tr><td colspan="8" class="loading-cell">Cargando solicitudes...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <div>
+        <h2>🔍 Buscar Usuarios</h2>
+        <p class="section-desc">Localiza usuarios por alias, DIP o email</p>
+      </div>
+      <div style="display:flex;gap:8px">
+        <input type="search" id="searchUser" placeholder="🔍 Buscar por alias, DIP o email..." style="width:280px;padding:8px 12px;border:2px solid var(--line);border-radius:var(--radius);font-family:var(--font);font-size:13px">
+        <button class="btn btn-primary btn-sm" onclick="buscarUsuarios()">Buscar</button>
+      </div>
+    </div>
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Alias</th>
+            <th>DIP</th>
+            <th>Franja</th>
+            <th>Estado</th>
+            <th>Rol</th>
+            <th>Cuenta</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="usuariosTable">
+          <tr><td colspan="7" class="loading-cell">Cargando usuarios...</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>
 
 <script>
+  async function cargarStatsIdentidad() {
+    try {
+      const usuarios = await apiFetch('/api/identidad/usuarios');
+      const pendientes = await apiFetch('/api/identidad/pendientes');
+      document.getElementById('totalUsuarios').textContent = usuarios.length;
+      document.getElementById('totalPendientes').textContent = pendientes.length;
+      document.getElementById('totalActivos').textContent = usuarios.filter(u => u.estado === 'activo').length;
+      document.getElementById('totalPlacetaid').textContent = usuarios.filter(u => u.placeid).length;
+    } catch (e) { /* fallback */ }
+  }
+
   async function cargarPendientes() {
     try {
       const data = await apiFetch('/api/identidad/pendientes');
@@ -140,4 +200,5 @@
 
   cargarPendientes();
   cargarUsuarios();
+  cargarStatsIdentidad();
 </script>

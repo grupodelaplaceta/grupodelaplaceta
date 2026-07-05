@@ -1,5 +1,43 @@
-<h1>Gestión Bancaria</h1>
-<p class="dashboard-date">Módulo 2: Core Bancario y Divisa Placeta (Pz)</p>
+<div class="dashboard">
+  <div class="dashboard-header">
+    <h1>Gestión Bancaria</h1>
+    <p class="dashboard-date">Módulo 2: Core Bancario y Divisa Placeta (Pz)</p>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card stat-primary">
+      <div class="stat-icon">🏦</div>
+      <div class="stat-content">
+        <span class="stat-value" id="kpiCuentas">—</span>
+        <span class="stat-label">Cuentas</span>
+        <span class="stat-detail">Registradas en el core</span>
+      </div>
+    </div>
+    <div class="stat-card stat-success">
+      <div class="stat-icon">💰</div>
+      <div class="stat-content">
+        <span class="stat-value" id="kpiMasa">—</span>
+        <span class="stat-label">Masa Monetaria</span>
+        <span class="stat-detail">Total Pz en circulación</span>
+      </div>
+    </div>
+    <div class="stat-card stat-info">
+      <div class="stat-icon">📊</div>
+      <div class="stat-content">
+        <span class="stat-value" id="kpiTransacciones">—</span>
+        <span class="stat-label">Transacciones</span>
+        <span class="stat-detail">Registradas hoy</span>
+      </div>
+    </div>
+    <div class="stat-card stat-warning">
+      <div class="stat-icon">💳</div>
+      <div class="stat-content">
+        <span class="stat-value" id="kpiTarjetas">—</span>
+        <span class="stat-label">Tarjetas</span>
+        <span class="stat-detail">Emitidas</span>
+      </div>
+    </div>
+  </div>
 
 <div class="section">
   <h2>Emisión / Quema Monetaria</h2>
@@ -118,3 +156,4 @@
 
   cargarResumen();
 </script>
+</div>

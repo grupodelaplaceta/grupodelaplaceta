@@ -1,5 +1,43 @@
-<h1>Gestión de Justicia y Expedientes</h1>
-<p class="dashboard-date">Módulo 6: Denuncias, Expedientes Disciplinarios y Sanciones</p>
+<div class="dashboard">
+  <div class="dashboard-header">
+    <h1>Gestión de Justicia y Expedientes</h1>
+    <p class="dashboard-date">Módulo 6: Denuncias, Expedientes Disciplinarios y Sanciones</p>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card stat-danger">
+      <div class="stat-icon">⚖️</div>
+      <div class="stat-content">
+        <span class="stat-value" id="kpiExpedientes">—</span>
+        <span class="stat-label">Expedientes</span>
+        <span class="stat-detail">Totales registrados</span>
+      </div>
+    </div>
+    <div class="stat-card stat-warning">
+      <div class="stat-icon">⏳</div>
+      <div class="stat-content">
+        <span class="stat-value" id="kpiAbiertos">—</span>
+        <span class="stat-label">Abiertos</span>
+        <span class="stat-detail">Pendientes de resolución</span>
+      </div>
+    </div>
+    <div class="stat-card stat-success">
+      <div class="stat-icon">✅</div>
+      <div class="stat-content">
+        <span class="stat-value" id="kpiResueltos">—</span>
+        <span class="stat-label">Resueltos</span>
+        <span class="stat-detail">Con fallo firme</span>
+      </div>
+    </div>
+    <div class="stat-card stat-info">
+      <div class="stat-icon">📋</div>
+      <div class="stat-content">
+        <span class="stat-value" id="kpiApelaciones">—</span>
+        <span class="stat-label">Apelaciones</span>
+        <span class="stat-detail">En proceso de revisión</span>
+      </div>
+    </div>
+  </div>
 
 <div class="section">
   <h2>Denuncias Pendientes</h2>
@@ -200,3 +238,4 @@
   cargarDenuncias();
   cargarExpedientes();
 </script>
+</div>

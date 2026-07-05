@@ -1,5 +1,43 @@
-<h1>Gestión de Ocio, Loterías e Inversiones</h1>
-<p class="dashboard-date">Módulo 4: Sorteos, Boletos y Fondos de Riesgo</p>
+<div class="dashboard">
+  <div class="dashboard-header">
+    <h1>Gestión de Ocio, Loterías e Inversiones</h1>
+    <p class="dashboard-date">Módulo 4: Sorteos, Boletos y Fondos de Riesgo</p>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card stat-primary">
+      <div class="stat-icon">🎲</div>
+      <div class="stat-content">
+        <span class="stat-value" id="kpiSorteos">—</span>
+        <span class="stat-label">Sorteos</span>
+        <span class="stat-detail">Activos en el sistema</span>
+      </div>
+    </div>
+    <div class="stat-card stat-success">
+      <div class="stat-icon">🎟️</div>
+      <div class="stat-content">
+        <span class="stat-value" id="kpiBoletos">—</span>
+        <span class="stat-label">Boletos</span>
+        <span class="stat-detail">Vendidos en sorteos</span>
+      </div>
+    </div>
+    <div class="stat-card stat-warning">
+      <div class="stat-icon">📈</div>
+      <div class="stat-content">
+        <span class="stat-value" id="kpiInversiones">—</span>
+        <span class="stat-label">Inversiones</span>
+        <span class="stat-detail">Fondos activos</span>
+      </div>
+    </div>
+    <div class="stat-card stat-info">
+      <div class="stat-icon">🏆</div>
+      <div class="stat-content">
+        <span class="stat-value" id="kpiPremios">—</span>
+        <span class="stat-label">Premios</span>
+        <span class="stat-detail">Entregados</span>
+      </div>
+    </div>
+  </div>
 
 <div class="section">
   <h2>Crear Nuevo Sorteo</h2>
@@ -107,3 +145,4 @@
 
   cargarSorteos();
 </script>
+</div>

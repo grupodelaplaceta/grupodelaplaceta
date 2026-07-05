@@ -110,6 +110,16 @@ app.use((req, res, next) => {
   next();
 });
 
+// Cache-busting: evitar caché del navegador en páginas HTML
+app.use((req, res, next) => {
+  if (req.accepts('html') && !req.path.startsWith('/api/') && !req.path.startsWith('/css/') && !req.path.startsWith('/js/') && !req.path.startsWith('/img/')) {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+  }
+  next();
+});
+
 // ── Rutas API ────────────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
 app.use('/api/identidad', identidadRoutes);

@@ -1,5 +1,43 @@
-<h1>Gestión Fiscal y Tributaria</h1>
-<p class="dashboard-date">Módulo 3: IRM, Descubiertos, RBU y Tasas</p>
+<div class="dashboard">
+  <div class="dashboard-header">
+    <h1>Gestión Fiscal y Tributaria</h1>
+    <p class="dashboard-date">Módulo 3: IRM, Descubiertos, RBU y Tasas</p>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card stat-primary">
+      <div class="stat-icon">📊</div>
+      <div class="stat-content">
+        <span class="stat-value" id="kpiIrm">—</span>
+        <span class="stat-label">IRM</span>
+        <span class="stat-detail">Impuesto de Regulación Monetaria</span>
+      </div>
+    </div>
+    <div class="stat-card stat-success">
+      <div class="stat-icon">💶</div>
+      <div class="stat-content">
+        <span class="stat-value" id="kpiRbu">—</span>
+        <span class="stat-label">RBU</span>
+        <span class="stat-detail">Renta Básica Universal reclamada</span>
+      </div>
+    </div>
+    <div class="stat-card stat-warning">
+      <div class="stat-icon">⚠️</div>
+      <div class="stat-content">
+        <span class="stat-value" id="kpiDescubiertos">—</span>
+        <span class="stat-label">Descubiertos</span>
+        <span class="stat-detail">Cuentas en negativo</span>
+      </div>
+    </div>
+    <div class="stat-card stat-info">
+      <div class="stat-icon">📅</div>
+      <div class="stat-content">
+        <span class="stat-value" id="kpiUltimoCierre">—</span>
+        <span class="stat-label">Último Cierre</span>
+        <span class="stat-detail">Período calculado</span>
+      </div>
+    </div>
+  </div>
 
 <div class="stats-grid">
   <div class="stat-card">
@@ -102,3 +140,4 @@
 
   cargarMultas();
 </script>
+</div>
