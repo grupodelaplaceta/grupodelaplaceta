@@ -11,17 +11,15 @@ let _exp = 0;
 async function getToken() {
   if (_token && Date.now() < _exp) return _token;
 
-  // 1) Bearer con API key (si verifyAdminApiKey desplegado)
-  for (const bearer of [API_KEY, null]) {
-    try {
-      const r = await fetch(`${API}/admin/stats`, {
-        headers: { 'Authorization': `Bearer ${bearer || API_KEY}`, 'X-API-Key': API_KEY }
-      });
-      if (r.ok) { _token = bearer || API_KEY; _exp = Date.now() + 3600000; return _token; }
-    } catch {}
-  }
+  // Usar API Key directamente (plid26 acepta ccb611... como admin)
+  try {
+    const r = await fetch(`${API}/admin/stats`, {
+      headers: { 'X-API-Key': API_KEY }
+    });
+    if (r.ok) { _token = API_KEY; _exp = Date.now() + 3600000; return _token; }
+  } catch {}
 
-  // 2) Login OAuth demo (2FA off)
+  // Fallback: login OAuth demo
   try {
     const f1 = await fetch(`${API}/auth/fase1`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -31,13 +29,13 @@ async function getToken() {
       const d = await f1.json();
       const t = d.tokenSesion || d.token || d.accessToken;
       if (t) {
-        const test = await fetch(`${API}/admin/stats`, { headers: { 'Authorization': `Bearer ${t}` } });
+        const test = await fetch(`${API}/admin/stats`, { headers: { 'Authorization': `Bearer ${t}`, 'X-API-Key': API_KEY } });
         if (test.ok || test.status === 403) { _token = t; _exp = Date.now() + 300000; return _token; }
       }
     }
   } catch {}
 
-  throw new Error('No auth. Despliega verifyAdminApiKey en PLID26 o configura PLACETAID_ADMIN_TOKEN.');
+  throw new Error('No se pudo autenticar contra PlacetaID. Verifica PLACETAID_API_KEY.');
 }
 
 async function call(path) {

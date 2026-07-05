@@ -66,21 +66,23 @@ router.get('/contributors/:placetaId', verificarSesion, verificarRol('administra
 
 router.post('/contributors', verificarSesion, verificarRol('administrador', 'junta', 'fiscal'), async (req, res) => {
   try {
-    const { placeta_id, dip, nombre, tipo_sujeto, roles_json, iban } = req.body;
+    const { placeta_id, dip, nombre, tipo_sujeto, roles_json, iban, eip } = req.body;
     if (!placeta_id || !dip || !nombre) {
       return res.status(400).json({ error: 'placeta_id_dip_nombre_requeridos' });
     }
 
+    const tipo = tipo_sujeto || 'Fisico';
     const contributor = await sbCreateTributosContributor({
       id: crypto.randomUUID?.() || String(Date.now()),
       placeta_id,
       dip,
       nombre,
-      tipo_sujeto: tipo_sujeto || 'Fisico',
+      tipo_sujeto: tipo,
       estado_fiscal: 'Al Dia',
       fecha_alta_tributos: new Date().toISOString(),
       roles_json: Array.isArray(roles_json) ? roles_json : String(roles_json || 'ciudadano').split(',').map((item) => item.trim()).filter(Boolean),
-      iban: iban || null
+      iban: iban || null,
+      eip: tipo === 'Empresa' ? (eip || null) : null
     });
 
     return res.json({ success: true, contributor });

@@ -126,6 +126,7 @@ CREATE TABLE IF NOT EXISTS tributos_contribuyentes (
   estado_fiscal TEXT DEFAULT 'Al Dia' CHECK (estado_fiscal IN ('Al Dia', 'Moroso', 'En Auditoria')),
   roles_json JSONB DEFAULT '["ciudadano"]',
   fecha_alta_tributos TIMESTAMPTZ, -- Si es NULL, el core BLP deniega transacciones
+  eip TEXT, -- Entidad Identificada de La Placeta (solo empresas)
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
