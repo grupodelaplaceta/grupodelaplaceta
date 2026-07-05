@@ -53,8 +53,8 @@
     <div class="section-header"><div><h2>🏢 Empresas y EIP</h2></div>
       <input type="search" id="searchEmpresas" oninput="filtrarTabla('searchEmpresas','empresasBody')" placeholder="🔍 Buscar empresa o EIP..." style="width:220px;padding:8px 12px;border:2px solid var(--line);border-radius:var(--radius);font-family:var(--font);font-size:13px">
     </div>
-    <div class="table-container"><table class="data-table"><thead><tr><th>Nombre</th><th>DIP Repr.</th><th>IBAN</th><th>EIP</th><th>Estado Tributos</th><th>Saldo</th><th>Vínculo</th></tr></thead>
-      <tbody id="empresasBody"><tr><td colspan="7" class="loading-cell">Cargando...</td></tr></tbody></table></div>
+    <div class="table-container"><table class="data-table"><thead><tr><th>Nombre</th><th>DIP Repr.</th><th>IBAN</th><th>EIP</th><th>Estado Tributos</th><th>Saldo</th><th>Vínculo</th><th>Acción</th></tr></thead>
+      <tbody id="empresasBody"><tr><td colspan="8" class="loading-cell">Cargando...</td></tr></tbody></table></div>
   </div>
 
   <!-- ═══════ TAB 4: EXPEDIENTES ═══════ -->
@@ -98,6 +98,15 @@
 let tramitesData = [];
 
 // ── Utilidades ──────────────────────────────────────────────────────────────
+async function apiFetch(url, opts) {
+  const r = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...opts });
+  if (!r.ok) {
+    let msg = 'HTTP ' + r.status;
+    try { const e = await r.json(); if (e.error) msg += ': ' + e.error; } catch {}
+    throw new Error(msg);
+  }
+  return r.json();
+}
 function switchTab(btn, tabId) {
   document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
   document.getElementById(tabId).style.display = 'block';
@@ -281,6 +290,7 @@ function filtrarTramitesPorDip(dip) {
 async function cargarEmpresas() {
   try {
     const r = await fetch('/api/bancario-proxy/cuentas?tipo=Business');
+    if (!r.ok) throw new Error('HTTP ' + r.status + ' — el backend-banco no está disponible');
     const cuentas = await r.json();
     const tbody = document.getElementById('empresasBody');
     if (!cuentas.length) { tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">Sin empresas registradas</td></tr>'; return; }
@@ -292,9 +302,36 @@ async function cargarEmpresas() {
       '<td><span class="pill pill-' + (c.eip ? 'success' : 'danger') + '">' + (c.eip || '❌ Sin EIP') + '</span></td>' +
       '<td><span class="badge badge-' + (c.tributosCensusDate ? 'activo' : 'pendiente') + '">' + (c.tributosCensusDate ? '✅ Alta' : '⏳ Pendiente') + '</span></td>' +
       '<td>' + Number(c.balancePz || 0).toLocaleString('es-ES') + ' Pz</td>' +
-      '<td>' + (c.placetaId || '—') + '</td></tr>'
+      '<td>' + (c.placetaId || '—') + '</td>' +
+      (!c.eip ? '<td><button class="btn btn-sm btn-primary" onclick="asignarEIP(\'' + c.id + '\',\'' + (c.displayName||c.id) + '\')">🔑 Asignar EIP</button></td>' : '<td><span style="color:var(--success);font-size:12px">✅ OK</span></td>') +
+      '</tr>'
     ).join('');
-  } catch(e) { document.getElementById('empresasBody').innerHTML = '<tr><td colspan="7" class="error-cell">Error al cargar</td></tr>'; }
+  } catch(e) {
+    document.getElementById('empresasBody').innerHTML = '<tr><td colspan="8" class="error-cell">' + e.message + '</td></tr>';
+    document.getElementById('totalEmpresas').textContent = '⚠️';
+  }
+}
+
+async function asignarEIP(cuentaId, nombre) {
+  const eip = prompt('Introduce EIP manual (o vacío para generar automático):', '');
+  if (eip !== null && eip.trim() === '') {
+    // Auto-generar
+    try {
+      const r = await apiFetch('/api/bancario-proxy/admin-cuentas', {
+        method: 'POST', body: JSON.stringify({ action: 'asignar-eip', accountId: cuentaId, motivo: 'Asignación desde Tramitación' })
+      });
+      alert('✅ EIP ' + r.eip + ' asignado a ' + nombre);
+      cargarEmpresas();
+    } catch(e) { alert('❌ ' + e.message); }
+  } else if (eip && eip.trim()) {
+    try {
+      const r = await apiFetch('/api/bancario-proxy/admin-cuentas', {
+        method: 'POST', body: JSON.stringify({ action: 'asignar-eip', accountId: cuentaId, eip: eip.trim().toUpperCase(), motivo: 'Asignación manual desde Tramitación' })
+      });
+      alert('✅ EIP ' + r.eip + ' asignado a ' + nombre);
+      cargarEmpresas();
+    } catch(e) { alert('❌ ' + e.message); }
+  }
 }
 
 // ── EXPEDIENTES ─────────────────────────────────────────────────────────────
