@@ -81,81 +81,65 @@ async function apiFetch(url, opts) {
 
 function formatPz(n) { return Number(n || 0).toLocaleString('es-ES', { minimumFractionDigits: 2 }) + ' Pz'; }
 
+// ── Datos desde proxy bancario (backend-banco real) ──────────────────────
 async function cargarResumen() {
   try {
-    const d = await apiFetch('/api/admin/audit/bancario/resumen');
-    document.getElementById('totalCuentas').textContent = d.cuentas;
-    document.getElementById('cuentasActivas').textContent = d.activas;
-    document.getElementById('cuentasNegativas').textContent = d.negativas;
-    document.getElementById('masaMonetaria').textContent = formatPz(d.masaMonetaria);
-    document.getElementById('volumenTransacciones').textContent = d.totalTransacciones + ' (' + formatPz(d.volumenTransacciones) + ')';
-    document.getElementById('bonosPendientes').textContent = d.bonoPendientes;
+    const d = await apiFetch('/api/bancario-proxy/resumen');
+    document.getElementById('totalCuentas').textContent = d.totalCuentas;
+    document.getElementById('cuentasActivas').textContent = d.totalUsuarios;
+    document.getElementById('masaMonetaria').textContent = formatPz(d.saldoTotal);
+    document.getElementById('volumenTransacciones').textContent = d.totalTransacciones;
+    document.getElementById('bonosPendientes').textContent = '—';
   } catch(e) { console.error(e); }
 }
 
 async function cargarTransacciones() {
   try {
-    const d = await apiFetch('/api/admin/audit/bancario/transacciones?limit=200');
+    const d = await apiFetch('/api/bancario-proxy/movimientos?limit=200');
     const tbody = document.getElementById('txBody');
     if (!d.length) { tbody.innerHTML = '<tr><td colspan="8" class="loading-cell">Sin transacciones</td></tr>'; return; }
     tbody.innerHTML = d.map(t => '<tr>' +
-      '<td>#' + t.id + '</td>' +
-      '<td>' + (t.creado_en ? new Date(t.creado_en).toLocaleString('es-ES') : '—') + '</td>' +
-      '<td><span class="pill pill-' + (t.tipo?.includes('debito')||t.cantidad<0?'danger':'success') + '">' + (t.tipo || 'transferencia') + '</span></td>' +
-      '<td>' + (t.alias_origen || '—') + '</td>' +
-      '<td>' + (t.alias_destino || '—') + '</td>' +
-      '<td><strong>' + formatPz(t.cantidad) + '</strong></td>' +
-      '<td style="font-size:12px">' + (t.concepto || '—') + '</td>' +
-      '<td><span class="badge badge-' + (t.estado === 'completada' ? 'activo' : 'pendiente') + '">' + (t.estado || '—') + '</span></td></tr>'
+      '<td style="font-size:11px">' + t.id.slice(0,12) + '…</td>' +
+      '<td>' + (t.createdAt ? new Date(t.createdAt).toLocaleString('es-ES') : '—') + '</td>' +
+      '<td><span class="pill pill-' + (t.kind?.includes('Fine')||t.amountPz<0?'danger':'success') + '">' + (t.kind || 'transfer') + '</span></td>' +
+      '<td style="font-size:12px">' + (t.fromAccountId ? t.fromAccountId.slice(0,16) : '—') + '</td>' +
+      '<td style="font-size:12px">' + (t.toAccountId ? t.toAccountId.slice(0,16) : '—') + '</td>' +
+      '<td><strong>' + formatPz(t.amountPz) + '</strong></td>' +
+      '<td style="font-size:12px">' + (t.note?.slice(0,30) || '—') + '</td>' +
+      '<td><span class="badge badge-' + (t.status === 'Settled' ? 'activo' : 'pendiente') + '">' + (t.status || '—') + '</span></td></tr>'
     ).join('');
-  } catch(e) { document.getElementById('txBody').innerHTML = '<tr><td colspan="8" class="error-cell">Error</td></tr>'; }
+  } catch(e) { document.getElementById('txBody').innerHTML = '<tr><td colspan="8" class="error-cell">Error: conexión con banco</td></tr>'; }
 }
 
 async function cargarDescubiertos() {
   try {
-    const d = await apiFetch('/api/admin/audit/bancario/cuentas-negativas');
+    const d = await apiFetch('/api/bancario-proxy/cuentas?tipo=Current');
+    const negativas = d.filter(c => (c.balancePz || 0) < 0);
     const tbody = document.getElementById('descubiertosBody');
-    if (!d.length) { tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">Sin cuentas en descubierto</td></tr>'; return; }
-    tbody.innerHTML = d.map(c => '<tr>' +
-      '<td>#' + c.id + '</td><td>' + (c.alias || '—') + '</td><td>' + (c.dip || '—') + '</td>' +
-      '<td style="color:#dc2626;font-weight:700">' + formatPz(c.saldo) + '</td>' +
-      '<td>' + formatPz(c.saldo_maximo) + '</td>' +
-      '<td><span class="badge badge-' + (c.estado_usuario === 'activo' ? 'activo' : 'suspendido') + '">' + (c.estado || '—') + '</span></td>' +
-      '<td><button class="btn btn-sm btn-danger" onclick="bloquearCuenta(' + c.id + ')">🔒</button></td></tr>'
+    if (!negativas.length) { tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">Sin cuentas en descubierto</td></tr>'; return; }
+    tbody.innerHTML = negativas.slice(0,50).map(c => '<tr>' +
+      '<td style="font-size:11px">' + (c.iban?.slice(0,14) || c.id.slice(0,10)) + '</td>' +
+      '<td>' + (c.displayName || '—') + '</td>' +
+      '<td>' + (c.placetaId || '—') + '</td>' +
+      '<td style="color:#dc2626;font-weight:700">' + formatPz(c.balancePz) + '</td>' +
+      '<td>—</td>' +
+      '<td><span class="badge badge-danger">Descubierto</span></td>' +
+      '<td><span style="color:var(--tm);font-size:11px">Gestionar desde banco</span></td></tr>'
     ).join('');
   } catch(e) { document.getElementById('descubiertosBody').innerHTML = '<tr><td colspan="7" class="error-cell">Error</td></tr>'; }
 }
 
 async function cargarSaldos() {
-  try {
-    const d = await apiFetch('/api/admin/audit/bancario/saldos-diarios?days=31');
-    const tbody = document.getElementById('saldosBody');
-    if (!d.length) { tbody.innerHTML = '<tr><td colspan="3" class="loading-cell">Sin datos</td></tr>'; return; }
-    tbody.innerHTML = d.map(s => '<tr><td>' + (s.fecha || '—') + '</td><td>' + formatPz(s.saldo_total) + '</td><td>' + (s.cuentas_negativas || 0) + '</td></tr>').join('');
-  } catch(e) { document.getElementById('saldosBody').innerHTML = '<tr><td colspan="3" class="error-cell">Error</td></tr>'; }
+  // No disponible desde proxy - mostrar mensaje
+  document.getElementById('saldosBody').innerHTML = '<tr><td colspan="3" class="loading-cell">Historial disponible en el panel del banco</td></tr>';
 }
 
 async function bloquearCuenta(id) {
-  if (!confirm('¿Bloquear cuenta #' + id + '?')) return;
-  try { await apiFetch('/api/admin/audit/bancario/bloquear/' + id, { method: 'POST' }); alert('Cuenta bloqueada'); cargarDescubiertos(); cargarResumen(); }
-  catch(e) { alert('Error: ' + e.message); }
+  alert('🔒 Gestiona bloqueos desde el panel del banco.');
 }
 
 async function ajustarSaldo() {
-  const cuentaId = document.getElementById('ajusteCuentaId').value;
-  const cantidad = parseFloat(document.getElementById('ajusteCantidad').value);
-  const concepto = document.getElementById('ajusteConcepto').value;
-  if (!cuentaId || !cantidad) { alert('Completa todos los campos'); return; }
-  if (!confirm(`¿Ajustar saldo de cuenta #${cuentaId} en ${formatPz(cantidad)}?`)) return;
-  try {
-    await apiFetch('/api/admin/audit/bancario/ajustar-saldo', {
-      method: 'POST', body: JSON.stringify({ cuentaId: parseInt(cuentaId), cantidad, concepto })
-    });
-    alert('✅ Ajuste aplicado');
-    document.getElementById('ajusteCantidad').value = '';
-    document.getElementById('ajusteConcepto').value = '';
-    cargarResumen();
-  } catch(e) { alert('Error: ' + e.message); }
+  alert('⚙️ Ajusta saldos desde el panel del banco.');
 }
 
 function cargarTodo() { cargarResumen(); cargarTransacciones(); cargarDescubiertos(); cargarSaldos(); }
