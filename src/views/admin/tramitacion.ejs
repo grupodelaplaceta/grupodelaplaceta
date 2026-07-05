@@ -10,15 +10,12 @@
     <div class="stat-card stat-success"><div class="stat-icon">✅</div><div class="stat-content"><span class="stat-value" id="totalAprobados">—</span><span class="stat-label">Aprobados</span></div></div>
     <div class="stat-card stat-danger"><div class="stat-icon">❌</div><div class="stat-content"><span class="stat-value" id="totalRechazados">—</span><span class="stat-label">Rechazados</span></div></div>
     <div class="stat-card stat-info"><div class="stat-icon">📄</div><div class="stat-content"><span class="stat-value" id="totalTramites">—</span><span class="stat-label">Total trámites</span></div></div>
-    <div class="stat-card stat-primary"><div class="stat-icon">🏢</div><div class="stat-content"><span class="stat-value" id="totalEmpresas">—</span><span class="stat-label">Empresas EIP</span></div></div>
     <div class="stat-card"><div class="stat-icon">📋</div><div class="stat-content"><span class="stat-value" id="totalExpedientes">—</span><span class="stat-label">Expedientes</span></div></div>
   </div>
 
   <!-- ═══════ PESTAÑAS ═══════ -->
   <div style="display:flex;gap:2px;margin:16px 0;border-bottom:2px solid var(--line);flex-wrap:wrap">
     <button class="tab-btn active" data-tab="tramitesTab" onclick="switchTab(this,'tramitesTab')">📋 Trámites</button>
-    <button class="tab-btn" data-tab="ciudadanosTab" onclick="switchTab(this,'ciudadanosTab');cargarCiudadanos()">👥 Ciudadanos</button>
-    <button class="tab-btn" data-tab="empresasTab" onclick="switchTab(this,'empresasTab');cargarEmpresas()">🏢 Empresas y EIP</button>
     <button class="tab-btn" data-tab="expedientesTab" onclick="switchTab(this,'expedientesTab');cargarExpedientes()">📁 Expedientes</button>
     <button style="margin-left:auto"><button class="btn btn-sm btn-primary" onclick="cargarTodo()">🔄 Refrescar</button></button>
   </div>
@@ -39,31 +36,7 @@
       <tbody id="tramitesBody"><tr><td colspan="8" class="loading-cell">Cargando...</td></tr></tbody></table></div>
   </div>
 
-  <!-- ═══════ TAB 2: CIUDADANOS ═══════ -->
-  <div id="ciudadanosTab" class="tab-content" style="display:none">
-    <div class="section-header"><div><h2>👥 Ciudadanos</h2></div>
-      <input type="search" id="searchCiudadanos" oninput="filtrarTabla('searchCiudadanos','ciudadanosBody')" placeholder="🔍 Buscar por DIP, nombre..." style="width:220px;padding:8px 12px;border:2px solid var(--line);border-radius:var(--radius);font-family:var(--font);font-size:13px">
-    </div>
-    <div class="table-container"><table class="data-table"><thead><tr><th>DIP</th><th>Nombre</th><th>Email / Teléfono</th><th>Trámites</th><th>Exp. Abiertos</th><th>Última actividad</th><th>Acción</th></tr></thead>
-      <tbody id="ciudadanosBody"><tr><td colspan="7" class="loading-cell">Cargando...</td></tr></tbody></table></div>
-  </div>
-
-  <!-- ═══════ TAB 3: EMPRESAS Y EIP ═══════ -->
-  <div id="empresasTab" class="tab-content" style="display:none">
-    <div class="section-header"><div><h2>🏢 Empresas y EIP</h2></div>
-      <input type="search" id="searchEmpresas" oninput="filtrarTabla('searchEmpresas','empresasBody')" placeholder="🔍 Buscar empresa o EIP..." style="width:220px;padding:8px 12px;border:2px solid var(--line);border-radius:var(--radius);font-family:var(--font);font-size:13px">
-    </div>
-    <div style="display:flex;gap:8px;margin-bottom:12px">
-      <button class="btn btn-sm btn-primary" onclick="cargarEmpresas()">🔄 Refrescar</button>
-      <button class="btn btn-sm btn-outline" onclick="cargarEmpresas('pendiente')">⏳ Pendientes</button>
-      <button class="btn btn-sm btn-outline" onclick="cargarEmpresas('activo')">✅ Activas</button>
-      <button class="btn btn-sm btn-outline" onclick="cargarEmpresas('baja')">📪 Bajas</button>
-    </div>
-    <div class="table-container"><table class="data-table"><thead><tr><th>ID</th><th>Nombre</th><th>Tipo</th><th>EIP</th><th>Representante</th><th>Email</th><th>Estado</th><th>Acción</th></tr></thead>
-      <tbody id="empresasBody"><tr><td colspan="8" class="loading-cell">Cargando...</td></tr></tbody></table></div>
-  </div>
-
-  <!-- ═══════ TAB 4: EXPEDIENTES ═══════ -->
+  <!-- ═══════ TAB 2: EXPEDIENTES ═══════ -->
   <div id="expedientesTab" class="tab-content" style="display:none">
     <div class="section-header"><div><h2>📁 Expedientes y seguimiento</h2></div>
       <input type="search" id="searchExpedientes" oninput="filtrarTabla('searchExpedientes','expedientesBody')" placeholder="🔍 Buscar..." style="width:220px;padding:8px 12px;border:2px solid var(--line);border-radius:var(--radius);font-family:var(--font);font-size:13px">
@@ -259,88 +232,7 @@ function mostrarTipos() {
   }).catch(() => alert('Error al cargar tipos'));
 }
 
-// ── CIUDADANOS ──────────────────────────────────────────────────────────────
-async function cargarCiudadanos() {
-  try {
-    const r = await fetch('/api/admin/tramites/tramites?limit=500');
-    const tramites = await r.json();
-    const usuarios = {};
-    (Array.isArray(tramites) ? tramites : []).forEach(t => {
-      const key = t.dip || t.alias || 'anon';
-      if (!usuarios[key]) usuarios[key] = { dip: t.dip, alias: t.alias, telefono: t.telefono || t.phone || '—', email: t.email || '—', tramites: [], expedientes: 0, ultima: null };
-      usuarios[key].tramites.push(t);
-      if (t.created_at && (!usuarios[key].ultima || t.created_at > usuarios[key].ultima)) usuarios[key].ultima = t.created_at;
-    });
-    const tbody = document.getElementById('ciudadanosBody');
-    const entries = Object.values(usuarios);
-    document.getElementById('totalExpedientes').textContent = entries.length;
-    if (!entries.length) { tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">Sin datos</td></tr>'; return; }
-    tbody.innerHTML = entries.map(u => '<tr>' +
-      '<td><strong>' + (u.dip || '—') + '</strong></td>' +
-      '<td>' + (u.alias || '—') + '</td>' +
-      '<td style="font-size:12px">' + (u.email || '—') + '<br>' + (u.telefono || '—') + '</td>' +
-      '<td>' + u.tramites.length + ' trámites</td>' +
-      '<td>' + (u.expedientes || 0) + '</td>' +
-      '<td style="font-size:12px">' + (u.ultima ? fechaES(u.ultima) : '—') + '</td>' +
-      '<td><button class="btn btn-sm btn-outline" onclick="filtrarTramitesPorDip(\'' + (u.dip||'') + '\')">🔍 Ver trámites</button></td></tr>'
-    ).join('');
-  } catch(e) { document.getElementById('ciudadanosBody').innerHTML = '<tr><td colspan="7" class="error-cell">Error</td></tr>'; }
-}
-function filtrarTramitesPorDip(dip) {
-  switchTab(document.querySelector('[data-tab="tramitesTab"]'), 'tramitesTab');
-  document.getElementById('searchTramites').value = dip;
-  filtrarTramites();
-}
 
-// ── EMPRESAS Y EIP ─────────────────────────────────────────────────────────
-async function cargarEmpresas(estado) {
-  try {
-    const url = '/api/admin/tramites/entidades' + (estado ? '?estado=' + estado : '');
-    const r = await fetch(url);
-    const entidades = await r.json();
-    const tbody = document.getElementById('empresasBody');
-    if (!entidades.length) { tbody.innerHTML = '<tr><td colspan="8" class="loading-cell">Sin entidades registradas</td></tr>'; return; }
-    document.getElementById('totalEmpresas').textContent = entidades.length;
-    tbody.innerHTML = entidades.map(e => '<tr>' +
-      '<td style="font-size:11px">#' + e.id + '</td>' +
-      '<td><strong>' + (e.nombre || '—') + '</strong></td>' +
-      '<td><span class="pill pill-purple">' + (e.tipo || '—') + '</span></td>' +
-      '<td><span class="pill pill-' + (e.eip ? 'success' : 'danger') + '">' + (e.eip || '❌ Sin EIP') + '</span></td>' +
-      '<td style="font-size:12px">' + (e.representante?.alias || e.representante?.dip || e.representante_dip || '—') + '</td>' +
-      '<td style="font-size:12px">' + (e.email || '—') + '</td>' +
-      '<td><span class="badge badge-' + (e.estado === 'activo' ? 'activo' : e.estado === 'baja' ? 'suspendido' : 'pendiente') + '">' + (e.estado || 'pendiente') + '</span></td>' +
-      '<td style="display:flex;gap:4px">' +
-        '<button class="btn btn-sm btn-outline" onclick="alert(\'EIP: ' + (e.eip||'') + '\\nNombre: ' + (e.nombre||'') + '\\nTipo: ' + (e.tipo||'') + '\\nCIF: ' + (e.cif||'') + '\\nEmail: ' + (e.email||'') + '\\nDesc: ' + ((e.descripcion||'').slice(0,80)) + '\')">🔍</button>' +
-        (e.estado !== 'baja' ? '<button class="btn btn-sm btn-warning" onclick="solicitarBaja(' + e.id + ',\'' + (e.nombre||'') + '\')">📪</button>' : '') +
-        '<button class="btn btn-sm btn-danger" onclick="eliminarEntidad(' + e.id + ',\'' + (e.nombre||'') + '\')">🗑️</button>' +
-      '</td></tr>'
-    ).join('');
-  } catch(e) {
-    document.getElementById('empresasBody').innerHTML = '<tr><td colspan="8" class="error-cell">' + (e.message || 'Error') + '</td></tr>';
-    document.getElementById('totalEmpresas').textContent = '⚠️';
-  }
-}
-
-async function solicitarBaja(id, nombre) {
-  const motivo = prompt('Motivo de la baja para "' + nombre + '":', 'Baja voluntaria');
-  if (!motivo) return;
-  try {
-    const r = await fetch('/api/admin/tramites/entidades/baja/' + id, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ motivo }) });
-    const d = await r.json();
-    alert(d.ok ? '✅ ' + d.message : '❌ ' + (d.error || 'Error'));
-    cargarEmpresas();
-  } catch(e) { alert('❌ ' + e.message); }
-}
-
-async function eliminarEntidad(id, nombre) {
-  if (!confirm('¿Eliminar PERMANENTEMENTE "' + nombre + '"? No se puede deshacer.')) return;
-  try {
-    const r = await fetch('/api/admin/tramites/entidades/delete/' + id, { method: 'POST' });
-    const d = await r.json();
-    alert(d.ok ? '✅ ' + d.message : '❌ ' + (d.error || 'Error'));
-    cargarEmpresas();
-  } catch(e) { alert('❌ ' + e.message); }
-}
 
 
 
@@ -375,6 +267,6 @@ async function cargarExpedientes() {
 }
 
 // ── INICIO ──────────────────────────────────────────────────────────────────
-function cargarTodo() { cargarTramites(); cargarEmpresas(); }
+function cargarTodo() { cargarTramites(); }
 document.addEventListener('DOMContentLoaded', cargarTodo);
 </script>

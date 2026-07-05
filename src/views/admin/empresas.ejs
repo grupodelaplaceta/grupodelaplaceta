@@ -1,0 +1,77 @@
+<div class="dashboard">
+  <div class="dashboard-header">
+    <h1>🏢 Empresas y EIP</h1>
+    <p class="dashboard-date">Gestión de entidades, EIPs y bajas</p>
+  </div>
+
+  <div class="stats-grid" id="statsGrid">
+    <div class="stat-card stat-primary"><div class="stat-icon">🏢</div><div class="stat-content"><span class="stat-value" id="totalEmpresas">—</span><span class="stat-label">Total</span></div></div>
+    <div class="stat-card stat-success"><div class="stat-icon">✅</div><div class="stat-content"><span class="stat-value" id="totalActivas">—</span><span class="stat-label">Activas</span></div></div>
+    <div class="stat-card stat-warning"><div class="stat-icon">⏳</div><div class="stat-content"><span class="stat-value" id="totalPendientes">—</span><span class="stat-label">Pendientes</span></div></div>
+    <div class="stat-card"><div class="stat-icon">📪</div><div class="stat-content"><span class="stat-value" id="totalBajas">—</span><span class="stat-label">Bajas</span></div></div>
+  </div>
+
+  <div class="section-header"><div><h2>Entidades registradas</h2></div>
+    <div style="display:flex;gap:6px">
+      <button class="btn btn-sm btn-outline" onclick="cargarEmpresas()">📋 Todas</button>
+      <button class="btn btn-sm btn-outline" onclick="cargarEmpresas('pendiente')">⏳ Pendientes</button>
+      <button class="btn btn-sm btn-outline" onclick="cargarEmpresas('activo')">✅ Activas</button>
+      <button class="btn btn-sm btn-outline" onclick="cargarEmpresas('baja')">📪 Bajas</button>
+      <button class="btn btn-sm btn-primary" onclick="cargarEmpresas()">🔄</button>
+    </div>
+  </div>
+  <div class="table-container"><table class="data-table"><thead><tr><th>ID</th><th>Nombre</th><th>Tipo</th><th>EIP</th><th>Representante</th><th>Email</th><th>Estado</th><th>Acción</th></tr></thead>
+    <tbody id="empresasBody"><tr><td colspan="8" class="loading-cell">Cargando...</td></tr></tbody></table></div>
+</div>
+
+<script>
+async function apiFetch(url, opts) {
+  const r = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...opts });
+  if (!r.ok) { let m = 'HTTP ' + r.status; try { const e = await r.json(); if (e.error) m += ': ' + e.error; } catch {} throw new Error(m); }
+  return r.json();
+}
+async function cargarEmpresas(estado) {
+  try {
+    const url = '/api/admin/tramites/entidades' + (estado ? '?estado=' + estado : '');
+    const d = await apiFetch(url);
+    const tbody = document.getElementById('empresasBody');
+    document.getElementById('totalEmpresas').textContent = d.length;
+    document.getElementById('totalActivas').textContent = d.filter(e => e.estado === 'activo').length;
+    document.getElementById('totalPendientes').textContent = d.filter(e => e.estado === 'pendiente').length;
+    document.getElementById('totalBajas').textContent = d.filter(e => e.estado === 'baja').length;
+    if (!d.length) { tbody.innerHTML = '<tr><td colspan="8" class="loading-cell">Sin entidades</td></tr>'; return; }
+    tbody.innerHTML = d.map(e => '<tr>' +
+      '<td style="font-size:11px">#' + e.id + '</td>' +
+      '<td><strong>' + (e.nombre || '—') + '</strong></td>' +
+      '<td><span class="pill pill-purple">' + (e.tipo || '—') + '</span></td>' +
+      '<td><span class="pill pill-' + (e.eip ? 'success' : 'danger') + '">' + (e.eip || '❌') + '</span></td>' +
+      '<td style="font-size:12px">' + (e.representante?.alias || e.representante?.dip || e.representante_dip || '—') + '</td>' +
+      '<td style="font-size:12px">' + (e.email || '—') + '</td>' +
+      '<td><span class="badge badge-' + (e.estado === 'activo' ? 'activo' : e.estado === 'baja' ? 'suspendido' : 'pendiente') + '">' + (e.estado || 'pendiente') + '</span></td>' +
+      '<td style="display:flex;gap:4px">' +
+        '<button class="btn btn-sm btn-outline" onclick="alert(\'EIP: ' + (e.eip||'') + '\\nNombre: ' + (e.nombre||'') + '\\nTipo: ' + (e.tipo||'') + '\\nCIF: ' + (e.cif||'') + '\\nEmail: ' + (e.email||'') + '\\nDesc: ' + ((e.descripcion||'').slice(0,100)) + '\')">🔍</button>' +
+        (e.estado !== 'baja' ? '<button class="btn btn-sm btn-warning" onclick="solicitarBaja(' + e.id + ',\'' + (e.nombre||'') + '\')">📪</button>' : '') +
+        '<button class="btn btn-sm btn-danger" onclick="eliminarEntidad(' + e.id + ',\'' + (e.nombre||'') + '\')">🗑️</button>' +
+      '</td></tr>'
+    ).join('');
+  } catch(e) { document.getElementById('empresasBody').innerHTML = '<tr><td colspan="8" class="error-cell">' + (e.message || 'Error') + '</td></tr>'; }
+}
+async function solicitarBaja(id, nombre) {
+  const motivo = prompt('Motivo de la baja para "' + nombre + '":', 'Baja voluntaria');
+  if (!motivo) return;
+  try {
+    const r = await fetch('/api/admin/tramites/entidades/baja/' + id, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ motivo }) });
+    const d = await r.json();
+    alert(d.ok ? '✅ ' + d.message : '❌ ' + (d.error || 'Error')); cargarEmpresas();
+  } catch(e) { alert('❌ ' + e.message); }
+}
+async function eliminarEntidad(id, nombre) {
+  if (!confirm('¿Eliminar PERMANENTEMENTE "' + nombre + '"? No se puede deshacer.')) return;
+  try {
+    const r = await fetch('/api/admin/tramites/entidades/delete/' + id, { method: 'POST' });
+    const d = await r.json();
+    alert(d.ok ? '✅ ' + d.message : '❌ ' + (d.error || 'Error')); cargarEmpresas();
+  } catch(e) { alert('❌ ' + e.message); }
+}
+document.addEventListener('DOMContentLoaded', () => cargarEmpresas());
+</script>

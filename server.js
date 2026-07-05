@@ -266,6 +266,8 @@ app.get('/admin/contenidos', verificarAuth, (req, res) => res.render('admin/cont
 app.get('/admin/voley-club', verificarAuth, (req, res) => res.render('admin/voley-club', { titulo: 'Voley Club - Gestión' }));
 app.get('/admin/audit-bancario', verificarAuth, (req, res) => res.render('admin/audit-bancario', { titulo: 'Auditoría Bancaria' }));
 app.get('/admin/tramitacion', verificarAuth, (req, res) => res.render('admin/tramitacion', { titulo: 'Tramitación' }));
+app.get('/admin/ciudadanos', verificarAuth, (req, res) => res.render('admin/ciudadanos', { titulo: 'Ciudadanos' }));
+app.get('/admin/empresas', verificarAuth, (req, res) => res.render('admin/empresas', { titulo: 'Empresas y EIP' }));
 app.get('/admin/vigilancia', verificarAuth, (req, res) => res.render('admin/vigilancia', { titulo: 'Vigilancia y Monitoreo' }));
 
 // URLs públicas de firma
