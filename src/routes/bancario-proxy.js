@@ -283,4 +283,15 @@ router.post('/admin-cuentas', verificarSesion, verificarRol('administrador', 'ju
   }
 });
 
+// ── Audit logs ─────────────────────────────────────────────────────────────
+router.get('/audit-logs', verificarSesion, verificarRol('administrador', 'junta', 'fiscal'), async (req, res) => {
+  try {
+    const state = await fetchBancoState(req);
+    const logs = (state.auditLogs || []).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 100);
+    res.json(logs);
+  } catch (err) {
+    res.status(502).json({ error: err.message });
+  }
+});
+
 export default router;

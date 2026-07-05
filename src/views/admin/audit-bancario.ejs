@@ -24,7 +24,7 @@
     <button class="tab-btn" data-tab="tabCumplimiento" onclick="switchTab(this,'tabCumplimiento')">⚖️ Cumplimiento</button>
     <button class="tab-btn" data-tab="tabAlertas" onclick="switchTab(this,'tabAlertas')">🚨 Alertas</button>
     <button class="tab-btn" data-tab="tabGestion" onclick="switchTab(this,'tabGestion')">🔧 Gestión</button>
-    <button style="margin-left:auto"><button class="btn btn-sm btn-primary" onclick="cargarTodo()">🔄 Refrescar todo</button></button>
+    <div style="margin-left:auto"><button class="btn btn-sm btn-primary" onclick="cargarTodo()">🔄 Refrescar todo</button></div>
   </div>
 
   <!-- ═══════════ TAB 1: TESORERÍA ═══════════ -->
@@ -401,23 +401,28 @@ async function gestionAltaTributos() {
 }
 async function cargarAuditLogs() {
   try {
-    const state = await apiFetch('/api/bancario-proxy/resumen'); // para state
-    const d = await apiFetch('/api/bancario-proxy/movimientos?limit=20');
-    // Leer audit logs del state directamente
-    let logs = [];
-    try {
-      const stateFull = await fetch('/api/bancario-proxy/cuentas?tipo=Personal&limit=1').then(r => r.json()).catch(()=>[]);
-      // No podemos leer audit logs desde el proxy actualmente, mostrar mensaje
-    } catch {}
+    const d = await apiFetch('/api/bancario-proxy/audit-logs');
     const tbody = document.getElementById('gestionAuditBody');
-    tbody.innerHTML = '<tr><td colspan="5" class="loading-cell">Audit logs disponibles en el panel de auditoría</td></tr>';
-  } catch(e) { document.getElementById('gestionAuditBody').innerHTML = '<tr><td colspan="5" class="error-cell">Error</td></tr>'; }
+    if (!d.length) { tbody.innerHTML = '<tr><td colspan="5" class="loading-cell">Sin operaciones registradas aún</td></tr>'; return; }
+    tbody.innerHTML = d.slice(0, 50).map(l => '<tr>' +
+      '<td style="font-size:11px">' + txIdShort(l.id) + '</td>' +
+      '<td><span class="pill pill-' + (l.action === 'emitir' || l.action === 'asignar_eip' || l.action === 'alta_tributos' ? 'success' : 'danger') + '">' + (l.action || '—') + '</span></td>' +
+      '<td>' + (l.admin || '—') + '</td>' +
+      '<td style="font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis">' + (l.motivo || l.eip || l.tipoNuevo || JSON.stringify(l).slice(0,80) || '—') + '</td>' +
+      '<td style="font-size:12px">' + fechaES(l.createdAt) + '</td></tr>'
+    ).join('');
+  } catch(e) { document.getElementById('gestionAuditBody').innerHTML = '<tr><td colspan="5" class="error-cell">Error al cargar auditoría</td></tr>'; }
 }
 function cargarTodo() {
   cargarResumen();
   cargarTesoro();
   cargarTarjetas();
   cargarCuentas();
+  cargarTransacciones();
+  cargarCiudadanos();
+  cargarCumplimiento();
+  cargarAlertas();
+  cargarAuditLogs();
   cargarTransacciones();
   cargarCiudadanos();
   cargarCumplimiento();
