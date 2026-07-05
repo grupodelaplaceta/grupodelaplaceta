@@ -32,7 +32,7 @@ async function apiFetch(url, opts) {
 }
 async function cargarEmpresas(estado) {
   try {
-    const url = '/api/admin/tramites/entidades' + (estado ? '?estado=' + estado : '');
+    const url = '/api/admin/entidades' + (estado ? '?estado=' + estado : '');
     const d = await apiFetch(url);
     const tbody = document.getElementById('empresasBody');
     document.getElementById('totalEmpresas').textContent = d.length;
@@ -60,7 +60,7 @@ async function solicitarBaja(id, nombre) {
   const motivo = prompt('Motivo de la baja para "' + nombre + '":', 'Baja voluntaria');
   if (!motivo) return;
   try {
-    const r = await fetch('/api/admin/tramites/entidades/baja/' + id, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ motivo }) });
+    const r = await fetch('/api/admin/entidades/baja/' + id, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ motivo }) });
     const d = await r.json();
     alert(d.ok ? '✅ ' + d.message : '❌ ' + (d.error || 'Error')); cargarEmpresas();
   } catch(e) { alert('❌ ' + e.message); }
@@ -68,7 +68,7 @@ async function solicitarBaja(id, nombre) {
 async function eliminarEntidad(id, nombre) {
   if (!confirm('¿Eliminar PERMANENTEMENTE "' + nombre + '"? No se puede deshacer.')) return;
   try {
-    const r = await fetch('/api/admin/tramites/entidades/delete/' + id, { method: 'POST' });
+    const r = await fetch('/api/admin/entidades/delete/' + id, { method: 'POST' });
     const d = await r.json();
     alert(d.ok ? '✅ ' + d.message : '❌ ' + (d.error || 'Error')); cargarEmpresas();
   } catch(e) { alert('❌ ' + e.message); }

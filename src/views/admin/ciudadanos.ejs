@@ -31,7 +31,7 @@ function filtrarTabla(searchId, tbodyId) {
 }
 async function cargarCiudadanos() {
   try {
-    const d = await apiFetch('/api/admin/tramites/ciudadanos');
+    const d = await apiFetch('/api/admin/ciudadanos');
     const tbody = document.getElementById('ciudadanosBody');
     document.getElementById('totalCiudadanos').textContent = d.length;
     document.getElementById('totalActivos').textContent = d.filter(u => u.estado === 'activo').length;
