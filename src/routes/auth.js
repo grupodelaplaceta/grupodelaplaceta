@@ -168,7 +168,61 @@ router.post('/register', async (req, res) => {
     }
 
     // Generar DIP (verificar unicidad en ambos sistemas)
-    let dip, placeid, hash, passwordHash;
+    let dip;
+    let dipUnico = false;
+    while (!dipUnico) {
+      dip = `${franja.slice(0, 2).toUpperCase()}${String(Math.floor(100000 + Math.random() * 900000))}`;
+      const existenteEnSQLite = db.prepare('SELECT id FROM solicitantes WHERE dip = ?').get(dip);
+      const existenteEnSupabase = supabaseOk ? (await sbFindSolicitudDip(dip).catch(() => null)) : null;
+      dipUnico = !existenteEnSQLite && !existenteEnSupabase;
+    }
+
+    // ── Insertar en Supabase (si disponible) ─────────────────────────────
+    let supabaseUserId = null;
+    if (supabaseOk) {
+      try {
+        const sbUser = await sbCreateSolicitante({
+          id: null, alias, nombre_real, email, fecha_nacimiento, edad, dip,
+          placeid: `PLID-${dip}`,
+          password_hash: hashSync(password, 10),
+          franja_edad: franja, estado: 'pendiente', rol: 'miembro',
+          ip_ultimo_acceso: ip
+        });
+        if (sbUser) supabaseUserId = sbUser.id;
+      } catch (e) {
+        console.warn('  ⚠️  Register: Error insertando en Supabase:', e.message);
+      }
+    }
+
+    // ── Insertar en SQLite ──────────────────────────────────────────────
+    const result = db.prepare(`
+      INSERT INTO solicitantes (alias, nombre_real, email, fecha_nacimiento, edad, dip, placeid,
+        password_hash, franja_edad, estado, rol, ip_registro, creado_en, actualizado_en)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente', 'miembro', ?, datetime('now'), datetime('now'))
+    `).run(alias, nombre_real, email, fecha_nacimiento, edad, dip, `PLID-${dip}`,
+      hashSync(password, 10), franja, ip);
+
+    const userId = result.lastInsertRowid;
+
+    // ── Crear contribuyente en tributos automáticamente ─────────────────
+    try {
+      const { sbCreateTributosContributor } = await import('../config/db-supabase.js');
+      await sbCreateTributosContributor({
+        id: crypto.randomUUID?.() || String(Date.now()),
+        placeta_id: `PLID-${dip}`,
+        dip,
+        nombre: nombre_real,
+        tipo_sujeto: 'Fisico',
+        estado_fiscal: 'Al Dia',
+        fecha_alta_tributos: new Date().toISOString(),
+        roles_json: ['ciudadano'],
+        iban: null,
+        eip: null
+      }).catch(() => {});
+    } catch (e) { /* tributos no disponible */ }
+
+    // ── Log de auditoría ────────────────────────────────────────────────
+    let placeid, hash, passwordHash;
     do {
       const num = Math.floor(10000000 + Math.random() * 90000000);
       const letras = 'TRWAGMYFPDXBNJZSQVHLCKE';

@@ -217,6 +217,35 @@ router.get('/tramites/tipos', verificarSesion, (req, res) => {
   ]);
 });
 
+// PUT /api/admin/tramites/:id — Editar trámite (contenido, observaciones, estado, tipo)
+router.put('/tramites/:id', verificarSesion, verificarRol('administrador', 'junta', 'secretario'), (req, res) => {
+  try {
+    const db = getDb();
+    const tramite = db.prepare('SELECT * FROM documentos_tramites WHERE id = ?').get(req.params.id);
+    if (!tramite) return res.status(404).json({ error: 'Trámite no encontrado' });
+
+    const campos = [];
+    const valores = [];
+    for (const campo of ['contenido', 'observaciones', 'estado', 'tipo']) {
+      if (req.body[campo] !== undefined) {
+        campos.push(`${campo}=?`);
+        valores.push(req.body[campo]);
+      }
+    }
+    if (campos.length === 0) return res.status(400).json({ error: 'Nada que actualizar' });
+
+    campos.push('resuelto_en=datetime()');
+    valores.push(req.params.id);
+
+    db.prepare(`UPDATE documentos_tramites SET ${campos.join(',')} WHERE id=?`).run(...valores);
+
+    const updated = db.prepare('SELECT * FROM documentos_tramites WHERE id = ?').get(req.params.id);
+    res.json({ success: true, tramite: updated });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ═══════════════════════════════════════════════════════════════════════════
 //  NOTIFICACIONES — Sistema de notificaciones internas
 // ═══════════════════════════════════════════════════════════════════════════

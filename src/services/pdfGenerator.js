@@ -466,16 +466,42 @@ class PDFGenerator {
   }
 
   _renderHtml(html) {
-    for (const line of html.split('\n')) {
-      const t = line.trim();
-      if (!t) { this.doc.y += 3; continue; }
-      if (t.startsWith('<h1>')) this._titulo1(t.replace(/<\/?h1>/g,''));
-      else if (t.startsWith('<h2>')) this._titulo2(t.replace(/<\/?h2>/g,''));
-      else if (t.startsWith('<h3>')) this._titulo3(t.replace(/<\/?h3>/g,''));
-      else if (t.startsWith('<tag>')) this._tag(t.replace(/<\/?tag>/g,''));
-      else if (t.startsWith('<note>')) this._nota(t.replace(/<\/?note>/g,''));
-      else if (t.startsWith('<p>')) this._texto(t.replace(/<\/?p>/g,''));
-      else this._texto(t);
+    // Extraer bloques con regex en lugar de split por líneas
+    const blockRegex = /<(h[1-3]|p|tag|note)[^>]*>[\s\S]*?<\/\1>/gi;
+    let lastIdx = 0;
+    const blocks = [];
+    let match;
+    while ((match = blockRegex.exec(html)) !== null) {
+      if (match.index > lastIdx) {
+        const textBetween = html.slice(lastIdx, match.index).trim();
+        if (textBetween) blocks.push({ type: 'text', content: textBetween });
+      }
+      const tagName = match[1];
+      const inner = match[0].replace(/<[^>]*>/g, '').trim();
+      if (inner) blocks.push({ type: tagName, content: inner });
+      lastIdx = blockRegex.lastIndex;
+    }
+    if (lastIdx < html.length) {
+      const rest = html.slice(lastIdx).trim();
+      if (rest) blocks.push({ type: 'text', content: rest.replace(/<[^>]*>/g, '').trim() });
+    }
+
+    if (blocks.length === 0) {
+      // Fallback: sin etiquetas HTML, tratar como texto plano
+      const plain = html.replace(/<[^>]*>/g, '').trim();
+      if (plain) this._texto(plain);
+      return;
+    }
+
+    for (const b of blocks) {
+      const content = b.content;
+      if (!content) continue;
+      if (b.type === 'h1') this._titulo1(content);
+      else if (b.type === 'h2') this._titulo2(content);
+      else if (b.type === 'h3') this._titulo3(content);
+      else if (b.type === 'tag') this._tag(content);
+      else if (b.type === 'note') this._nota(content);
+      else this._texto(content);
     }
   }
 }

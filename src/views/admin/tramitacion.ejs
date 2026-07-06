@@ -115,23 +115,41 @@ function renderTramites(lista) {
   document.getElementById('totalTramites').textContent = lista.length;
 
   const tbody = document.getElementById('tramitesBody');
-  if (!lista.length) { tbody.innerHTML = '<tr><td colspan="8" class="loading-cell">Sin trámites</td></tr>'; return; }
+  if (!lista.length) { tbody.innerHTML = '<tr><td colspan="9" class="loading-cell">Sin trámites</td></tr>'; return; }
   tbody.innerHTML = lista.map(t => {
-    const estClass = t.estado === 'aprobado' ? 'badge-activo' : t.estado === 'rechazado' ? 'badge-suspendido' : 'badge-pendiente';
-    const estLabel = t.estado === 'aprobado' ? '✅ Aprobado' : t.estado === 'rechazado' ? '❌ Rechazado' : '⏳ Pendiente';
-    const seguimiento = t.estado === 'aprobado' ? '✅ Resuelto ' + fechaES(t.resuelto_en) : t.estado === 'rechazado' ? '❌ Rechazado ' + fechaES(t.resuelto_en) : (t.created_at ? '🕐 ' + Math.floor((Date.now() - new Date(t.created_at).getTime())/86400000) + 'd espera' : '—');
+    const estClass = t.estado === 'aprobado' ? 'badge-activo' : t.estado === 'rechazado' ? 'badge-suspendido' : t.estado === 'en_revision' ? 'badge-login' : t.estado === 'documentacion_requerida' ? 'badge-pendiente' : t.estado === 'completado' ? 'badge-activo' : 'badge-pendiente';
+    const estadoLabels = {
+      'pendiente': '⏳ Pendiente', 'en_revision': '🔍 En Revisión',
+      'documentacion_requerida': '📎 Docs Requeridos', 'aprobado': '✅ Aprobado',
+      'rechazado': '❌ Rechazado', 'completado': '🎉 Completado'
+    };
+    const estLabel = estadoLabels[t.estado] || (t.estado === 'aprobado' ? '✅ Aprobado' : t.estado === 'rechazado' ? '❌ Rechazado' : '⏳ ' + (t.estado || 'Pendiente'));
+    const seguimiento = t.estado === 'aprobado' ? '✅ ' + fechaES(t.resuelto_en) : t.estado === 'rechazado' ? '❌ ' + fechaES(t.resuelto_en) : t.estado === 'completado' ? '🎉 ' + fechaES(t.resuelto_en) : (t.created_at ? '🕐 ' + Math.floor((Date.now() - new Date(t.created_at).getTime())/86400000) + 'd' : '—');
     return '<tr data-estado="' + (t.estado || 'pendiente') + '">' +
       '<td>#' + t.id + '</td>' +
       '<td>' + fechaES(t.created_at) + '</td>' +
       '<td><strong>' + (t.alias || '—') + '</strong><br><span style="font-size:11px">' + (t.dip || '') + '</span></td>' +
       '<td><span class="pill pill-purple">' + (t.tipo || '—') + '</span></td>' +
-      '<td><span class="badge ' + estClass + '">' + estLabel + '</span></td>' +
-      '<td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (t.contenido || '—') + '</td>' +
+      '<td><span class="badge ' + estClass + '" style="cursor:help" title="' + (t.observaciones || '') + '">' + estLabel + '</span></td>' +
+      '<td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer" title="' + (t.contenido || '').replace(/<[^>]*>/g,'') + '">' + (t.contenido || '—').replace(/<[^>]*>/g,'').slice(0,60) + '</td>' +
       '<td style="font-size:12px;color:var(--text-light)">' + seguimiento + '</td>' +
-      '<td style="display:flex;gap:4px">' +
+      '<td style="display:flex;gap:3px;flex-wrap:wrap">' +
         (!t.estado || t.estado === 'pendiente' ?
+          '<button class="btn btn-info btn-sm" onclick="abrirModalEditarTramite(' + t.id + ')" title="Editar">✏️</button>' +
+          '<button class="btn btn-primary btn-sm" onclick="revisarTramite(' + t.id + ')" title="Poner en revisión">🔍</button>' +
           '<button class="btn btn-success btn-sm" onclick="abrirModalAprobar(' + t.id + ')">✅</button>' +
           '<button class="btn btn-danger btn-sm" onclick="abrirModalRechazar(' + t.id + ')">❌</button>' : '') +
+        (t.estado === 'en_revision' ?
+          '<button class="btn btn-info btn-sm" onclick="abrirModalEditarTramite(' + t.id + ')" title="Editar">✏️</button>' +
+          '<button class="btn btn-warning btn-sm" onclick="pedirDocumentacion(' + t.id + ')" title="Solicitar más documentos">📎</button>' +
+          '<button class="btn btn-success btn-sm" onclick="abrirModalAprobar(' + t.id + ')">✅</button>' +
+          '<button class="btn btn-danger btn-sm" onclick="abrirModalRechazar(' + t.id + ')">❌</button>' : '') +
+        (t.estado === 'documentacion_requerida' ?
+          '<button class="btn btn-info btn-sm" onclick="abrirModalEditarTramite(' + t.id + ')" title="Editar">✏️</button>' +
+          '<button class="btn btn-primary btn-sm" onclick="revisarTramite(' + t.id + ')" title="Volver a revisión">🔍</button>' : '') +
+        (!t.estado || t.estado === 'pendiente' || t.estado === 'en_revision' || t.estado === 'documentacion_requerida' ? '' : '') +
+        (t.estado === 'aprobado' ?
+          '<button class="btn btn-completar btn-sm" onclick="completarTramite(' + t.id + ')" title="Marcar como completado">🎉</button>' : '') +
         '<button class="btn btn-sm btn-outline" onclick="generarPDF(' + t.id + ')">📄</button>' +
       '</td></tr>';
   }).join('');
