@@ -383,6 +383,16 @@
 </div>
 
 <script>
+  // ── Helper: apiFetch para todas las llamadas API ───────────────────────────
+  async function apiFetch(url, opts = {}) {
+    const r = await fetch(url, {
+      headers: { 'Content-Type': 'application/json', ...opts.headers },
+      ...opts
+    });
+    if (!r.ok) { let m = 'HTTP ' + r.status; try { const e = await r.json(); if (e.error) m += ': ' + e.error; } catch {} throw new Error(m); }
+    return r.json();
+  }
+
   // ── Tab switching ──────────────────────────────────────────────────────────
   function switchTab(btn, tabId) {
     document.querySelectorAll('.tab-btn').forEach(b => {
