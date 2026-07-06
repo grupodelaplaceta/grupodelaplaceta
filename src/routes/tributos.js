@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { Router } from 'express';
+import { getDb } from '../config/db.js';
 import { verificarSesion, verificarRol } from '../middleware/auth.js';
 import PDFGenerator from '../services/pdfGenerator.js';
 import {
@@ -122,7 +123,14 @@ router.post('/contributors/alta-rapida', verificarSesion, verificarRol('administ
 
     // Para personas: buscar por DIP
     if (!dip) return res.status(400).json({ error: 'DIP requerido' });
-    const usuario = await sbFindSolicitante(dip);
+    let usuario = await sbFindSolicitante(dip).catch(() => null);
+    // Fallback a SQLite si Supabase no responde
+    if (!usuario) {
+      try {
+        const db = getDb();
+        usuario = db.prepare('SELECT * FROM solicitantes WHERE dip = ? OR alias = ?').get(dip, dip);
+      } catch (e) { /* SQLite fallback error */ }
+    }
     if (!usuario) return res.status(404).json({ error: 'Usuario no encontrado en PlacetaID' });
 
     const placetaId = usuario.placeid || `PLID-${usuario.dip}`;
