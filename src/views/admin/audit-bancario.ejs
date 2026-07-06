@@ -96,6 +96,19 @@
         <tbody id="cuentasBody"><tr><td colspan="6" class="loading-cell">Cargando...</td></tr></tbody>
       </table>
     </div>
+
+    <!-- ── Listado detallado de cuentas con cambio de tipo inline ── -->
+    <div class="section-header" style="margin-top:24px"><div><h3>📋 Listado completo de cuentas</h3></div>
+      <button class="btn btn-sm btn-primary" onclick="cargarCuentasDetalle()">🔄</button>
+    </div>
+    <div style="overflow-x:auto;background:var(--surface-glass);border-radius:var(--radius-lg);border:1px solid rgba(255,255,255,0.7);box-shadow:var(--shadow-sm)">
+      <table class="data-table" style="min-width:900px">
+        <thead><tr>
+          <th>ID</th><th>Nombre</th><th>Tipo</th><th>Saldo (Pz)</th><th>PlacetaID</th><th>IBAN</th><th>Estado</th><th>Acción</th>
+        </tr></thead>
+        <tbody id="cuentasDetalleBody"><tr><td colspan="8" class="loading-cell">Cargando cuentas...</td></tr></tbody>
+      </table>
+    </div>
   </div>
 
   <!-- ═══════════ TAB 3: TRANSACCIONES ═══════════ -->
@@ -319,6 +332,43 @@ async function cargarCuentas() {
   if (!d.length) { tbody.innerHTML = '<tr><td colspan="6" class="loading-cell">Sin datos</td></tr>'; return; }
   const totalGlobal = d.reduce((s, t) => s + t.saldoTotal, 0);
   tbody.innerHTML = d.map(t => '<tr><td><strong>' + t.tipo + '</strong></td><td>' + t.count + '</td><td>' + formatPz(t.saldoTotal) + '</td><td>' + formatPz(t.saldoMaximo) + '</td><td>' + formatPz(t.promedio) + '</td><td>' + (totalGlobal > 0 ? (t.saldoTotal / totalGlobal * 100).toFixed(1) + '%' : '—') + '</td></tr>').join('');
+}
+
+// ── Listado detallado de cuentas ─────────────────────────────────────────
+async function cargarCuentasDetalle() {
+  const d = await tryFetch('/api/bancario-proxy/cuentas') || [];
+  const tbody = document.getElementById('cuentasDetalleBody');
+  if (!d.length) { tbody.innerHTML = '<tr><td colspan="8" class="loading-cell">Sin cuentas disponibles</td></tr>'; return; }
+  tbody.innerHTML = d.map(c => {
+    const tipos = ['Personal','Business','Savings','Current'];
+    const opts = tipos.map(t => `<option value="${t}"${c.type===t?' selected':''}>${t}</option>`).join('');
+    const estado = c.closedAt ? '🔴 Cerrada' : c.complianceStatus === 'Frozen' ? '🧊 Congelada' : '✅ Activa';
+    return '<tr>' +
+      '<td style="font-size:11px;font-family:monospace">' + txIdShort(c.id) + '</td>' +
+      '<td><strong>' + (c.displayName || '—') + '</strong></td>' +
+      '<td><select id="tipoCta_' + txIdShort(c.id) + '" class="form-input" style="padding:4px 8px;font-size:12px;width:120px" onchange="cambiarTipoInline(\'' + c.id + '\',this.value)">' + opts + '</select></td>' +
+      '<td><strong>' + formatPz(c.balancePz) + '</strong></td>' +
+      '<td style="font-size:12px">' + (c.placetaId || '—') + '</td>' +
+      '<td style="font-size:11px;font-family:monospace">' + (c.iban || '—') + '</td>' +
+      '<td><span class="badge badge-' + (c.closedAt ? 'baja' : c.complianceStatus === 'Frozen' ? 'suspendido' : 'activo') + '">' + estado + '</span></td>' +
+      '<td><button class="btn btn-sm btn-glass" onclick="document.getElementById(\'buscadorCambiarTipo\').querySelector(\'input\').value=\'' + (c.displayName||c.id) + '\';switchTab(document.querySelector(\'[data-tab=tabGestion]\'),\'tabGestion\')">🔧</button></td>' +
+    '</tr>';
+  }).join('');
+}
+
+// ── Cambiar tipo inline ─────────────────────────────────────────────────
+async function cambiarTipoInline(accountId, nuevoTipo) {
+  const motivo = prompt('Motivo del cambio a ' + nuevoTipo + ' (obligatorio):');
+  if (!motivo) return;
+  try {
+    const r = await apiFetch('/api/bancario-proxy/admin-cuentas', {
+      method: 'POST', body: JSON.stringify({ action: 'cambiar-tipo', accountId, tipo: nuevoTipo, motivo })
+    });
+    mostrarToast('success', '✅ ' + r.message);
+    cargarCuentasDetalle();
+    cargarCuentas();
+    cargarAuditLogs();
+  } catch(e) { alert('❌ ' + e.message); }
 }
 
 async function cargarTransacciones() {
