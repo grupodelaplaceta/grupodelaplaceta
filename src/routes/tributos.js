@@ -413,40 +413,39 @@ router.post('/reconcile/:placetaId', verificarSesion, verificarRol('administrado
     }
 
     if (bankTx.length > 0) {
-      // Ordenar transacciones por fecha
+      // Ordenar transacciones por fecha (ascendente)
       const sorted = bankTx.sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''));
       const accountIds = new Set(cuentasDelTitular.map(a => a.id));
-      let saldoCorriente = 0;
-      let txIndex = 0;
 
-      for (let d = 1; d <= diasEnMes; d++) {
-        const fechaStr = `${mesPeriodo}-${String(d).padStart(2, '0')}`;
-        let txDelDia = 0;
-
-        while (txIndex < sorted.length) {
-          const txFecha = (sorted[txIndex].createdAt || '').slice(0, 10);
-          if (txFecha === fechaStr) {
-            const tx = sorted[txIndex];
-            const amount = Math.abs(Number(tx.amountPz || 0));
-            const esIngreso = accountIds.has(tx.toAccountId) || accountIds.has(tx.toId);
-            saldoCorriente += esIngreso ? amount : -amount;
-            txDelDia++;
-            txIndex++;
-          } else break;
+      // Paso 1: contar transacciones por día
+      const txPorDia = {};
+      for (const tx of sorted) {
+        const d = parseInt((tx.createdAt || '').slice(8, 10), 10);
+        if (d >= 1 && d <= diasEnMes) {
+          if (!txPorDia[d]) txPorDia[d] = [];
+          txPorDia[d].push(tx);
         }
+      }
+
+      // Paso 2: procesar en REVERSA desde el saldo real del último día
+      let saldoCorriente = bankSaldoTotal;
+      for (let d = diasEnMes; d >= 1; d--) {
+        const fechaStr = `${mesPeriodo}-${String(d).padStart(2, '0')}`;
+        const txs = txPorDia[d] || [];
 
         dailyMap[fechaStr] = {
           fecha: fechaStr,
           saldo: Math.round(Math.max(0, saldoCorriente) * 100) / 100,
-          transactions_count: txDelDia,
-          origen: txDelDia > 0 ? 'banco' : 'reconstruido'
+          transactions_count: txs.length,
+          origen: txs.length > 0 ? 'banco' : 'reconstruido'
         };
-      }
-      // Último día = saldo actual real
-      const ultimoDia = `${mesPeriodo}-${String(diasEnMes).padStart(2, '0')}`;
-      if (dailyMap[ultimoDia]) {
-        dailyMap[ultimoDia].saldo = bankSaldoTotal;
-        dailyMap[ultimoDia].origen = 'banco';
+
+        // Revertir transacciones de este día para obtener saldo del día anterior
+        for (const tx of txs) {
+          const amount = Math.abs(Number(tx.amountPz || 0));
+          const esIngreso = accountIds.has(tx.toAccountId) || accountIds.has(tx.toId);
+          saldoCorriente += esIngreso ? -amount : amount; // deshacer: restar ingresos, sumar gastos
+        }
       }
     } else if (bankSaldoTotal > 0) {
       // Sin transacciones pero con saldo: distribución proporcional
