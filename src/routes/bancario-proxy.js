@@ -83,12 +83,14 @@ router.get('/status', verificarSesion, verificarRol('administrador', 'junta', 'f
 router.get('/resumen', verificarSesion, verificarRol('administrador', 'junta', 'fiscal'), async (req, res) => {
   try {
     const state = await fetchBancoState(req);
+    const accounts = Array.isArray(state.accounts) ? state.accounts : Object.values(state.accounts || {});
+    const tglp = accounts.find(a => a.id === 'TGLP' || a.id === 'sys-lottery');
     res.json({
       totalUsuarios: (state.users || []).length,
-      totalCuentas: Object.keys(state.accounts || {}).length,
+      totalCuentas: accounts.length,
       totalTransacciones: (state.transactions || []).length,
-      saldoTotal: Object.values(state.accounts || {}).reduce((sum, a) => sum + (a.balancePz || 0), 0),
-      tesoro: state.accounts?.TGLP?.balancePz || 0,
+      saldoTotal: accounts.reduce((sum, a) => sum + (a.balancePz || 0), 0),
+      tesoro: tglp?.balancePz || 0,
       updatedAt: state.updatedAt
     });
   } catch (err) {
@@ -100,7 +102,7 @@ router.get('/resumen', verificarSesion, verificarRol('administrador', 'junta', '
 router.get('/cuentas', verificarSesion, verificarRol('administrador', 'junta', 'fiscal'), async (req, res) => {
   try {
     const state = await fetchBancoState(req);
-    const cuentas = Object.values(state.accounts || {});
+    const cuentas = Array.isArray(state.accounts) ? state.accounts : Object.values(state.accounts || {});
     const { tipo, search } = req.query;
     let filtered = cuentas;
     if (tipo) filtered = filtered.filter(c => c.type === tipo);
@@ -157,7 +159,7 @@ router.get('/buscar', verificarSesion, verificarRol('administrador', 'junta', 'f
       u.dip?.toUpperCase().includes(q) || u.placetaId?.toUpperCase().includes(q) || u.displayName?.toUpperCase().includes(q)
     );
     const placetaIds = new Set(usuarios.map(u => u.placetaId));
-    const cuentas = Object.values(state.accounts || {}).filter(c =>
+    const cuentas = (Array.isArray(state.accounts) ? state.accounts : Object.values(state.accounts || {})).filter(c =>
       c.placetaId && placetaIds.has(c.placetaId)
     );
     res.json({ usuarios, cuentas });
@@ -170,7 +172,7 @@ router.get('/buscar', verificarSesion, verificarRol('administrador', 'junta', 'f
 router.get('/resumen-cuentas', verificarSesion, verificarRol('administrador', 'junta', 'fiscal'), async (req, res) => {
   try {
     const state = await fetchBancoState(req);
-    const cuentas = Object.values(state.accounts || {});
+    const cuentas = Array.isArray(state.accounts) ? state.accounts : Object.values(state.accounts || {});
     const porTipo = {};
     for (const c of cuentas) {
       const tipo = c.type || 'Unknown';
@@ -263,7 +265,7 @@ router.get('/subsidios', verificarSesion, verificarRol('administrador', 'junta',
 router.get('/alertas', verificarSesion, verificarRol('administrador', 'junta', 'fiscal'), async (req, res) => {
   try {
     const state = await fetchBancoState(req);
-    const cuentas = state.accounts || [];
+    const cuentas = Array.isArray(state.accounts) ? state.accounts : Object.values(state.accounts || {});
     const cards = state.digitalCards || [];
     const txs = state.transactions || [];
 
