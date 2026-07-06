@@ -21,10 +21,12 @@ import {
   sbUpsertDailyBalance,
   sbClearDailyBalances,
   sbCalculateDeclarationFromDailyBalances,
-  sbFindSolicitante
+  sbFindSolicitante,
+  sbGetTributosContributorByEip
 } from '../config/db-supabase.js';
 
 const router = Router();
+const BANCO_API = (process.env.BANCO_API_URL || 'https://api.banco.laplaceta.org').replace(/\/+$/, '');
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  SUMMARY
@@ -102,26 +104,27 @@ router.post('/contributors/alta-rapida', verificarSesion, verificarRol('administ
     // Para empresas: buscar por EIP en tributos_contribuyentes
     if (tipo === 'Empresa') {
       if (!eip) return res.status(400).json({ error: 'EIP requerido para empresas' });
-      // Buscar si ya existe contribuyente con ese EIP
-      const existente = await sbGetTributosContributorByEip(eip);
-      if (existente) return res.json({ success: true, yaExiste: true, contributor: existente });
-      // Crear contribuyente empresa con EIP
-      const contributor = await sbCreateTributosContributor({
-        id: crypto.randomUUID?.() || String(Date.now()),
-        placeta_id: `EIP-${eip.replace(/[^A-Z0-9]/g, '')}`,
-        dip: null,
-        nombre: `Empresa ${eip}`,
-        tipo_sujeto: 'Empresa',
-        estado_fiscal: 'Al Dia',
-        fecha_alta_tributos: new Date().toISOString(),
-        roles_json: ['ciudadano', 'empresa'],
-        iban: null,
-        eip
-      });
-      return res.json({ success: true, contributor });
+      try {
+        const existente = await sbGetTributosContributorByEip(eip);
+        if (existente) return res.json({ success: true, yaExiste: true, contributor: existente });
+        const contributor = await sbCreateTributosContributor({
+          id: crypto.randomUUID?.() || String(Date.now()),
+          placeta_id: `EIP-${eip.replace(/[^A-Z0-9]/g, '')}`,
+          dip: null, nombre: `Empresa ${eip}`, tipo_sujeto: 'Empresa',
+          estado_fiscal: 'Al Dia', fecha_alta_tributos: new Date().toISOString(),
+          roles_json: ['ciudadano', 'empresa'], iban: null, eip
+        });
+        return res.json({ success: true, contributor });
+      } catch (err) {
+        return res.status(500).json({
+          error: 'Error al crear contribuyente empresa',
+          detail: err.message,
+          solution: 'Abre el SQL Editor de Supabase y pega el script de migración.'
+        });
+      }
     }
 
-    // Para personas: buscar por DIP en Supabase
+    // Para personas: buscar por DIP
     if (!dip) return res.status(400).json({ error: 'DIP requerido' });
     const usuario = await sbFindSolicitante(dip);
     if (!usuario) return res.status(404).json({ error: 'Usuario no encontrado en PlacetaID' });
@@ -129,15 +132,14 @@ router.post('/contributors/alta-rapida', verificarSesion, verificarRol('administ
     const placetaId = usuario.placeid || `PLID-${usuario.dip}`;
     const nombre = usuario.nombre_real || usuario.alias || `Usuario ${dip}`;
 
-    // Verificar si ya existe
     try {
       const existente = await sbGetTributosContributorByPlacetaId(placetaId);
       if (existente) return res.json({ success: true, yaExiste: true, contributor: existente });
     } catch {}
 
-    const contributor = await sbCreateTributosContributor({
-      id: crypto.randomUUID?.() || String(Date.now()),
-      placeta_id: placetaId,
+    try {
+      const contributor = await sbCreateTributosContributor({
+        id: crypto.randomUUID?.() || String(Date.now()), placeta_id: placetaId,
       dip,
       nombre,
       tipo_sujeto: 'Fisico',
@@ -365,93 +367,114 @@ router.get('/daily-balances/:placetaId', verificarSesion, verificarRol('administ
 
 /**
  * POST /api/admin/tributos/reconcile/:placetaId
- * Reconstruye los saldos diarios a partir del historial de transacciones del banco (BLP).
- * Body: { mes, transactions: [...] }
- * Si no se envían transacciones, genera datos simulados basados en el contribuyente.
+ * Reconstruye los saldos diarios a partir del historial de transacciones REALES del banco (BLP).
+ * Body: { mes }
  */
 router.post('/reconcile/:placetaId', verificarSesion, verificarRol('administrador', 'junta', 'fiscal'), async (req, res) => {
   try {
     const { placetaId } = req.params;
     const ahora = new Date();
     const mesPeriodo = req.body.mes || `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}`;
-    const transactions = Array.isArray(req.body.transactions) ? req.body.transactions : [];
 
-    // Obtener info del contribuyente
+    // 1. Obtener info del contribuyente
     let contributor = null;
     try { contributor = await sbGetTributosContributorByPlacetaId(placetaId); } catch (e) {}
     const nombre = contributor?.nombre || placetaId;
-    const saldoActual = Number(req.body.saldo_actual || contributor?.saldo || 0);
+    const dip = contributor?.dip || '';
 
-    // Calcular días del mes
+    // 2. Obtener estado REAL del banco
+    let bankTx = [];
+    let bankSaldo = 0;
+    let bankAccountId = '';
+    try {
+      const CRM_KEY = process.env.CRM_READ_KEY || 'crm-gdlp-shared-key-2026';
+      const r = await fetch(`${BANCO_API}/api/crm-state`, {
+        headers: { 'X-CRM-Key': CRM_KEY },
+        signal: AbortSignal.timeout(8000)
+      });
+      if (r.ok) {
+        const state = await r.json();
+        const accounts = Array.isArray(state.accounts) ? state.accounts : Object.values(state.accounts || {});
+        // Buscar cuenta por placetaId o dip
+        const cuenta = accounts.find(a =>
+          a.placetaId === placetaId || a.placetaId === dip ||
+          a.dip === dip || a.id === placetaId || a.id === dip
+        );
+        if (cuenta) {
+          bankAccountId = cuenta.id;
+          bankSaldo = cuenta.balancePz || 0;
+          // Filtrar transacciones de esta cuenta
+          const txs = state.transactions || [];
+          bankTx = txs.filter(t =>
+            t.fromAccountId === cuenta.id || t.toAccountId === cuenta.id ||
+            t.fromId === cuenta.id || t.toId === cuenta.id
+          );
+        }
+      }
+    } catch (e) {
+      console.warn(`[Tributos] Banco no disponible para reconcile: ${e.message}`);
+    }
+
     const [year, month] = mesPeriodo.split('-').map(Number);
     const diasEnMes = new Date(year, month, 0).getDate();
 
-    // Construir mapa de saldos diarios desde transacciones
+    // 3. Construir dailyMap con datos REALES
     const dailyMap = {};
     for (let d = 1; d <= diasEnMes; d++) {
       const fechaStr = `${mesPeriodo}-${String(d).padStart(2, '0')}`;
       dailyMap[fechaStr] = { fecha: fechaStr, saldo: 0, transactions_count: 0, origen: 'reconstruido' };
     }
 
-    // Procesar transacciones: asignar cada una a su día y acumular impacto
-    let saldoCorriente = 0;
-    const sortedTx = [...transactions].sort((a, b) => (a.createdAt || a.fecha || '').localeCompare(b.createdAt || b.fecha || ''));
-
-    // Primera pasada: construir saldos secuenciales
-    // Si no hay transacciones, crear datos simulados con el saldo actual
-    if (sortedTx.length === 0) {
-      // Sin transacciones: distribución uniforme del saldo actual
-      for (let d = 1; d <= diasEnMes; d++) {
-        const fechaStr = `${mesPeriodo}-${String(d).padStart(2, '0')}`;
-        const saldoDia = Math.max(0, saldoActual * (0.7 + Math.random() * 0.6));
-        dailyMap[fechaStr] = {
-          fecha: fechaStr,
-          saldo: Math.round(saldoDia * 100) / 100,
-          transactions_count: Math.floor(Math.random() * 3),
-          origen: 'reconstruido'
-        };
-      }
-      // Marcar el último día con el saldo actual exacto
-      const ultimoDia = `${mesPeriodo}-${String(diasEnMes).padStart(2, '0')}`;
-      if (dailyMap[ultimoDia]) {
-        dailyMap[ultimoDia].saldo = saldoActual;
-        dailyMap[ultimoDia].origen = 'banco';
-      }
-    } else {
-      // Con transacciones reales: calcular saldo día a día
+    if (bankTx.length > 0) {
+      // Ordenar transacciones por fecha
+      const sorted = bankTx.sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''));
+      let saldoCorriente = 0;
       let txIndex = 0;
+
       for (let d = 1; d <= diasEnMes; d++) {
         const fechaStr = `${mesPeriodo}-${String(d).padStart(2, '0')}`;
         let txDelDia = 0;
 
-        // Acumular transacciones de este día
-        while (txIndex < sortedTx.length) {
-          const txFecha = (sortedTx[txIndex].createdAt || sortedTx[txIndex].fecha || '').slice(0, 10);
+        while (txIndex < sorted.length) {
+          const txFecha = (sorted[txIndex].createdAt || '').slice(0, 10);
           if (txFecha === fechaStr) {
-            const tx = sortedTx[txIndex];
-            const impacto = Math.abs(Number(tx.amountPz || tx.cantidad || 0));
-            saldoCorriente += impacto * (tx.toAccountId === placetaId || tx.cuenta_destino === placetaId ? 1 : -1);
+            const tx = sorted[txIndex];
+            const amount = Math.abs(Number(tx.amountPz || 0));
+            const esIngreso = tx.toAccountId === bankAccountId || tx.toId === bankAccountId;
+            saldoCorriente += esIngreso ? amount : -amount;
             txDelDia++;
             txIndex++;
-          } else {
-            break;
-          }
+          } else break;
         }
 
         dailyMap[fechaStr] = {
           fecha: fechaStr,
-          saldo: Math.round(Math.max(0, saldoCorriente || saldoActual * (d / diasEnMes)) * 100) / 100,
+          saldo: Math.round(Math.max(0, saldoCorriente) * 100) / 100,
           transactions_count: txDelDia,
           origen: txDelDia > 0 ? 'banco' : 'reconstruido'
         };
       }
-      // Asegurar que el último día refleje el saldo actual
+      // Último día = saldo actual real
       const ultimoDia = `${mesPeriodo}-${String(diasEnMes).padStart(2, '0')}`;
       if (dailyMap[ultimoDia]) {
-        dailyMap[ultimoDia].saldo = saldoActual;
+        dailyMap[ultimoDia].saldo = bankSaldo;
         dailyMap[ultimoDia].origen = 'banco';
       }
+    } else if (bankSaldo > 0) {
+      // Sin transacciones pero con saldo: distribución proporcional
+      for (let d = 1; d <= diasEnMes; d++) {
+        const fechaStr = `${mesPeriodo}-${String(d).padStart(2, '0')}`;
+        dailyMap[fechaStr] = {
+          fecha: fechaStr,
+          saldo: Math.round((bankSaldo * d / diasEnMes) * 100) / 100,
+          transactions_count: 0,
+          origen: 'reconstruido'
+        };
+      }
+      const ultimoDia = `${mesPeriodo}-${String(diasEnMes).padStart(2, '0')}`;
+      if (dailyMap[ultimoDia]) { dailyMap[ultimoDia].saldo = bankSaldo; dailyMap[ultimoDia].origen = 'banco'; }
     }
+    // Si no hay nada, todo queda a 0
 
     // Guardar en base de datos
     await sbClearDailyBalances(placetaId, mesPeriodo);
@@ -472,7 +495,7 @@ router.post('/reconcile/:placetaId', verificarSesion, verificarRol('administrado
       total_dias: diasEnMes,
       dias_con_datos: Object.values(dailyMap).filter(d => d.transactions_count > 0 || d.origen === 'banco').length,
       patrimonio_medio: declaration?.patrimonio_medio || 0,
-      saldo_actual: saldoActual,
+      saldo_actual: bankSaldo,
       balances: Object.values(dailyMap),
       declaration
     });

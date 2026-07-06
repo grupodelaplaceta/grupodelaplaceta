@@ -81,12 +81,17 @@
   </div>
 
   <script>
+    let registroEnviado = false;
+
     document.getElementById('registerForm').addEventListener('submit', async (e) => {
       e.preventDefault();
+      if (registroEnviado) return; // ← Bloquea auto-clickers
+        
       const btn = e.target.querySelector('button[type="submit"]');
       const errorMsg = document.getElementById('errorMsg');
       const successMsg = document.getElementById('successMsg');
       
+      registroEnviado = true;
       btn.disabled = true;
       btn.querySelector('.btn-text').style.display = 'none';
       btn.querySelector('.btn-loading').style.display = 'inline';
@@ -113,12 +118,15 @@
         } else {
           errorMsg.textContent = result.error || 'Error al registrar';
           errorMsg.style.display = 'block';
+          registroEnviado = false; // Solo re-permite si fue error (no 409 por duplicado real)
+          btn.disabled = false;
         }
       } catch (err) {
         errorMsg.textContent = 'Error de conexión';
         errorMsg.style.display = 'block';
-      } finally {
+        registroEnviado = false;
         btn.disabled = false;
+      } finally {
         btn.querySelector('.btn-text').style.display = 'inline';
         btn.querySelector('.btn-loading').style.display = 'none';
       }

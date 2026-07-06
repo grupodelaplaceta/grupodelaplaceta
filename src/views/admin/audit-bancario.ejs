@@ -154,7 +154,7 @@
         <h3 style="margin:0 0 4px 0">🏷️ Corregir Tipo</h3>
         <p style="font-size:12px;color:var(--text-light);margin:0 0 12px 0">Cambia el tipo de cuenta (Personal ↔ Business)</p>
         <div style="display:grid;gap:8px">
-          <input type="text" id="gestionAccountId" placeholder="ID de Cuenta" class="form-input">
+          <div id="buscadorCambiarTipo"></div>
           <select id="gestionTipo" class="form-input" style="padding:10px">
             <option value="Personal">Personal</option>
             <option value="Business">Business</option>
@@ -170,7 +170,7 @@
         <h3 style="margin:0 0 4px 0">🔑 Asignar EIP</h3>
         <p style="font-size:12px;color:var(--text-light);margin:0 0 12px 0">Genera o asigna un EIP a una cuenta empresa</p>
         <div style="display:grid;gap:8px">
-          <input type="text" id="gestionEipAccountId" placeholder="ID de Cuenta" class="form-input">
+          <div id="buscadorAsignarEip"></div>
           <input type="text" id="gestionEipValor" placeholder="EIP manual (o vacío = auto)" class="form-input">
           <button class="btn btn-primary" onclick="gestionAsignarEip()">🔑 Asignar y documentar</button>
         </div>
@@ -180,7 +180,7 @@
         <h3 style="margin:0 0 4px 0">🏛️ Alta en Tributos</h3>
         <p style="font-size:12px;color:var(--text-light);margin:0 0 12px 0">Da de alta una cuenta manualmente en el censo</p>
         <div style="display:grid;gap:8px">
-          <input type="text" id="gestionAltaAccountId" placeholder="ID de Cuenta o PlacetaID" class="form-input">
+          <div id="buscadorAltaTributos"></div>
           <input type="text" id="gestionAltaMotivo" placeholder="Motivo (obligatorio)" class="form-input">
           <button class="btn btn-primary" onclick="gestionAltaTributos()">🏛️ Dar de alta y documentar</button>
         </div>
@@ -200,13 +200,19 @@
     </div>
   </div>
 
-  <!-- ═══════════ TAB 8: ALERTAS ═══════════ -->
+  <!-- ═══════════ TAB 8: ALERTAS + NOTIFICACIONES ═══════════ -->
   <div id="tabAlertas" class="tab-content" style="display:none">
     <div class="section-header"><div><h2>🚨 Centro de Alertas</h2></div></div>
     <div id="alertasContainer" style="display:grid;gap:8px"><p class="loading-cell">Cargando...</p></div>
+
+    <div class="section-header" style="margin-top:24px"><div><h2>🔔 Notificaciones del Sistema</h2></div>
+      <button class="btn btn-sm btn-primary" onclick="cargarNotificaciones()">🔄</button>
+    </div>
+    <div id="notificacionesContainer" style="display:grid;gap:6px"><p class="loading-cell">Cargando...</p></div>
   </div>
 </div>
 
+<script src="/js/buscador-universal.js"></script>
 <script>
 // ── Utilidades ──────────────────────────────────────────────────────────────
 async function apiFetch(url, opts) {
@@ -371,6 +377,32 @@ async function cargarAlertas() {
   ).join('');
 }
 
+async function cargarNotificaciones() {
+  const container = document.getElementById('notificacionesContainer');
+  try {
+    const d = await tryFetch('/api/notificaciones') || [];
+    if (!d.length) { container.innerHTML = '<div class="card" style="padding:20px;text-align:center;color:var(--text-light)">📨 Sin notificaciones</div>'; return; }
+    container.innerHTML = d.map(n => {
+      const icono = n.tipo === 'alerta' ? '⚠️' : n.tipo === 'sancion' ? '⚖️' : '📢';
+      const leida = n.leida ? 'opacity:0.5' : '';
+      return '<div class="card" style="padding:10px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;' + leida + '" onclick="marcarNotifLeida(' + n.id + ')">' +
+        '<span style="font-size:16px">' + icono + '</span>' +
+        '<div style="flex:1"><strong style="font-size:13px">' + (n.titulo || '') + '</strong>' +
+        '<p style="font-size:12px;color:var(--text-light);margin:2px 0 0">' + (n.mensaje || '') + '</p></div>' +
+        '<div style="text-align:right;font-size:11px;color:var(--text-muted);white-space:nowrap">' +
+          new Date(n.created_at + 'Z').toLocaleString('es-ES') +
+          (!n.leida ? '<br><span style="color:var(--p500);font-weight:600">● Nueva</span>' : '') +
+        '</div></div>';
+    }).join('');
+  } catch(e) {
+    container.innerHTML = '<div class="card" style="padding:20px;text-align:center;color:var(--text-light)">📡 Sin conexión</div>';
+  }
+}
+
+async function marcarNotifLeida(id) {
+  try { await fetch('/api/notificaciones/' + id + '/leer', { method: 'POST' }); cargarNotificaciones(); if (typeof cargarContadorNotificaciones === 'function') cargarContadorNotificaciones(); } catch(e) {}
+}
+
 // ── Acciones ────────────────────────────────────────────────────────────────
 async function emitirPz() {
   const cantidad = parseInt(document.getElementById('emitirCantidad').value);
@@ -394,11 +426,14 @@ async function quemarPz() {
 }
 
 // ── Gestión de cuentas ──────────────────────────────────────────────────────
+let _buscadorCambiarTipo, _buscadorAsignarEip, _buscadorAltaTributos;
+
 async function gestionCambiarTipo() {
-  const accountId = document.getElementById('gestionAccountId').value.trim();
+  const sel = _buscadorCambiarTipo?.getSelected();
+  const accountId = sel?.id?.trim();
   const tipo = document.getElementById('gestionTipo').value;
   const motivo = document.getElementById('gestionMotivo').value.trim();
-  if (!accountId) return alert('Introduce el ID de cuenta');
+  if (!accountId) return alert('Selecciona una cuenta del buscador');
   if (!motivo) return alert('El motivo es obligatorio (requisito normativo)');
   try {
     const r = await apiFetch('/api/bancario-proxy/admin-cuentas', {
@@ -411,9 +446,10 @@ async function gestionCambiarTipo() {
   } catch(e) { alert('❌ ' + e.message); }
 }
 async function gestionAsignarEip() {
-  const accountId = document.getElementById('gestionEipAccountId').value.trim();
+  const sel = _buscadorAsignarEip?.getSelected();
+  const accountId = sel?.id?.trim();
   const eip = document.getElementById('gestionEipValor').value.trim().toUpperCase() || undefined;
-  if (!accountId) return alert('Introduce el ID de cuenta');
+  if (!accountId) return alert('Selecciona una cuenta del buscador');
   try {
     const body = { action: 'asignar-eip', accountId, motivo: 'Asignación administrativa EIP' };
     if (eip) body.eip = eip;
@@ -425,9 +461,10 @@ async function gestionAsignarEip() {
   } catch(e) { alert('❌ ' + e.message); }
 }
 async function gestionAltaTributos() {
-  const accountId = document.getElementById('gestionAltaAccountId').value.trim();
+  const sel = _buscadorAltaTributos?.getSelected();
+  const accountId = sel?.id?.trim();
   const motivo = document.getElementById('gestionAltaMotivo').value.trim();
-  if (!accountId) return alert('Introduce ID de cuenta o PlacetaID');
+  if (!accountId) return alert('Selecciona una cuenta del buscador');
   if (!motivo) return alert('El motivo es obligatorio (requisito normativo)');
   try {
     const r = await apiFetch('/api/bancario-proxy/admin-cuentas', {
@@ -466,6 +503,18 @@ function cargarTodo() {
   cargarCumplimiento();
   cargarAlertas();
   cargarAuditLogs();
+  cargarNotificaciones();
 }
-document.addEventListener('DOMContentLoaded', function() { diagnosticar(); cargarTodo(); });
+document.addEventListener('DOMContentLoaded', function() {
+  diagnosticar(); cargarTodo();
+  _buscadorCambiarTipo = crearBuscador('buscadorCambiarTipo', {
+    tipo: 'cuenta', placeholder: '🔍 Buscar cuenta por nombre, IBAN, PlacetaID...'
+  });
+  _buscadorAsignarEip = crearBuscador('buscadorAsignarEip', {
+    tipo: 'cuenta', placeholder: '🔍 Buscar cuenta empresa...'
+  });
+  _buscadorAltaTributos = crearBuscador('buscadorAltaTributos', {
+    tipo: 'cuenta', placeholder: '🔍 Buscar cuenta para alta en tributos...'
+  });
+});
 </script>

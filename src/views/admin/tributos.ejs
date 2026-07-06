@@ -1,7 +1,12 @@
 <div class="dashboard">
   <div class="dashboard-header">
-    <h1>Gestión de Tributos</h1>
+    <h1>🧾 Gestión de Tributos</h1>
     <p class="dashboard-date">Módulo Tributario TLP · Control de contribuyentes, declaraciones e IVA</p>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <a href="/admin/bancario" class="btn btn-sm btn-glass">🏦 Bancario</a>
+      <a href="/admin/empresas" class="btn btn-sm btn-glass">🏢 Empresas</a>
+      <a href="/admin/audit-bancario" class="btn btn-sm btn-glass">🏛️ Gobierno</a>
+    </div>
   </div>
 
   <!-- KPI Cards -->
@@ -257,10 +262,12 @@
       </div>
       <form id="formAltaRapida" class="form-grid" style="box-shadow:none;padding:0;border:none;background:none">
         <div id="altaRapidaPersonaFields">
-          <label>DIP <input type="text" id="altaRapidaDip" required placeholder="12345678A"></label>
+          <label>👤 Persona</label>
+          <div id="buscadorAltaPersona"></div>
         </div>
         <div id="altaRapidaEmpresaFields" style="display:none">
-          <label>EIP <input type="text" id="altaRapidaEip" placeholder="EIP-XXXXXX"></label>
+          <label>🏢 Empresa</label>
+          <div id="buscadorAltaEmpresa"></div>
         </div>
         <div style="grid-column:1/-1;display:flex;gap:12px;justify-content:flex-end;margin-top:8px">
           <button type="button" class="btn btn-outline" data-modal-close>Cancelar</button>
@@ -273,6 +280,8 @@
 </div>
 
 <script>
+  let _buscadorAltaPersona, _buscadorAltaEmpresa;
+
   function selectAltaTipo(tipo) {
     document.getElementById('btnAltaPersona').className = tipo === 'persona' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-outline';
     document.getElementById('btnAltaEmpresa').className = tipo === 'empresa' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-outline';
@@ -285,27 +294,39 @@
   document.getElementById('formAltaRapida')?.addEventListener('submit', async function(e) {
     e.preventDefault();
     const tipo = window._altaTipo || 'persona';
-    const dip = document.getElementById('altaRapidaDip').value.trim().toUpperCase();
-    const eip = document.getElementById('altaRapidaEip').value.trim().toUpperCase();
+    const selPersona = _buscadorAltaPersona?.getSelected();
+    const selEmpresa = _buscadorAltaEmpresa?.getSelected();
     const resultado = document.getElementById('altaRapidaResultado');
     resultado.style.display = 'block';
-    resultado.innerHTML = '<span class="spinner"></span> Buscando y registrando...';
-    try {
-      const body = tipo === 'empresa' ? { tipo_sujeto: 'Empresa', eip } : { dip, tipo_sujeto: 'Fisico' };
-      const res = await apiFetch('/api/admin/tributos/contributors/alta-rapida', {
-        method: 'POST', body: JSON.stringify(body)
-      });
-      if (res.success) {
-        resultado.innerHTML = '<div class="alert alert-success">✅ ' + (res.contributor?.nombre || '') + ' dado de alta</div>';
-        cargarContribuyentes();
-        cargarTributosResumen();
-        document.getElementById('altaRapidaDip').value = '';
-        document.getElementById('altaRapidaEip').value = '';
-      } else {
-        resultado.innerHTML = '<div class="alert alert-error">❌ ' + (res.error || 'Error') + '</div>';
-      }
-    } catch (err) {
-      resultado.innerHTML = '<div class="alert alert-error">❌ ' + (err.message || err) + '</div>';
+
+    if (tipo === 'persona') {
+      if (!selPersona) { resultado.innerHTML = '<div class="alert alert-error">❌ Selecciona una persona del buscador</div>'; return; }
+      resultado.innerHTML = '<span class="spinner"></span> Buscando y registrando...';
+      try {
+        const res = await apiFetch('/api/admin/tributos/contributors/alta-rapida', {
+          method: 'POST', body: JSON.stringify({ dip: selPersona.dip, tipo_sujeto: 'Fisico' })
+        });
+        if (res.success) {
+          resultado.innerHTML = '<div class="alert alert-success">✅ ' + (selPersona.displayName || selPersona.nombre || '') + ' dado de alta</div>';
+          cargarContribuyentes(); cargarTributosResumen();
+          _buscadorAltaPersona.clear();
+        } else resultado.innerHTML = '<div class="alert alert-error">❌ ' + (res.error || 'Error') + '</div>';
+      } catch (err) { resultado.innerHTML = '<div class="alert alert-error">❌ ' + (err.message || err) + '</div>'; }
+    } else {
+      if (!selEmpresa) { resultado.innerHTML = '<div class="alert alert-error">❌ Selecciona una empresa del buscador</div>'; return; }
+      resultado.innerHTML = '<span class="spinner"></span> Buscando y registrando...';
+      try {
+        const res = await apiFetch('/api/admin/tributos/contributors/alta-rapida', {
+          method: 'POST', body: JSON.stringify({ eip: selEmpresa.eip, tipo_sujeto: 'Empresa' })
+        });
+        if (res.success) {
+          resultado.innerHTML = '<div class="alert alert-success">✅ ' + (selEmpresa.nombre || 'Empresa') + ' dado de alta</div>';
+          cargarContribuyentes(); cargarTributosResumen();
+          _buscadorAltaEmpresa.clear();
+        } else resultado.innerHTML = '<div class="alert alert-error">❌ ' + (res.error || 'Error') + '</div>';
+      } catch (err) { resultado.innerHTML = '<div class="alert alert-error">❌ ' + (err.message || err) + '</div>'; }
+    }
+  });
     }
   });
 </script>
@@ -665,6 +686,13 @@
     cargarContribuyentesSelect();
     const mesInput = document.getElementById('reconcileMes');
     if (mesInput) mesInput.value = new Date().toISOString().slice(0, 7);
+    // Inicializar buscadores
+    _buscadorAltaPersona = crearBuscador('buscadorAltaPersona', {
+      tipo: 'persona', placeholder: '🔍 Buscar por nombre, DIP o PlacetaID...'
+    });
+    _buscadorAltaEmpresa = crearBuscador('buscadorAltaEmpresa', {
+      tipo: 'empresa', placeholder: '🔍 Buscar empresa por nombre o EIP...'
+    });
   });
 </script>
 

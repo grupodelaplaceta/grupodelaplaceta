@@ -51,81 +51,106 @@
     <div class="quick-actions">
       <a href="/admin/identidad" class="action-card">
         <span class="action-icon">📋</span>
-        <span class="action-title">Gestionar Altas</span>
-        <span class="action-desc">Revisar y aprobar solicitudes pendientes</span>
+        <span class="action-title">Altas</span>
+        <span class="action-desc">Revisar y aprobar solicitudes de alta</span>
         <span class="action-badge" id="pendientesBadge"><%= pendientes %> pendientes</span>
       </a>
-      <a href="/admin/tributos" class="action-card">
-        <span class="action-icon">🧾</span>
-        <span class="action-title">Tributos</span>
-        <span class="action-desc">Gestión de contribuyentes, IVA y declaraciones</span>
+      <a href="/admin/ciudadanos" class="action-card">
+        <span class="action-icon">👥</span>
+        <span class="action-title">Ciudadanos</span>
+        <span class="action-desc">Padrón y gestión de solicitantes</span>
       </a>
-      <a href="/admin/justicia" class="action-card">
-        <span class="action-icon">⚖️</span>
-        <span class="action-title">Expedientes</span>
-        <span class="action-desc">Gestionar casos disciplinarios</span>
-        <span class="action-badge"><%= expedientesAbiertos %> abiertos</span>
+      <a href="/admin/bancario" class="action-card">
+        <span class="action-icon">🏦</span>
+        <span class="action-title">Bancario</span>
+        <span class="action-desc">Cuentas, transacciones y estado</span>
       </a>
       <a href="/admin/tributos" class="action-card">
         <span class="action-icon">🧾</span>
         <span class="action-title">Tributos TLP</span>
         <span class="action-desc">IRM, IGF, IVA y declaraciones</span>
       </a>
+      <a href="/admin/justicia" class="action-card">
+        <span class="action-icon">⚖️</span>
+        <span class="action-title">Expedientes</span>
+        <span class="action-desc">Casos disciplinarios y resoluciones</span>
+        <span class="action-badge"><%= expedientesAbiertos %> abiertos</span>
+      </a>
+      <a href="/admin/documentos" class="action-card">
+        <span class="action-icon">📄</span>
+        <span class="action-title">Documentos</span>
+        <span class="action-desc">Generar PDF, firmas y gestión documental</span>
+      </a>
       <a href="/admin/rgpd" class="action-card">
         <span class="action-icon">🔒</span>
         <span class="action-title">RGPD</span>
-        <span class="action-desc">Gestionar solicitudes ARCO y RAT</span>
+        <span class="action-desc">Solicitudes ARCO y RAT</span>
       </a>
-      <a href="/admin/pdf" class="action-card">
-        <span class="action-icon">📄</span>
-        <span class="action-title">Generar PDF</span>
-        <span class="action-desc">Documentos oficiales normativos</span>
-      </a>
-      <a href="/admin/firmas" class="action-card">
-        <span class="action-icon">✍️</span>
-        <span class="action-title">Firma Digital</span>
-        <span class="action-desc">Documentos pendientes de firma</span>
-      </a>
-      <a href="/admin/contenidos" class="action-card">
-        <span class="action-icon">📝</span>
-        <span class="action-title">Contenidos</span>
-        <span class="action-desc">Gestionar páginas y avisos</span>
+      <a href="/admin/ocio" class="action-card">
+        <span class="action-icon">🎲</span>
+        <span class="action-title">Ocio</span>
+        <span class="action-desc">Loterías y actividades culturales</span>
       </a>
       <a href="/admin/voley-club" class="action-card">
         <span class="action-icon">🏐</span>
         <span class="action-title">Voley Club</span>
         <span class="action-desc">Torneos, partidos y noticias</span>
       </a>
-    </div>
-  </div>
+      <a href="/admin/recursos" class="action-card">
+        <span class="action-icon">🔧</span>
+        <span class="action-title">Recursos</span>
+        <span class="action-desc">Recursos digitales y soporte</span>
+      </a>
 
-  <!-- Últimos logs -->
+  <!-- ════════ MONITOR / VIGILANCIA (integrado) ════════ -->
   <div class="section">
     <div class="section-header">
       <div>
-        <h2>Actividad Reciente</h2>
-        <p class="section-desc">Últimos movimientos registrados en el sistema</p>
+        <h2>🛡️ Vigilancia y Monitoreo</h2>
+        <p class="section-desc">Alertas, logs y actividad del sistema</p>
+      </div>
+      <div style="display:flex;gap:6px">
+        <a href="/admin/audit-bancario" class="btn btn-sm btn-glass">🏛️ Gobierno</a>
+        <button class="btn btn-sm btn-outline" onclick="cargarAlertas();cargarLogs()">🔄</button>
       </div>
     </div>
-    <div class="table-container">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Fecha</th>
-            <th>Usuario</th>
-            <th>Acción</th>
-            <th>Detalle</th>
-          </tr>
-        </thead>
-        <tbody id="logsTable">
-          <tr><td colspan="4" class="loading-cell">Cargando actividad...</td></tr>
-        </tbody>
-      </table>
+
+    <div style="display:flex;gap:4px;margin-bottom:16px;border-bottom:2px solid var(--line)">
+      <button class="tab-btn active" onclick="switchTabDash(this,'dashLogs')">📋 Actividad</button>
+      <button class="tab-btn" onclick="switchTabDash(this,'dashAlertas')">🚨 Alertas</button>
+    </div>
+
+    <!-- Logs -->
+    <div id="dashLogs" class="tab-content">
+      <div class="table-container">
+        <table class="data-table">
+          <thead><tr><th>Fecha</th><th>Usuario</th><th>Acción</th><th>Detalle</th></tr></thead>
+          <tbody id="logsTable"><tr><td colspan="4" class="loading-cell">Cargando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Alertas -->
+    <div id="dashAlertas" class="tab-content" style="display:none">
+      <div id="alertasContainerDash" style="display:grid;gap:8px"><p class="loading-cell">Cargando alertas...</p></div>
     </div>
   </div>
 </div>
 
 <script>
+  function switchTabDash(btn, tabId) {
+    document.querySelectorAll('#dashLogs, #dashAlertas').forEach(t => t.style.display = 'none');
+    document.querySelectorAll('.section-tabs .tab-btn, [onclick*="switchTabDash"]').forEach(b => {
+      b.classList.remove('active');
+      b.style.color = 'var(--text-light)';
+      b.style.borderBottomColor = 'transparent';
+    });
+    btn.classList.add('active');
+    btn.style.color = 'var(--p500)';
+    btn.style.borderBottomColor = 'var(--p500)';
+    document.getElementById(tabId).style.display = 'block';
+  }
+
   async function cargarLogs() {
     try {
       const res = await fetch('/api/admin/logs?limite=10');
@@ -144,6 +169,27 @@
     }
   }
 
+  async function cargarAlertas() {
+    const container = document.getElementById('alertasContainerDash');
+    try {
+      const r = await fetch('/api/bancario-proxy/alertas');
+      const alertas = await r.json();
+      if (!alertas.length) { container.innerHTML = '<p style="color:var(--text-light);text-align:center;padding:20px">✅ Sin alertas activas</p>'; return; }
+      container.innerHTML = alertas.map(a => {
+        const level = a.level || 'info';
+        const icon = level === 'critical' ? '🔴' : level === 'warning' ? '🟡' : level === 'info' ? '🔵' : '⚪';
+        return `<div class="card" style="padding:14px 18px;display:flex;align-items:center;gap:12px;border-left:4px solid ${level === 'critical' ? 'var(--red)' : level === 'warning' ? 'var(--warning)' : 'var(--p500)'}">
+          <span style="font-size:20px">${icon}</span>
+          <div style="flex:1"><strong style="font-size:14px">${a.title || 'Alerta'}</strong>
+            <p style="font-size:12.5px;color:var(--text-light);margin:2px 0 0">${a.message || a.detail || ''}</p></div>
+          <span style="font-size:11px;color:var(--text-muted);white-space:nowrap">${a.createdAt ? new Date(a.createdAt).toLocaleString('es-ES') : ''}</span>
+        </div>`;
+      }).join('');
+    } catch(e) {
+      container.innerHTML = '<p style="color:var(--text-light);text-align:center;padding:20px">📡 Conectando con el core bancario...</p>';
+    }
+  }
+
   async function cargarDocumentos() {
     try {
       const res = await fetch('/api/firma/documentos');
@@ -154,6 +200,7 @@
   }
 
   cargarLogs();
+  cargarAlertas();
   cargarDocumentos();
 </script>
 

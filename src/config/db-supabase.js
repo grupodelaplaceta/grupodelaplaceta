@@ -214,10 +214,15 @@ async function autoMigrateSupabase() {
       creado_en TIMESTAMPTZ DEFAULT NOW()
     );
     `;
-    // Ejecutar cada CREATE TABLE por separado
+    // Ejecutar cada CREATE TABLE por separado via .rpc() o query()
     const statements = sql.split(';').filter(s => s.trim().startsWith('CREATE'));
     for (const stmt of statements) {
-      try { await sb.rpc('exec_sql', { sql: stmt + ';' }); } catch {}
+      try { await sb.rpc('exec_sql', { sql: stmt + ';' }); } catch (e) {
+        // Intentar via REST query directo si rpc falla
+        try { await sb.query(stmt + ';'); } catch (e2) {
+          console.warn('  ⚠️  No se pudo crear tabla via RPC ni query. Ejecuta el SQL manualmente en Supabase.');
+        }
+      }
     }
     console.log('  ✅ Supabase: Migración automática completada');
   } catch (err) {
@@ -655,7 +660,12 @@ export async function sbCreateTributosContributor(data) {
   if (!sb) throw new Error('Supabase no configurado');
   const { data: result, error } = await sb.from('tributos_contribuyentes')
     .insert(data).select().single();
-  if (error) throw new Error(error.message);
+  if (error) {
+    if (error.message?.includes('does not exist') || error.code === '42P01') {
+      throw new Error('La tabla tributos_contribuyentes no existe en Supabase. Crea las tablas desde el SQL editor.');
+    }
+    throw new Error(error.message);
+  }
   return result;
 }
 

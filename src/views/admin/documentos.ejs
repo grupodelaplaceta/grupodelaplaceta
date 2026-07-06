@@ -35,12 +35,26 @@
     <div class="section-header">
       <div>
         <h2>Acciones</h2>
-        <p class="section-desc">Crear y gestionar documentos</p>
+        <p class="section-desc">Documentos, PDFs y firmas digitales</p>
       </div>
-      <div style="display:flex;gap:8px">
-        <a href="/admin/documentos/editor" class="btn btn-primary">➕ Nuevo Documento</a>
-        <button class="btn btn-secondary" onclick="cargarDocumentos()">🔄 Refrescar</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a href="/admin/documentos/editor" class="btn btn-sm btn-primary">➕ Nuevo</a>
+        <a href="/admin/pdf" class="btn btn-sm btn-glass">📄 Generar PDF</a>
+        <a href="/admin/firmas" class="btn btn-sm btn-glass">✍️ Firmas Pendientes</a>
+        <button class="btn btn-sm btn-outline" onclick="cargarDocumentos()">🔄</button>
       </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:12px">
+      <a href="/admin/pdf" class="action-card" style="padding:16px">
+        <span class="action-icon">📄</span>
+        <span class="action-title">Generar PDF</span>
+        <span class="action-desc">Documentos oficiales y normativos</span>
+      </a>
+      <a href="/admin/firmas" class="action-card" style="padding:16px">
+        <span class="action-icon">✍️</span>
+        <span class="action-title">Firma Digital</span>
+        <span class="action-desc">Documentos pendientes de firma</span>
+      </a>
     </div>
   </div>
 

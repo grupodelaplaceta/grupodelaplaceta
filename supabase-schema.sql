@@ -160,27 +160,6 @@ CREATE TABLE IF NOT EXISTS tributos_declaraciones (
 CREATE INDEX IF NOT EXISTS idx_tributos_declaraciones_periodo ON tributos_declaraciones(mes_periodo);
 CREATE INDEX IF NOT EXISTS idx_tributos_declaraciones_permiso ON tributos_declaraciones(id_permiso_junta);
 
--- Función trigger para actualizar updated_at automáticamente
-CREATE OR REPLACE FUNCTION update_tributos_modified_column()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = CURRENT_TIMESTAMP;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trg_tributos_contribuyentes_updated
-  BEFORE UPDATE ON tributos_contribuyentes
-  FOR EACH ROW EXECUTE FUNCTION update_tributos_modified_column();
-
-CREATE TRIGGER trg_tributos_declaraciones_updated
-  BEFORE UPDATE ON tributos_declaraciones
-  FOR EACH ROW EXECUTE FUNCTION update_tributos_modified_column();
-
-CREATE TRIGGER trg_tributos_facturas_updated
-  BEFORE UPDATE ON tributos_facturas
-  FOR EACH ROW EXECUTE FUNCTION update_tributos_modified_column();
-
 CREATE TABLE IF NOT EXISTS tributos_facturas (
   id TEXT PRIMARY KEY,
   numero_factura TEXT UNIQUE NOT NULL,
@@ -259,6 +238,29 @@ CREATE TABLE IF NOT EXISTS tributos_saldos_diarios (
 );
 
 CREATE INDEX IF NOT EXISTS idx_tributos_saldos_diarios_busqueda ON tributos_saldos_diarios(placeta_id, mes_periodo);
+
+-- ═══════════════════════════════════════════════════════════════════════════
+--  TRIGGERS (después de TODAS las tablas)
+-- ═══════════════════════════════════════════════════════════════════════════
+CREATE OR REPLACE FUNCTION update_tributos_modified_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_tributos_contribuyentes_updated
+  BEFORE UPDATE ON tributos_contribuyentes
+  FOR EACH ROW EXECUTE FUNCTION update_tributos_modified_column();
+
+CREATE TRIGGER trg_tributos_declaraciones_updated
+  BEFORE UPDATE ON tributos_declaraciones
+  FOR EACH ROW EXECUTE FUNCTION update_tributos_modified_column();
+
+CREATE TRIGGER trg_tributos_facturas_updated
+  BEFORE UPDATE ON tributos_facturas
+  FOR EACH ROW EXECUTE FUNCTION update_tributos_modified_column();
 
 -- 11. CONTENIDOS
 CREATE TABLE IF NOT EXISTS contenidos (

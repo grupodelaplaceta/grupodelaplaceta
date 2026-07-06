@@ -36,6 +36,7 @@ import placetaidAdminRoutes from './src/routes/placetaid-admin.js';
 import documentosRoutes from './src/routes/documentos.js';
 import auditRoutes from './src/routes/audit.js';
 import tramitacionRoutes from './src/routes/tramitacion.js';
+import notificacionesRoutes from './src/routes/notifications.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -152,6 +153,7 @@ app.use('/api/admin/placetid', placetaidAdminRoutes);
 app.use('/', documentosRoutes);
 app.use('/api/admin/audit', auditRoutes);
 app.use('/api/admin', tramitacionRoutes);
+app.use('/api/notificaciones', notificacionesRoutes);
 app.use('/api/firma', firmaRoutes);
 app.use('/api/placetid', placetidRoutes);
 app.use('/api/contenidos', contenidosRoutes);

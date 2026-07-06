@@ -124,15 +124,28 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'Todos los campos son obligatorios' });
     }
 
-    // Verificar si el alias ya existe en Supabase
+    const db = getDb();
+
+    // ── Verificar duplicados (Supabase + SQLite) ─────────────────────────
+    let supabaseOk = false;
     try {
       const existente = await sbFindSolicitante(alias);
       if (existente) return res.status(409).json({ error: 'El alias o email ya están registrados' });
-    } catch (e) {}
-    try {
       const existenteEmail = await sbFindSolicitanteByEmail(email);
       if (existenteEmail) return res.status(409).json({ error: 'El alias o email ya están registrados' });
-    } catch (e) {}
+      supabaseOk = true;
+    } catch (e) {
+      // Supabase no disponible → verificar solo en SQLite
+      console.warn('  ⚠️  Register: Supabase no disponible, usando solo SQLite');
+    }
+
+    // Fallback: verificar duplicados en SQLite
+    if (!supabaseOk) {
+      const existenteAlias = db.prepare('SELECT id FROM solicitantes WHERE alias = ?').get(alias);
+      if (existenteAlias) return res.status(409).json({ error: 'El alias o email ya están registrados' });
+      const existenteEmail = db.prepare('SELECT id FROM solicitantes WHERE email = ?').get(email);
+      if (existenteEmail) return res.status(409).json({ error: 'El alias o email ya están registrados' });
+    }
 
     // Calcular edad
     const nacimiento = new Date(fecha_nacimiento);

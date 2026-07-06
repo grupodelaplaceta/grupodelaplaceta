@@ -8,7 +8,24 @@ document.addEventListener('DOMContentLoaded', () => {
   inicializarModales();
   inicializarSidebar();
   inicializarBusqueda();
+  cargarContadorNotificaciones();
 });
+
+// ── Contador de notificaciones ─────────────────────────────────────────────
+async function cargarContadorNotificaciones() {
+  try {
+    const r = await fetch('/api/notificaciones/no-leidas');
+    const data = await r.json();
+    const total = data.total || 0;
+    ['notifBadge', 'notifBadgeMobile'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        if (total > 0) { el.style.display = 'inline'; el.textContent = total; }
+        else el.style.display = 'none';
+      }
+    });
+  } catch (e) { /* silencioso */ }
+}
 
 // ── Sidebar ─────────────────────────────────────────────────────────────────
 function inicializarSidebar() {

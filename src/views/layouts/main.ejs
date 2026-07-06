@@ -28,51 +28,34 @@
         <a href="/admin/dashboard" class="sidebar-link <%= pathActual === '/admin/dashboard' ? 'active' : '' %>">
           <span class="sl-icon">📊</span> Dashboard
         </a>
-        <a href="/admin/vigilancia" class="sidebar-link sidebar-sub <%= pathActual.startsWith('/admin/vigilancia') ? 'active' : '' %>">
-          <span class="sl-icon">🛡️</span> Vigilancia
-        </a>
       </div>
 
       <div class="sidebar-group">
         <div class="sidebar-group-title">Identidad</div>
         <a href="/admin/identidad" class="sidebar-link <%= pathActual.startsWith('/admin/identidad') ? 'active' : '' %>">
-          <span class="sl-icon">🆔</span> Gestión de Altas
+          <span class="sl-icon">🆔</span> Altas
         </a>
-        <a href="/admin/ciudadanos" class="sidebar-link sidebar-sub <%= pathActual.startsWith('/admin/ciudadanos') ? 'active' : '' %>">
+        <a href="/admin/ciudadanos" class="sidebar-link <%= pathActual.startsWith('/admin/ciudadanos') ? 'active' : '' %>">
           <span class="sl-icon">👥</span> Ciudadanos
         </a>
-        <a href="/admin/placetid" class="sidebar-link sidebar-sub <%= pathActual.startsWith('/admin/placetid') ? 'active' : '' %>">
+        <a href="/admin/placetid" class="sidebar-link <%= pathActual.startsWith('/admin/placetid') ? 'active' : '' %>">
           <span class="sl-icon">🔐</span> PlacetaID
         </a>
       </div>
 
       <div class="sidebar-group">
-        <div class="sidebar-group-title">Económico-Financiero</div>
+        <div class="sidebar-group-title">Financiero</div>
         <a href="/admin/bancario" class="sidebar-link <%= pathActual.startsWith('/admin/bancario') ? 'active' : '' %>">
           <span class="sl-icon">🏦</span> Bancario
         </a>
-        <a href="/admin/empresas" class="sidebar-link sidebar-sub <%= pathActual.startsWith('/admin/empresas') ? 'active' : '' %>">
-          <span class="sl-icon">🏢</span> Empresas y EIP
+        <a href="/admin/audit-bancario" class="sidebar-link <%= pathActual.startsWith('/admin/audit-bancario') ? 'active' : '' %>">
+          <span class="sl-icon">🏛️</span> Gobierno
         </a>
-        <a href="/admin/tributos" class="sidebar-link sidebar-sub <%= pathActual.startsWith('/admin/tributos') ? 'active' : '' %>">
+        <a href="/admin/empresas" class="sidebar-link <%= pathActual.startsWith('/admin/empresas') ? 'active' : '' %>">
+          <span class="sl-icon">🏢</span> Empresas
+        </a>
+        <a href="/admin/tributos" class="sidebar-link <%= pathActual.startsWith('/admin/tributos') ? 'active' : '' %>">
           <span class="sl-icon">🧾</span> Tributos
-        </a>
-        <a href="/admin/audit-bancario" class="sidebar-link sidebar-sub <%= pathActual.startsWith('/admin/audit-bancario') ? 'active' : '' %>">
-          <span class="sl-icon">🏦</span> Auditoría Bancaria
-        </a>
-      </div>
-
-      <div class="sidebar-group">
-        <div class="sidebar-group-title">Ocio y Cultura</div>
-        <a href="/admin/ocio" class="sidebar-link <%= pathActual.startsWith('/admin/ocio') ? 'active' : '' %>">
-          <span class="sl-icon">🎲</span> Ocio y Loterías
-        </a>
-      </div>
-
-      <div class="sidebar-group">
-        <div class="sidebar-group-title">Recursos</div>
-        <a href="/admin/recursos" class="sidebar-link <%= pathActual.startsWith('/admin/recursos') ? 'active' : '' %>">
-          <span class="sl-icon">🔧</span> Recursos Digitales
         </a>
       </div>
 
@@ -81,34 +64,34 @@
         <a href="/admin/justicia" class="sidebar-link <%= pathActual.startsWith('/admin/justicia') ? 'active' : '' %>">
           <span class="sl-icon">⚖️</span> Expedientes
         </a>
-        <a href="/admin/tramitacion" class="sidebar-link sidebar-sub <%= pathActual.startsWith('/admin/tramitacion') ? 'active' : '' %>">
+        <a href="/admin/tramitacion" class="sidebar-link <%= pathActual.startsWith('/admin/tramitacion') ? 'active' : '' %>">
           <span class="sl-icon">📋</span> Tramitación
         </a>
       </div>
 
       <div class="sidebar-group">
         <div class="sidebar-group-title">Secretaría</div>
+        <a href="/admin/documentos" class="sidebar-link <%= pathActual.startsWith('/admin/documentos') ? 'active' : '' %>">
+          <span class="sl-icon">📄</span> Documentos
+        </a>
         <a href="/admin/rgpd" class="sidebar-link <%= pathActual.startsWith('/admin/rgpd') ? 'active' : '' %>">
           <span class="sl-icon">🔒</span> RGPD
-        </a>
-        <a href="/admin/pdf" class="sidebar-link <%= pathActual.startsWith('/admin/pdf') ? 'active' : '' %>">
-          <span class="sl-icon">📄</span> Generar PDF
-        </a>
-        <a href="/admin/firmas" class="sidebar-link <%= pathActual.startsWith('/admin/firmas') ? 'active' : '' %>">
-          <span class="sl-icon">✍️</span> Firma Digital
         </a>
         <a href="/admin/contenidos" class="sidebar-link <%= pathActual.startsWith('/admin/contenidos') ? 'active' : '' %>">
           <span class="sl-icon">📝</span> Contenidos
         </a>
-        <a href="/admin/documentos" class="sidebar-link sidebar-sub <%= pathActual.startsWith('/admin/documentos') ? 'active' : '' %>">
-          <span class="sl-icon">📄</span> Documentos
-        </a>
       </div>
 
       <div class="sidebar-group">
-        <div class="sidebar-group-title">Voley Club</div>
+        <div class="sidebar-group-title">Grupos</div>
+        <a href="/admin/ocio" class="sidebar-link <%= pathActual.startsWith('/admin/ocio') ? 'active' : '' %>">
+          <span class="sl-icon">🎲</span> Ocio
+        </a>
         <a href="/admin/voley-club" class="sidebar-link <%= pathActual.startsWith('/admin/voley-club') ? 'active' : '' %>">
           <span class="sl-icon">🏐</span> Voley Club
+        </a>
+        <a href="/admin/recursos" class="sidebar-link <%= pathActual.startsWith('/admin/recursos') ? 'active' : '' %>">
+          <span class="sl-icon">🔧</span> Recursos
         </a>
       </div>
     </nav>
@@ -118,9 +101,12 @@
         <span class="sidebar-user-badge"><%= usuario.alias %></span>
         <span class="sidebar-user-rol"><%= usuario.rol %></span>
       </div>
-      <form action="/api/auth/logout" method="POST">
-        <button type="submit" class="sidebar-logout" title="Cerrar sesión">🚪 Salir</button>
-      </form>
+      <div style="display:flex;gap:6px;align-items:center">
+        <a href="/admin/audit-bancario" style="position:relative;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.7);padding:6px 10px;border-radius:10px;text-decoration:none;font-size:14px" title="Notificaciones">🔔 <span id="notifBadge" style="display:none;background:var(--red);color:#fff;border-radius:50%;padding:1px 5px;font-size:10px;position:absolute;top:-4px;right:-4px">0</span></a>
+        <form action="/api/auth/logout" method="POST">
+          <button type="submit" class="sidebar-logout" title="Cerrar sesión">🚪 Salir</button>
+        </form>
+      </div>
     </div>
   </aside>
 
@@ -131,9 +117,14 @@
     <div class="topbar-mobile">
       <button class="hamburger" onclick="document.getElementById('sidebar').classList.toggle('open')" aria-label="Abrir menú">☰</button>
       <span class="topbar-mobile-title">🏛️ GDLP CRM</span>
-      <form action="/api/auth/logout" method="POST" class="topbar-mobile-logout">
-        <button type="submit" class="btn btn-sm btn-glass" style="color:white;border-color:rgba(255,255,255,0.2)">Salir</button>
-      </form>
+      <div style="display:flex;gap:6px;align-items:center">
+        <button class="btn btn-sm btn-glass" style="color:white;border-color:rgba(255,255,255,0.2);position:relative" onclick="window.location.href='/admin/audit-bancario'" title="Notificaciones">
+          🔔 <span id="notifBadgeMobile" style="display:none;background:var(--red);color:#fff;border-radius:50%;padding:1px 5px;font-size:10px;position:absolute;top:-2px;right:-4px">0</span>
+        </button>
+        <form action="/api/auth/logout" method="POST" class="topbar-mobile-logout">
+          <button type="submit" class="btn btn-sm btn-glass" style="color:white;border-color:rgba(255,255,255,0.2)">Salir</button>
+        </form>
+      </div>
     </div>
 
     <main class="main-content">
@@ -154,6 +145,10 @@
   </main>
   <% } %>
 
+  <!-- Toast notifications container -->
+  <div id="mensajes"></div>
+
   <script src="/js/crm.js"></script>
+  <script src="/js/buscador-universal.js"></script>
 </body>
 </html>

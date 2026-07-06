@@ -340,6 +340,29 @@ router.post('/admin-cuentas', verificarSesion, verificarRol('administrador', 'ju
     });
     const data = await r.json();
     if (!r.ok) return res.status(r.status).json(data);
+
+    // ── Auto-notificación ────────────────────────────────────────────────
+    try {
+      const { crearNotificacion } = await import('./notifications.js');
+      const admin = req.session.usuario?.alias || 'Admin';
+      const titulos = {
+        'cambiar-tipo': `🏷️ Cambio de tipo en cuenta`,
+        'asignar-eip': `🔑 EIP asignado a cuenta`,
+        'alta-tributos': `🏛️ Alta en tributos`
+      };
+      const mensajes = {
+        'cambiar-tipo': `${admin} cambió el tipo de ${params.accountId} a ${params.tipo}`,
+        'asignar-eip': `${admin} asignó EIP ${data.eip || params.eip} a ${params.accountId}`,
+        'alta-tributos': `${admin} dio de alta ${params.accountId} en tributos`
+      };
+      crearNotificacion({
+        titulo: titulos[action] || `Acción: ${action}`,
+        mensaje: (mensajes[action] || `${admin} ejecutó ${action}`) + (params.motivo ? ` — ${params.motivo}` : ''),
+        tipo: action === 'cambiar-tipo' ? 'alerta' : 'informativa',
+        creado_por: req.session.usuario?.id
+      });
+    } catch (e) { /* notificación no crítica */ }
+
     res.json(data);
   } catch (err) {
     res.status(502).json({ error: err.message });
