@@ -53,7 +53,9 @@ async function fetchBancoState(req) {
     return cache.data;
   }
   if (!res.ok) {
-    console.warn(`[bancario-proxy] Banco API respondió ${res.status}, usando SQLite fallback`);
+    let detail = '';
+    try { const e = await res.json(); detail = e.error || ''; } catch { try { detail = await res.text(); } catch {} }
+    console.warn(`[bancario-proxy] Banco API respondió ${res.status}: ${detail}, usando SQLite fallback`);
     cache.data = sqliteFallback();
     return cache.data;
   }
