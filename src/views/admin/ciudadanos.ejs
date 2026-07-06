@@ -14,12 +14,15 @@
   <div class="section-header"><div><h2>Listado de Ciudadanos</h2></div>
     <input type="search" id="searchCiudadanos" oninput="filtrarTabla('searchCiudadanos','ciudadanosBody')" placeholder="🔍 Buscar por DIP, nombre..." style="width:260px;padding:8px 12px;border:2px solid var(--line);border-radius:var(--radius);font-family:var(--font);font-size:13px">
     <button class="btn btn-sm btn-primary" onclick="cargarCiudadanos()">🔄 Refrescar</button>
+    <button class="btn btn-sm btn-success" onclick="importarDePlacetaID()">📥 Importar de PlacetaID</button>
   </div>
-  <div class="table-container"><table class="data-table"><thead><tr><th>DIP</th><th>Nombre</th><th>Alias</th><th>PlacetaID</th><th>Email</th><th>Teléfono</th><th>Rol</th><th>Estado</th><th>Trámites</th></tr></thead>
+  <div class="table-container"><table class="data-table"><thead><tr><th>DIP</th><th>Nombre</th><th>Alias</th><th>PlacetaID</th><th>Email</th><th>Rol</th><th>Estado</th><th>PlacetaID</th><th>Acciones</th></tr></thead>
     <tbody id="ciudadanosBody"><tr><td colspan="9" class="loading-cell">Cargando...</td></tr></tbody></table></div>
 </div>
 
 <script>
+let placetaidRegistros = [];
+
 async function apiFetch(url, opts) {
   const r = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...opts });
   if (!r.ok) { let m = 'HTTP ' + r.status; try { const e = await r.json(); if (e.error) m += ': ' + e.error; } catch {} throw new Error(m); }
@@ -29,6 +32,123 @@ function filtrarTabla(searchId, tbodyId) {
   const q = document.getElementById(searchId).value.toLowerCase();
   document.querySelectorAll(`#${tbodyId} tr`).forEach(r => r.style.display = r.textContent.toLowerCase().includes(q) ? '' : 'none');
 }
+
+async function mostrarModalHTML(titulo, html) {
+  const div = document.createElement('div');
+  div.className = 'modal-overlay';
+  div.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center';
+  div.innerHTML = `<div class="modal-window" style="max-width:500px;width:90%;max-height:85vh;overflow:auto">
+    <div class="modal-header"><h3>${titulo}</h3><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
+    <div class="modal-body">${html}</div>
+  </div>`;
+  document.body.appendChild(div);
+}
+
+async function crearEnPlacetaID(dip, nombre, email) {
+  if (!confirm(`¿Crear usuario ${dip} en PlacetaID con 2FA?`)) return;
+  try {
+    const r = await apiFetch('/api/admin/placetid/registro/crear', {
+      method: 'POST',
+      body: JSON.stringify({
+        dip, nombre: nombre || 'Ciudadano', apellidos: '', correo: email || '',
+        password: Math.random().toString(36).slice(-12) + 'A1!',
+        fechaNacimiento: '2000-01-01', origen: 'crm_admin'
+      })
+    });
+    // Generar token de registro
+    const t = await apiFetch('/api/admin/placetid/registro/generar-token', {
+      method: 'POST', body: JSON.stringify({ dip })
+    });
+    const baseUrl = window.location.origin;
+    const enlace = baseUrl + '/tramites/completar-registro?token=' + encodeURIComponent(t.token);
+    await mostrarModalHTML('✅ Creado en PlacetaID', `
+      <div class="alert alert-success"><strong>${r.dip || dip}</strong> registrado con PlacetaID</div>
+      <div style="text-align:center;margin:16px 0">
+        <img src="${t.qrCode}" alt="QR 2FA" style="width:160px;height:160px;border:2px solid var(--p200);border-radius:8px;padding:4px;background:#fff">
+      </div>
+      <div style="background:#f5f3ff;border-radius:8px;padding:12px;margin:12px 0;word-break:break-all">
+        <p style="font-size:12px;color:#666;margin:0 0 4px 0">🔗 Enlace para el ciudadano:</p>
+        <a href="${enlace}" target="_blank" style="font-size:12px">${enlace}</a>
+        <button class="btn btn-sm btn-primary" style="margin-top:8px" onclick="navigator.clipboard.writeText('${enlace}').then(()=>this.textContent='✅ Copiado')">📋 Copiar enlace</button>
+      </div>
+      <div style="background:#fefce8;border-radius:8px;padding:12px;margin:12px 0;font-size:13px">
+        <strong>Secreto TOTP:</strong> <code style="user-select:all" onclick="navigator.clipboard.writeText(this.textContent)">${t.totpSecret}</code>
+      </div>
+      <p style="font-size:12px;color:#888">Comparte el enlace con el ciudadano. Deberá escanear el QR y verificar un código 2FA.</p>
+    `);
+    cargarCiudadanos();
+  } catch (e) { alert('Error: ' + e.message); }
+}
+
+async function generarEnlaceRegistro(dip) {
+  try {
+    const t = await apiFetch('/api/admin/placetid/registro/generar-token', {
+      method: 'POST', body: JSON.stringify({ dip })
+    });
+    const baseUrl = window.location.origin;
+    const enlace = baseUrl + '/tramites/completar-registro?token=' + encodeURIComponent(t.token);
+    await mostrarModalHTML('🔗 Enlace de registro', `
+      <div style="text-align:center;margin:16px 0">
+        <img src="${t.qrCode}" alt="QR 2FA" style="width:160px;height:160px;border:2px solid var(--p200);border-radius:8px;padding:4px;background:#fff">
+      </div>
+      <p style="font-size:14px;font-weight:600">${t.nombre}</p>
+      <p style="font-size:12px;color:#666">DIP: ${t.dip} · PlacetaID: ${t.placeid}</p>
+      <div style="background:#f5f3ff;border-radius:8px;padding:12px;margin:12px 0;word-break:break-all">
+        <p style="font-size:12px;color:#666;margin:0 0 4px 0">🔗 Enlace para el ciudadano:</p>
+        <a href="${enlace}" target="_blank" style="font-size:12px">${enlace}</a>
+        <button class="btn btn-sm btn-primary" style="margin-top:8px;display:block" onclick="navigator.clipboard.writeText('${enlace}').then(()=>this.textContent='✅ Copiado')">📋 Copiar enlace</button>
+      </div>
+    `);
+  } catch (e) { alert('Error: ' + e.message); }
+}
+
+async function importarDePlacetaID() {
+  try {
+    const registros = await apiFetch('/api/admin/placetid/registros-placetaid?limit=200');
+    const existentes = await apiFetch('/api/admin/ciudadanos');
+    const dipsExistentes = new Set(existentes.map(u => u.dip));
+    const nuevos = (registros.registros || []).filter(r => !dipsExistentes.has(r.dip));
+
+    if (!nuevos.length) {
+      alert('No hay nuevos ciudadanos en PlacetaID para importar.');
+      return;
+    }
+
+    let html = '<p>Se importarán ' + nuevos.length + ' ciudadanos de PlacetaID:</p><div style="max-height:300px;overflow:auto">' +
+      nuevos.map(r => '<label style="display:flex;align-items:center;gap:8px;padding:4px 0"><input type="checkbox" class="importCheck" value="' + r.dip + '" checked><strong>' + r.dip + '</strong> ' + (r.nombre || '') + ' ' + (r.apellidos || '') + '</label>').join('') +
+      '</div><button class="btn btn-primary" style="margin-top:12px" onclick="ejecutarImportacion()">📥 Importar seleccionados</button>';
+
+    window._importables = nuevos;
+    await mostrarModalHTML('📥 Importar de PlacetaID', html);
+  } catch (e) { alert('Error: ' + e.message); }
+}
+
+async function ejecutarImportacion() {
+  const checks = document.querySelectorAll('.importCheck:checked');
+  if (!checks.length) return alert('Selecciona al menos un ciudadano.');
+  const seleccionados = window._importables.filter(r => Array.from(checks).some(c => c.value === r.dip));
+
+  let ok = 0, err = 0;
+  for (const r of seleccionados) {
+    try {
+      await apiFetch('/api/auth/register', {
+        method: 'POST',
+        body: JSON.stringify({
+          alias: (r.nombre || 'user').toLowerCase().replace(/[^a-z0-9]/g,'') + r.dip.slice(-4),
+          nombre_real: r.nombre + ' ' + (r.apellidos || ''),
+          email: r.correo || r.dip + '@placeta.local',
+          fecha_nacimiento: r.fechaNacimiento ? r.fechaNacimiento.slice(0,10) : '2000-01-01',
+          password: Math.random().toString(36).slice(-12) + 'A1!',
+          dip: r.dip
+        })
+      });
+      ok++;
+    } catch { err++; }
+  }
+  alert(`✅ ${ok} importados, ❌ ${err} errores`);
+  cargarCiudadanos();
+}
+
 async function cargarCiudadanos() {
   try {
     const d = await apiFetch('/api/admin/ciudadanos');
@@ -37,18 +157,30 @@ async function cargarCiudadanos() {
     document.getElementById('totalActivos').textContent = d.filter(u => u.estado === 'activo').length;
     document.getElementById('totalPendientes').textContent = d.filter(u => u.estado === 'pendiente' || u.estado === 'suspendido').length;
     document.getElementById('totalTramites').textContent = d.reduce((s, u) => s + (u.total_tramites || 0), 0);
+
+    // Obtener registros de PlacetaID para marcar estado
+    try { placetaidRegistros = await apiFetch('/api/admin/placetid/registros-placetaid?limit=200'); } catch { placetaidRegistros = { registros: [] }; }
+    const dipsPlacetaid = new Set((placetaidRegistros.registros || []).map(r => r.dip));
+
     if (!d.length) { tbody.innerHTML = '<tr><td colspan="9" class="loading-cell">Sin ciudadanos</td></tr>'; return; }
-    tbody.innerHTML = d.map(u => '<tr>' +
+    tbody.innerHTML = d.map(u => {
+      const enPlacetaid = dipsPlacetaid.has(u.dip);
+      return '<tr>' +
       '<td><strong>' + (u.dip || '—') + '</strong></td>' +
       '<td>' + (u.nombre_real || '—') + '</td>' +
       '<td>' + (u.alias || '—') + '</td>' +
       '<td>' + (u.placeid || '—') + '</td>' +
       '<td>' + (u.email || '—') + '</td>' +
-      '<td>' + (u.telefono || '—') + '</td>' +
       '<td><span class="pill pill-purple">' + (u.rol || 'miembro') + '</span></td>' +
       '<td><span class="badge badge-' + (u.estado === 'activo' ? 'activo' : u.estado === 'pendiente' ? 'pendiente' : 'suspendido') + '">' + (u.estado || '—') + '</span></td>' +
-      '<td>' + (u.total_tramites || 0) + '</td></tr>'
-    ).join('');
+      '<td>' + (enPlacetaid ? '<span class="badge badge-activo">✅ Sí</span>' : '<span class="badge badge-baja">❌ No</span>') + '</td>' +
+      '<td style="display:flex;gap:4px">' +
+        (enPlacetaid
+          ? '<button class="btn btn-sm btn-primary" onclick="generarEnlaceRegistro(\'' + u.dip + '\')">🔗 Enlace</button>'
+          : '<button class="btn btn-sm btn-success" onclick="crearEnPlacetaID(\'' + u.dip + '\',\'' + (u.nombre_real || '').replace(/'/g,"\\'") + '\',\'' + (u.email || '').replace(/'/g,"\\'") + '\')">➕ PlacetaID</button>'
+        ) +
+      '</td></tr>';
+    }).join('');
   } catch(e) { document.getElementById('ciudadanosBody').innerHTML = '<tr><td colspan="9" class="error-cell">' + e.message + '</td></tr>'; }
 }
 document.addEventListener('DOMContentLoaded', cargarCiudadanos);

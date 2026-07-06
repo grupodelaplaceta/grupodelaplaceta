@@ -137,4 +137,42 @@ router.delete('/solicitantes/:id', async (req, res) => {
   } catch (e) { res.status(502).json({ error: e.message }); }
 });
 
+// ── Registro: crear en PlacetaID (genera 2FA) ──────────────────────────────
+router.post('/registro/crear', async (req, res) => {
+  try {
+    const token = await getToken();
+    const url = `${API}/registro/solicitante`;
+    const result = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
+      body: JSON.stringify(req.body)
+    });
+    const txt = await result.text();
+    try { res.status(result.status).json(JSON.parse(txt)); }
+    catch { res.status(result.status).json({ raw: txt.substring(0,200) }); }
+  } catch (e) { res.status(502).json({ error: e.message }); }
+});
+
+// ── Generar token de registro para compartir ───────────────────────────────
+router.post('/registro/generar-token', async (req, res) => {
+  try {
+    const token = await getToken();
+    const url = `${API}/registro/generar-token`;
+    const result = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
+      body: JSON.stringify(req.body)
+    });
+    const txt = await result.text();
+    try { res.status(result.status).json(JSON.parse(txt)); }
+    catch { res.status(result.status).json({ raw: txt.substring(0,200) }); }
+  } catch (e) { res.status(502).json({ error: e.message }); }
+});
+
+// ── Listar registros de PlacetaID (para importar) ──────────────────────────
+router.get('/registros-placetaid', async (req, res) => {
+  try { send(res, await call(`/admin/registros?limit=${req.query.limit || 200}`)); }
+  catch (e) { res.status(502).json({ error: e.message }); }
+});
+
 export default router;

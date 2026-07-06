@@ -1,0 +1,47 @@
+<section class="hero" style="padding:50px 24px">
+  <h1>📱 Completar Registro</h1>
+  <p>Configura tu autenticador de dos factores (2FA)</p>
+</section>
+
+<section class="section">
+  <div class="section-inner tramite-form">
+    <div class="form-card" id="step1Card">
+      <h2>🔐 Configurar PlacetaID</h2>
+      <p>Escanea el código QR con tu aplicación de autenticación (Google Authenticator, Authy, etc.) o copia el código manualmente. Luego introduce el código de 6 dígitos para verificar.</p>
+
+      <% if (typeof error !== 'undefined' && error) { %>
+      <div class="alert alert-error"><%= error %></div>
+      <% } %>
+
+      <% if (typeof resultado !== 'undefined' && resultado) { %>
+      <div class="alert alert-success"><strong>✅ <%= resultado.mensaje %></strong></div>
+      <a href="/login" class="btn btn-primary btn-block">Ir a Iniciar Sesión</a>
+      <% } else if (typeof qrCode !== 'undefined' && qrCode) { %>
+      <div style="text-align:center;margin:20px 0">
+        <img src="<%= qrCode %>" alt="QR 2FA" style="width:200px;height:200px;border:3px solid var(--p200);border-radius:12px;padding:8px;background:#fff">
+      </div>
+      <div style="background:#f5f3ff;border-radius:12px;padding:16px;margin:16px 0;text-align:center">
+        <p style="font-size:12px;color:#666;margin:0 0 8px 0">O introduce este código manualmente en tu app:</p>
+        <code style="font-size:14px;background:#fff;padding:8px 16px;border-radius:8px;border:1px solid #ddd6fe;display:inline-block;user-select:all;font-family:monospace" onclick="navigator.clipboard?.writeText(this.textContent)"><%= totpSecret %></code>
+        <p style="font-size:11px;color:#999;margin:8px 0 0 0">(Haz clic para copiar)</p>
+      </div>
+      <div style="background:#fefce8;border-radius:12px;padding:12px;margin:16px 0;font-size:13px;border:1px solid #fde68a">
+        <strong>👤 <%= nombre %></strong><br>
+        DIP: <strong><%= dip %></strong> · PlacetaID: <strong><%= placeid %></strong>
+      </div>
+      <form method="POST" action="/tramites/completar-registro">
+        <input type="hidden" name="token" value="<%= token %>">
+        <div class="form-group">
+          <label>Código de verificación (6 dígitos) *</label>
+          <input type="text" name="codigo" required placeholder="000000" pattern="[0-9]{6}" maxlength="6" style="font-size:24px;text-align:center;letter-spacing:8px;font-family:monospace">
+          <span class="form-hint">Introduce el código de 6 dígitos que aparece en tu app de autenticación</span>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">✅ Verificar y completar</button>
+      </form>
+      <p style="text-align:center;font-size:12px;color:#999;margin-top:16px">¿Tienes problemas? Contacta con la Junta Directiva.</p>
+      <% } else { %>
+      <div class="alert alert-warning">Enlace inválido o expirado. Solicita un nuevo enlace de registro.</div>
+      <% } %>
+    </div>
+  </div>
+</section>

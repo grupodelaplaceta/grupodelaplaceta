@@ -199,6 +199,51 @@ router.get('/tramites/alta-placetid', (req, res) => {
   res.render('public/tramites/alta-placetid', { titulo: 'Alta PlacetaID', layout: 'layouts/publico', pathActual: '/tramites', resultado: null, usuario: null, dipSugerido: '' });
 });
 
+// ── Completar registro (página pública con QR + 2FA) ──────────────────────
+router.get('/tramites/completar-registro', async (req, res) => {
+  const { token } = req.query;
+  if (!token) return res.render('public/tramites/completar-registro', { titulo: 'Completar Registro', layout: 'layouts/publico', pathActual: '/tramites', error: 'Token requerido.', qrCode: null, totpSecret: null, token: null, nombre: null, dip: null, placeid: null, resultado: null });
+
+  // Obtener datos del token desde PlacetaID
+  try {
+    const r = await fetch(`${process.env.PLACETAID_API_URL || 'https://id.laplaceta.org/api'}/registro/info-token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-API-Key': process.env.PLACETAID_API_KEY || 'ccb611655030bdadf7218418dc195dcb' },
+      body: JSON.stringify({ token })
+    });
+    const data = await r.json();
+    if (!r.ok) return res.render('public/tramites/completar-registro', { titulo: 'Completar Registro', layout: 'layouts/publico', pathActual: '/tramites', error: data.error || 'Token inválido', qrCode: null, totpSecret: null, token: null, nombre: null, dip: null, placeid: null, resultado: null });
+
+    res.render('public/tramites/completar-registro', {
+      titulo: 'Completar Registro', layout: 'layouts/publico', pathActual: '/tramites',
+      qrCode: data.qrCode, totpSecret: data.totpSecret,
+      token, nombre: data.nombre, dip: data.dip, placeid: data.placeid,
+      error: null, resultado: null
+    });
+  } catch {
+    res.render('public/tramites/completar-registro', { titulo: 'Completar Registro', layout: 'layouts/publico', pathActual: '/tramites', error: 'Error al validar el enlace.', qrCode: null, totpSecret: null, token: null, nombre: null, dip: null, placeid: null, resultado: null });
+  }
+});
+
+router.post('/tramites/completar-registro', async (req, res) => {
+  const { token, codigo } = req.body;
+  if (!token || !codigo) return res.render('public/tramites/completar-registro', { titulo: 'Completar Registro', layout: 'layouts/publico', pathActual: '/tramites', error: 'Token y código requeridos.', qrCode: null, totpSecret: null, token: null, nombre: null, dip: null, placeid: null, resultado: null });
+
+  try {
+    const r = await fetch(`${process.env.PLACETAID_API_URL || 'https://id.laplaceta.org/api'}/registro/completar-con-token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, codigo })
+    });
+    const data = await r.json();
+    if (!r.ok) return res.render('public/tramites/completar-registro', { titulo: 'Completar Registro', layout: 'layouts/publico', pathActual: '/tramites', error: data.error || 'Error al verificar', qrCode: null, totpSecret: null, token: null, nombre: null, dip: null, placeid: null, resultado: null });
+
+    res.render('public/tramites/completar-registro', { titulo: 'Completar Registro', layout: 'layouts/publico', pathActual: '/tramites', resultado: data, error: null, qrCode: null, totpSecret: null, token: null, nombre: null, dip: null, placeid: null });
+  } catch {
+    res.render('public/tramites/completar-registro', { titulo: 'Completar Registro', layout: 'layouts/publico', pathActual: '/tramites', error: 'Error al verificar. Inténtalo de nuevo.', qrCode: null, totpSecret: null, token: null, nombre: null, dip: null, placeid: null, resultado: null });
+  }
+});
+
 router.post('/tramites/alta-placetid', async (req, res) => {
   try {
     const { dip, email, password } = req.body;
