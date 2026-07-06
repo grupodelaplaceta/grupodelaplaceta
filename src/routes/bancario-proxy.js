@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { verificarSesion, verificarRol } from '../middleware/auth.js';
+import { getDb } from '../config/db-supabase.js';
 
 const router = Router();
 let raw = process.env.BANCO_API_URL || 'https://api.banco.laplaceta.org';
@@ -12,6 +13,34 @@ const CACHE_TTL = 30_000; // 30 segundos
 
 const CRM_KEY = process.env.CRM_READ_KEY || 'crm-gdlp-shared-key-2026';
 
+function sqliteFallback() {
+  try {
+    const db = getDb();
+    const solicitantes = db.prepare('SELECT * FROM solicitantes').all() || [];
+    const cuentas = db.prepare('SELECT * FROM cuentas_bancarias').all() || [];
+    const transacciones = db.prepare('SELECT * FROM transacciones ORDER BY creado_en DESC LIMIT 200').all() || [];
+    return {
+      users: solicitantes.map(s => ({ dip: s.dip, placetaId: s.placeid, displayName: s.nombre_real, role: s.rol, createdAt: s.creado_en })),
+      accounts: Object.fromEntries(cuentas.map(c => [c.id, {
+        id: String(c.id), displayName: c.display_name || c.tipo_cuenta || 'Cuenta',
+        placetaId: c.placeta_id, type: c.tipo || 'Personal', balancePz: c.saldo || 0,
+        iban: c.iban || '', eip: c.eip || null, complianceStatus: c.compliance_status || 'Clear',
+        tributosCensusDate: c.tributos_census_date || null, closedAt: c.closed_at || null
+      }])),
+      transactions: transacciones.map(t => ({
+        id: String(t.id), fromAccountId: String(t.cuenta_origen_id || ''), toAccountId: String(t.cuenta_destino_id || ''),
+        amountPz: t.cantidad || 0, kind: t.tipo || 'Transfer', note: t.concepto || '',
+        status: 'Settled', createdAt: t.creado_en || new Date().toISOString()
+      })),
+      digitalCards: [], complianceFlags: [], auditLogs: [],
+      updatedAt: new Date().toISOString()
+    };
+  } catch (e) {
+    console.warn('[bancario-proxy] SQLite fallback error:', e.message);
+    return { users: [], accounts: {}, transactions: [], digitalCards: [], complianceFlags: [], auditLogs: [], updatedAt: new Date().toISOString() };
+  }
+}
+
 async function fetchBancoState(req) {
   if (cache.data && Date.now() < cache.expiresAt) return cache.data;
   const url = `${BANCO_API}/api/crm-state`;
@@ -19,14 +48,13 @@ async function fetchBancoState(req) {
   let res;
   try { res = await fetch(url, { headers, signal: AbortSignal.timeout(8000) }); }
   catch (e) {
-    // Fallback: devolver estado vacío en lugar de romper
-    console.warn(`[bancario-proxy] Sin conexión a ${BANCO_API}: ${e.message}`);
-    cache.data = { users: [], accounts: [], transactions: [], digitalCards: [], complianceFlags: [], auditLogs: [] };
+    console.warn(`[bancario-proxy] Sin conexión a ${BANCO_API}, usando SQLite fallback: ${e.message}`);
+    cache.data = sqliteFallback();
     return cache.data;
   }
   if (!res.ok) {
-    console.warn(`[bancario-proxy] Banco API respondió ${res.status}`);
-    cache.data = { users: [], accounts: [], transactions: [], digitalCards: [], complianceFlags: [], auditLogs: [] };
+    console.warn(`[bancario-proxy] Banco API respondió ${res.status}, usando SQLite fallback`);
+    cache.data = sqliteFallback();
     return cache.data;
   }
   const data = await res.json();
