@@ -306,7 +306,7 @@ async function cargarTransacciones() {
 }
 
 async function cargarCiudadanos() {
-  const d = await tryFetch('/api/admin/tramites/ciudadanos') || MOCK.usuarios;
+  const d = await tryFetch('/api/admin/ciudadanos') || MOCK.usuarios;
   const tbody = document.getElementById('ciudadanosBody');
   if (!d.length) { tbody.innerHTML = '<tr><td colspan="6" class="loading-cell">Sin ciudadanos registrados en GDLP</td></tr>'; return; }
   tbody.innerHTML = d.map(u => '<tr>' +
