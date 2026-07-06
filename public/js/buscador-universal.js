@@ -151,18 +151,21 @@ function crearBuscador(containerId, opts = {}) {
         return;
       }
       
-      results.innerHTML = filtrados.map(item => `
+      results.innerHTML = filtrados.map((item, idx) => {
+        const safeId = `_bitem_${selectedId}_${idx}`;
+        window[safeId] = item;
+        return `
         <div class="buscador-item" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #f0f0f0;font-size:13px;transition:background 0.15s"
           onmouseover="this.style.background='#f5f3ff'" onmouseout="this.style.background=''"
-          onclick="(function(){document.getElementById('${inputId}').value='${item._label.replace(/'/g,"\\'")}';document.getElementById('${resultsId}').style.display='none';mostrarSeleccionado_${selectedId}(JSON.parse('${JSON.stringify(item).replace(/'/g,"\\'").replace(/"/g,'&quot;')}'))})()">
+          onclick="document.getElementById('${inputId}').value='${item._label.replace(/'/g,"\\'")}';document.getElementById('${resultsId}').style.display='none';window['mostrarSeleccionado_${selectedId}'](window['${safeId}'])">
           ${item._label}
           <span style="font-size:11px;color:#999;display:block;margin-top:2px">
             ${item._tipo === 'cuenta' ? `Saldo: ${(item.balancePz || 0).toLocaleString()} Pz` : 
               item._tipo === 'persona' ? `DIP: ${item.dip || ''} · Rol: ${item.rol || ''}` :
               `EIP: ${item.eip || ''} · CIF: ${item.cif || ''}`}
           </span>
-        </div>
-      `).join('');
+        </div>`;
+      }).join('');
       results.style.display = 'block';
     }, 200);
   });
