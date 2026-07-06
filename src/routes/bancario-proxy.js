@@ -341,6 +341,9 @@ router.post('/admin-cuentas', verificarSesion, verificarRol('administrador', 'ju
     const data = await r.json();
     if (!r.ok) return res.status(r.status).json(data);
 
+    // Invalidar caché para que los cambios se vean al instante
+    cache.expiresAt = 0;
+
     // ── Auto-notificación ────────────────────────────────────────────────
     try {
       const { crearNotificacion } = await import('./notifications.js');
