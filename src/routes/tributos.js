@@ -369,10 +369,10 @@ router.post('/reconcile/:placetaId', verificarSesion, verificarRol('administrado
     const nombre = contributor?.nombre || placetaId;
     const dip = contributor?.dip || '';
 
-    // 2. Obtener estado REAL del banco
+    // 2. Obtener estado REAL del banco - TODAS las cuentas del titular
     let bankTx = [];
-    let bankSaldo = 0;
-    let bankAccountId = '';
+    let bankSaldoTotal = 0;
+    let cuentasDelTitular = [];
     try {
       const CRM_KEY = process.env.CRM_READ_KEY || 'crm-gdlp-shared-key-2026';
       const r = await fetch(`${BANCO_API}/api/crm-state`, {
@@ -382,21 +382,21 @@ router.post('/reconcile/:placetaId', verificarSesion, verificarRol('administrado
       if (r.ok) {
         const state = await r.json();
         const accounts = Array.isArray(state.accounts) ? state.accounts : Object.values(state.accounts || {});
-        // Buscar cuenta por placetaId o dip
-        const cuenta = accounts.find(a =>
+        // Buscar TODAS las cuentas del titular (Personal, Savings, Investment, etc.)
+        cuentasDelTitular = accounts.filter(a =>
           a.placetaId === placetaId || a.placetaId === dip ||
-          a.dip === dip || a.id === placetaId || a.id === dip
+          a.dip === dip || a.dip === placetaId ||
+          a.id === placetaId || a.id === dip
         );
-        if (cuenta) {
-          bankAccountId = cuenta.id;
-          bankSaldo = cuenta.balancePz || 0;
-          // Filtrar transacciones de esta cuenta
-          const txs = state.transactions || [];
-          bankTx = txs.filter(t =>
-            t.fromAccountId === cuenta.id || t.toAccountId === cuenta.id ||
-            t.fromId === cuenta.id || t.toId === cuenta.id
-          );
-        }
+        const accountIds = new Set(cuentasDelTitular.map(a => a.id));
+        bankSaldoTotal = cuentasDelTitular.reduce((sum, a) => sum + (a.balancePz || 0), 0);
+
+        // Agrupar TODAS las transacciones de todas las cuentas del titular
+        const txs = state.transactions || [];
+        bankTx = txs.filter(t =>
+          accountIds.has(t.fromAccountId) || accountIds.has(t.toAccountId) ||
+          accountIds.has(t.fromId) || accountIds.has(t.toId)
+        );
       }
     } catch (e) {
       console.warn(`[Tributos] Banco no disponible para reconcile: ${e.message}`);
@@ -415,6 +415,7 @@ router.post('/reconcile/:placetaId', verificarSesion, verificarRol('administrado
     if (bankTx.length > 0) {
       // Ordenar transacciones por fecha
       const sorted = bankTx.sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''));
+      const accountIds = new Set(cuentasDelTitular.map(a => a.id));
       let saldoCorriente = 0;
       let txIndex = 0;
 
@@ -427,7 +428,7 @@ router.post('/reconcile/:placetaId', verificarSesion, verificarRol('administrado
           if (txFecha === fechaStr) {
             const tx = sorted[txIndex];
             const amount = Math.abs(Number(tx.amountPz || 0));
-            const esIngreso = tx.toAccountId === bankAccountId || tx.toId === bankAccountId;
+            const esIngreso = accountIds.has(tx.toAccountId) || accountIds.has(tx.toId);
             saldoCorriente += esIngreso ? amount : -amount;
             txDelDia++;
             txIndex++;
@@ -444,22 +445,22 @@ router.post('/reconcile/:placetaId', verificarSesion, verificarRol('administrado
       // Último día = saldo actual real
       const ultimoDia = `${mesPeriodo}-${String(diasEnMes).padStart(2, '0')}`;
       if (dailyMap[ultimoDia]) {
-        dailyMap[ultimoDia].saldo = bankSaldo;
+        dailyMap[ultimoDia].saldo = bankSaldoTotal;
         dailyMap[ultimoDia].origen = 'banco';
       }
-    } else if (bankSaldo > 0) {
+    } else if (bankSaldoTotal > 0) {
       // Sin transacciones pero con saldo: distribución proporcional
       for (let d = 1; d <= diasEnMes; d++) {
         const fechaStr = `${mesPeriodo}-${String(d).padStart(2, '0')}`;
         dailyMap[fechaStr] = {
           fecha: fechaStr,
-          saldo: Math.round((bankSaldo * d / diasEnMes) * 100) / 100,
+          saldo: Math.round((bankSaldoTotal * d / diasEnMes) * 100) / 100,
           transactions_count: 0,
           origen: 'reconstruido'
         };
       }
       const ultimoDia = `${mesPeriodo}-${String(diasEnMes).padStart(2, '0')}`;
-      if (dailyMap[ultimoDia]) { dailyMap[ultimoDia].saldo = bankSaldo; dailyMap[ultimoDia].origen = 'banco'; }
+      if (dailyMap[ultimoDia]) { dailyMap[ultimoDia].saldo = bankSaldoTotal; dailyMap[ultimoDia].origen = 'banco'; }
     }
     // Si no hay nada, todo queda a 0
 
@@ -482,7 +483,7 @@ router.post('/reconcile/:placetaId', verificarSesion, verificarRol('administrado
       total_dias: diasEnMes,
       dias_con_datos: Object.values(dailyMap).filter(d => d.transactions_count > 0 || d.origen === 'banco').length,
       patrimonio_medio: declaration?.patrimonio_medio || 0,
-      saldo_actual: bankSaldo,
+      saldo_actual: bankSaldoTotal,
       balances: Object.values(dailyMap),
       declaration
     });
