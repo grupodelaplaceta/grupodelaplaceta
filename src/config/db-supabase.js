@@ -785,6 +785,21 @@ export async function sbGetTributosContributorByPlacetaId(placetaId) {
   }
 }
 
+export async function sbGetTributosContributorByEip(eip) {
+  const sb = safeSupabase();
+  if (!sb) return null;
+  try {
+    const cleanEip = String(eip || '').trim().toUpperCase();
+    if (!cleanEip) return null;
+    const { data, error } = await sb.from('tributos_contribuyentes')
+      .select('*').eq('eip', cleanEip).limit(1).single();
+    if (error && error.code !== 'PGRST116') return null;
+    return data;
+  } catch (err) {
+    return null;
+  }
+}
+
 export async function sbCreateTributosDeclaration(data) {
   const sb = safeSupabase();
   if (!sb) throw new Error('Supabase no configurado');

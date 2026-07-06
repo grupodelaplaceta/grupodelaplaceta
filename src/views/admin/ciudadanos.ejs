@@ -104,10 +104,11 @@ async function generarEnlaceRegistro(dip) {
 
 async function importarDePlacetaID() {
   try {
-    const registros = await apiFetch('/api/admin/placetid/registros-placetaid?limit=200');
+    const data = await apiFetch('/api/admin/placetid/registros-placetaid?limit=200');
+    const registros = Array.isArray(data) ? data : (data.registros || []);
     const existentes = await apiFetch('/api/admin/ciudadanos');
     const dipsExistentes = new Set(existentes.map(u => u.dip));
-    const nuevos = (registros.registros || []).filter(r => !dipsExistentes.has(r.dip));
+    const nuevos = registros.filter(r => !dipsExistentes.has(r.dip));
 
     if (!nuevos.length) {
       alert('No hay nuevos ciudadanos en PlacetaID para importar.');
@@ -159,8 +160,11 @@ async function cargarCiudadanos() {
     document.getElementById('totalTramites').textContent = d.reduce((s, u) => s + (u.total_tramites || 0), 0);
 
     // Obtener registros de PlacetaID para marcar estado
-    try { placetaidRegistros = await apiFetch('/api/admin/placetid/registros-placetaid?limit=200'); } catch { placetaidRegistros = { registros: [] }; }
-    const dipsPlacetaid = new Set((placetaidRegistros.registros || []).map(r => r.dip));
+    try {
+      const pd = await apiFetch('/api/admin/placetid/registros-placetaid?limit=200');
+      placetaidRegistros = Array.isArray(pd) ? pd : (pd.registros || []);
+    } catch { placetaidRegistros = []; }
+    const dipsPlacetaid = new Set((placetaidRegistros || []).map(r => r.dip));
 
     if (!d.length) { tbody.innerHTML = '<tr><td colspan="9" class="loading-cell">Sin ciudadanos</td></tr>'; return; }
     tbody.innerHTML = d.map(u => {

@@ -93,19 +93,41 @@ router.post('/contributors', verificarSesion, verificarRol('administrador', 'jun
   }
 });
 
-// ── Alta rápida desde PlacetaID (busca por DIP y crea contribuyente) ──────
+// ── Alta rápida desde PlacetaID (busca por DIP o EIP) ────────────────────
 router.post('/contributors/alta-rapida', verificarSesion, verificarRol('administrador', 'junta', 'fiscal'), async (req, res) => {
   try {
     const { dip, tipo_sujeto, eip } = req.body;
-    if (!dip) return res.status(400).json({ error: 'DIP requerido' });
+    const tipo = tipo_sujeto || 'Fisico';
 
-    // Buscar en Supabase
+    // Para empresas: buscar por EIP en tributos_contribuyentes
+    if (tipo === 'Empresa') {
+      if (!eip) return res.status(400).json({ error: 'EIP requerido para empresas' });
+      // Buscar si ya existe contribuyente con ese EIP
+      const existente = await sbGetTributosContributorByEip(eip);
+      if (existente) return res.json({ success: true, yaExiste: true, contributor: existente });
+      // Crear contribuyente empresa con EIP
+      const contributor = await sbCreateTributosContributor({
+        id: crypto.randomUUID?.() || String(Date.now()),
+        placeta_id: `EIP-${eip.replace(/[^A-Z0-9]/g, '')}`,
+        dip: null,
+        nombre: `Empresa ${eip}`,
+        tipo_sujeto: 'Empresa',
+        estado_fiscal: 'Al Dia',
+        fecha_alta_tributos: new Date().toISOString(),
+        roles_json: ['ciudadano', 'empresa'],
+        iban: null,
+        eip
+      });
+      return res.json({ success: true, contributor });
+    }
+
+    // Para personas: buscar por DIP en Supabase
+    if (!dip) return res.status(400).json({ error: 'DIP requerido' });
     const usuario = await sbFindSolicitante(dip);
     if (!usuario) return res.status(404).json({ error: 'Usuario no encontrado en PlacetaID' });
 
     const placetaId = usuario.placeid || `PLID-${usuario.dip}`;
     const nombre = usuario.nombre_real || usuario.alias || `Usuario ${dip}`;
-    const tipo = tipo_sujeto || 'Fisico';
 
     // Verificar si ya existe
     try {
@@ -118,12 +140,12 @@ router.post('/contributors/alta-rapida', verificarSesion, verificarRol('administ
       placeta_id: placetaId,
       dip,
       nombre,
-      tipo_sujeto: tipo,
+      tipo_sujeto: 'Fisico',
       estado_fiscal: 'Al Dia',
       fecha_alta_tributos: new Date().toISOString(),
       roles_json: ['ciudadano'],
       iban: null,
-      eip: tipo === 'Empresa' ? (eip || null) : null
+      eip: null
     });
 
     return res.json({ success: true, contributor });
