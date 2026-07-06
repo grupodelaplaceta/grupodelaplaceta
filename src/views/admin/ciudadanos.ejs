@@ -129,11 +129,12 @@ async function ejecutarImportacion() {
   if (!checks.length) return alert('Selecciona al menos un ciudadano.');
   const seleccionados = window._importables.filter(r => Array.from(checks).some(c => c.value === r.dip));
 
-  let ok = 0, err = 0;
+  let ok = 0, err = 0, skip = 0;
   for (const r of seleccionados) {
     try {
-      await apiFetch('/api/auth/register', {
+      const res = await fetch('/api/auth/register', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           alias: (r.nombre || 'user').toLowerCase().replace(/[^a-z0-9]/g,'') + r.dip.slice(-4),
           nombre_real: r.nombre + ' ' + (r.apellidos || ''),
@@ -143,10 +144,12 @@ async function ejecutarImportacion() {
           dip: r.dip
         })
       });
+      if (res.status === 409) { skip++; continue; }
+      if (!res.ok) { err++; continue; }
       ok++;
     } catch { err++; }
   }
-  alert(`✅ ${ok} importados, ❌ ${err} errores`);
+  alert(`✅ ${ok} importados, ⏭️ ${skip} ya existían, ❌ ${err} errores`);
   cargarCiudadanos();
 }
 

@@ -132,6 +132,97 @@ export async function initializeDatabase() {
   if (initialized) return;
   initialized = true;
   await initSqlite();
+  await autoMigrateSupabase();
+}
+
+// ── Auto-migración Supabase (crea tablas si no existen) ────────────────────
+async function autoMigrateSupabase() {
+  const sb = safeSupabase();
+  if (!sb) return;
+  try {
+    const sql = `
+    CREATE TABLE IF NOT EXISTS tributos_contribuyentes (
+      id TEXT PRIMARY KEY,
+      placeta_id TEXT UNIQUE NOT NULL,
+      dip TEXT UNIQUE,
+      nombre TEXT NOT NULL,
+      tipo_sujeto TEXT DEFAULT 'Fisico' CHECK (tipo_sujeto IN ('Fisico', 'Empresa')),
+      iban TEXT,
+      estado_fiscal TEXT DEFAULT 'Al Dia' CHECK (estado_fiscal IN ('Al Dia', 'Moroso', 'En Auditoria')),
+      roles_json JSONB DEFAULT '["ciudadano"]',
+      fecha_alta_tributos TIMESTAMPTZ,
+      eip TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS tributos_declaraciones (
+      id TEXT PRIMARY KEY,
+      contributor_id TEXT REFERENCES tributos_contribuyentes(id),
+      placeta_id TEXT,
+      mes_periodo TEXT NOT NULL,
+      cuenta_id_blp TEXT NOT NULL,
+      patrimonio_medio NUMERIC(15,2) DEFAULT 0,
+      indice_acumulacion NUMERIC(10,4) DEFAULT 0,
+      cuota_irm NUMERIC(15,2) DEFAULT 0,
+      cuota_igf NUMERIC(15,2) DEFAULT 0,
+      exencion_aplicada BOOLEAN DEFAULT FALSE,
+      dias_declarados_banco INTEGER DEFAULT 0,
+      dias_reconstruidos_crm INTEGER DEFAULT 0,
+      dias_activos_mes INTEGER DEFAULT 30,
+      estado_pago TEXT DEFAULT 'Borrador',
+      is_rectified BOOLEAN DEFAULT FALSE,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS tributos_facturas (
+      id TEXT PRIMARY KEY,
+      numero_factura TEXT UNIQUE NOT NULL,
+      emisor_placeta_id TEXT NOT NULL,
+      receptor_placeta_id TEXT NOT NULL,
+      fecha_emision TIMESTAMPTZ DEFAULT NOW(),
+      base_imponible NUMERIC(15,2) DEFAULT 0,
+      total_iva NUMERIC(15,2) DEFAULT 0,
+      total_factura NUMERIC(15,2) DEFAULT 0,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS tributos_control_recaudacion (
+      id TEXT PRIMARY KEY,
+      mes_periodo TEXT UNIQUE NOT NULL,
+      estado_inhibicion_global BOOLEAN DEFAULT TRUE,
+      operador_responsable_id TEXT NOT NULL DEFAULT 'system',
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS tributos_saldos_diarios (
+      id BIGSERIAL PRIMARY KEY,
+      placeta_id TEXT NOT NULL,
+      mes_periodo TEXT NOT NULL,
+      fecha DATE NOT NULL,
+      saldo NUMERIC(15,2) DEFAULT 0,
+      transactions_count INTEGER DEFAULT 0,
+      origen TEXT DEFAULT 'reconstruido',
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(placeta_id, fecha)
+    );
+    CREATE TABLE IF NOT EXISTS tributos_audit_logs (
+      id BIGSERIAL PRIMARY KEY,
+      accion TEXT NOT NULL,
+      entidad TEXT,
+      entidad_id TEXT,
+      usuario_id TEXT,
+      detalle JSONB,
+      ip TEXT,
+      creado_en TIMESTAMPTZ DEFAULT NOW()
+    );
+    `;
+    // Ejecutar cada CREATE TABLE por separado
+    const statements = sql.split(';').filter(s => s.trim().startsWith('CREATE'));
+    for (const stmt of statements) {
+      try { await sb.rpc('exec_sql', { sql: stmt + ';' }); } catch {}
+    }
+    console.log('  ✅ Supabase: Migración automática completada');
+  } catch (err) {
+    console.log('  ⚠️  Supabase: No se pudo auto-migrar -', err.message?.substring(0,80));
+  }
 }
 
 export function getDb() {
@@ -1107,7 +1198,28 @@ function ejecutarMigracionesSqlite(database) {
   database.run(`CREATE TABLE IF NOT EXISTS voley_solicitudes (id INTEGER PRIMARY KEY AUTOINCREMENT, solicitante_nombre TEXT NOT NULL, email TEXT, tipo TEXT, mensaje TEXT, estado TEXT DEFAULT 'pendiente', gestionado_por INTEGER, gestionado_en TEXT, created_at TEXT DEFAULT (datetime('now')))`);
   database.run(`CREATE TABLE IF NOT EXISTS entidades (id INTEGER PRIMARY KEY AUTOINCREMENT, nombre TEXT NOT NULL, tipo TEXT NOT NULL, eip TEXT UNIQUE NOT NULL, representante_dip TEXT, email TEXT, cif TEXT, descripcion TEXT, creado_en TEXT DEFAULT (datetime('now')))`);
 
+  // ── Tributos (SQLite fallback) ──────────────────────────────────────────
+  database.run(`CREATE TABLE IF NOT EXISTS tributos_contribuyentes (id TEXT PRIMARY KEY, placeta_id TEXT UNIQUE NOT NULL, dip TEXT UNIQUE, nombre TEXT NOT NULL, tipo_sujeto TEXT DEFAULT 'Fisico', iban TEXT, estado_fiscal TEXT DEFAULT 'Al Dia', roles_json TEXT DEFAULT '["ciudadano"]', fecha_alta_tributos TEXT, eip TEXT, created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now')))`);
+  database.run(`CREATE TABLE IF NOT EXISTS tributos_declaraciones (id TEXT PRIMARY KEY, contributor_id TEXT, placeta_id TEXT, mes_periodo TEXT NOT NULL, cuenta_id_blp TEXT NOT NULL DEFAULT '', patrimonio_medio REAL DEFAULT 0, indice_acumulacion REAL DEFAULT 0, cuota_irm REAL DEFAULT 0, cuota_igf REAL DEFAULT 0, estado_pago TEXT DEFAULT 'Borrador', created_at TEXT DEFAULT (datetime('now')))`);
+  database.run(`CREATE TABLE IF NOT EXISTS tributos_saldos_diarios (id INTEGER PRIMARY KEY AUTOINCREMENT, placeta_id TEXT NOT NULL, mes_periodo TEXT NOT NULL, fecha TEXT NOT NULL, saldo REAL DEFAULT 0, transactions_count INTEGER DEFAULT 0, origen TEXT DEFAULT 'reconstruido', created_at TEXT DEFAULT (datetime('now')), UNIQUE(placeta_id, fecha))`);
+  database.run(`CREATE TABLE IF NOT EXISTS tributos_control_recaudacion (id TEXT PRIMARY KEY, mes_periodo TEXT UNIQUE NOT NULL, estado_inhibicion_global INTEGER DEFAULT 1, created_at TEXT DEFAULT (datetime('now')))`);
+
+  // ── Cuentas bancarias extendidas ────────────────────────────────────────
+  try { database.run(`ALTER TABLE cuentas_bancarias ADD COLUMN tipo TEXT DEFAULT 'Personal'`); } catch(e) {}
+  try { database.run(`ALTER TABLE cuentas_bancarias ADD COLUMN placeta_id TEXT`); } catch(e) {}
+  try { database.run(`ALTER TABLE cuentas_bancarias ADD COLUMN eip TEXT`); } catch(e) {}
+  try { database.run(`ALTER TABLE cuentas_bancarias ADD COLUMN display_name TEXT`); } catch(e) {}
+  try { database.run(`ALTER TABLE cuentas_bancarias ADD COLUMN iban TEXT`); } catch(e) {}
+  try { database.run(`ALTER TABLE cuentas_bancarias ADD COLUMN compliance_status TEXT DEFAULT 'Clear'`); } catch(e) {}
+  try { database.run(`ALTER TABLE cuentas_bancarias ADD COLUMN tributos_census_date TEXT`); } catch(e) {}
+  try { database.run(`ALTER TABLE cuentas_bancarias ADD COLUMN closed_at TEXT`); } catch(e) {}
+  database.run(`CREATE TABLE IF NOT EXISTS account_holders (id INTEGER PRIMARY KEY AUTOINCREMENT, account_id INTEGER NOT NULL, placeta_id TEXT NOT NULL, dip TEXT, display_name TEXT, role TEXT DEFAULT 'Primary', ownership_percent REAL DEFAULT 100, added_at TEXT DEFAULT (datetime('now')), linked_at TEXT, valid_until TEXT, UNIQUE(account_id, placeta_id))`);
+  database.run(`CREATE TABLE IF NOT EXISTS account_managers (id INTEGER PRIMARY KEY AUTOINCREMENT, account_id INTEGER NOT NULL, placeta_id TEXT NOT NULL, dip TEXT, display_name TEXT, role TEXT DEFAULT 'Manager', permissions TEXT DEFAULT '["manage","view"]', added_at TEXT DEFAULT (datetime('now')), UNIQUE(account_id, placeta_id))`);
+  database.run(`CREATE TABLE IF NOT EXISTS compliance_flags (id INTEGER PRIMARY KEY AUTOINCREMENT, account_id INTEGER NOT NULL, tipo TEXT NOT NULL, severity TEXT DEFAULT 'warning', description TEXT, created_at TEXT DEFAULT (datetime('now')), resolved_at TEXT)`);
+
   database.run('CREATE INDEX IF NOT EXISTS idx_cuentas_usuario ON cuentas_bancarias(usuario_id)');
+  database.run('CREATE INDEX IF NOT EXISTS idx_cuentas_placeta ON cuentas_bancarias(placeta_id)');
+  database.run('CREATE INDEX IF NOT EXISTS idx_cuentas_eip ON cuentas_bancarias(eip)');
   database.run('CREATE INDEX IF NOT EXISTS idx_notificaciones_usuario ON notificaciones(usuario_id)');
   database.run('CREATE INDEX IF NOT EXISTS idx_tramites_estado ON documentos_tramites(estado)');
   database.run('CREATE INDEX IF NOT EXISTS idx_logs_fecha ON logs_auditoria(created_at)');
@@ -1116,4 +1228,6 @@ function ejecutarMigracionesSqlite(database) {
   database.run('CREATE INDEX IF NOT EXISTS idx_expedientes_infractor ON expedientes_disciplinarios(infractor_id)');
   database.run('CREATE INDEX IF NOT EXISTS idx_expedientes_estado ON expedientes_disciplinarios(estado)');
   database.run('CREATE INDEX IF NOT EXISTS idx_saldos_diarios_cuenta ON historial_saldos_diarios(cuenta_id, fecha)');
+  database.run('CREATE INDEX IF NOT EXISTS idx_account_holders_account ON account_holders(account_id)');
+  database.run('CREATE INDEX IF NOT EXISTS idx_account_managers_account ON account_managers(account_id)');
 }
