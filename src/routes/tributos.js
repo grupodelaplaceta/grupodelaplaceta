@@ -194,6 +194,18 @@ router.post('/declarations', verificarSesion, verificarRol('administrador', 'jun
   }
 });
 
+// ── Eliminar declaración (solo borradores) ──────────────────────────────
+router.delete('/declarations/:id', verificarSesion, verificarRol('administrador', 'junta', 'fiscal'), async (req, res) => {
+  try {
+    const { sbDeleteTributosDeclaration } = await import('../config/db-supabase.js');
+    await sbDeleteTributosDeclaration(req.params.id);
+    res.json({ success: true, message: 'Declaración eliminada' });
+  } catch (err) {
+    console.error('[Tributos] Error eliminar declaration:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ═══════════════════════════════════════════════════════════════════════════
 //  FACTURAS
 // ═══════════════════════════════════════════════════════════════════════════
@@ -382,9 +394,16 @@ router.post('/reconcile/:placetaId', verificarSesion, verificarRol('administrado
       if (r.ok) {
         const state = await r.json();
         const accounts = Array.isArray(state.accounts) ? state.accounts : Object.values(state.accounts || {});
-        // Buscar TODAS las cuentas del titular (Personal, Savings, Investment, etc.)
-        // Excluir cuentas estatales (TGLP, Tesoro, Administración, sistema)
+        // Buscar TODAS las cuentas del titular (solo tipo Personal, Savings, Current, Investment)
+        // Excluir: Business (empresas), Tesoro, TGLP (estatales), sys (sistema)
+        // Para personas (DIP): solo Personal, Savings, Current, Investment
+        // Para empresas (EIP): solo Business
+        const esPersona = !contributor?.eip;
+        const TIPOS_VALIDOS = esPersona
+          ? ['Personal', 'Savings', 'Current', 'Investment']
+          : ['Business'];
         cuentasDelTitular = accounts.filter(a =>
+          TIPOS_VALIDOS.includes(a.type) &&
           (a.placetaId === placetaId || a.placetaId === dip ||
            a.dip === dip || a.dip === placetaId ||
            a.id === placetaId || a.id === dip) &&

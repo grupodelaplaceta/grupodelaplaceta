@@ -321,22 +321,74 @@ class PDFGenerator {
 
   generarDeclaracionTributaria(d) {
     this._initDoc({ info: { Title: `Declaraci\u00F3n ${d.ID_DECLARACION||d.mes_periodo}`, Subject: 'Declaraci\u00F3n Tributaria' } });
-    this._header('DECLARACI\u00D3N TRIBUTARIA MENSUAL', `Periodo: ${d.mes_periodo||'\u2014'} \u00B7 ${d.ID_DECLARACION||''}`, 'TLP-DEC-001');
+    const esBorrador = d.estado_pago === 'Borrador' || !d.estado_pago;
+    this._header(
+      esBorrador ? 'BORRADOR · DECLARACI\u00D3N TRIBUTARIA' : 'DECLARACI\u00D3N TRIBUTARIA MENSUAL',
+      `Periodo: ${d.mes_periodo||'\u2014'} \u00B7 ${d.ID_DECLARACION||''}`,
+      'TLP-DEC-001'
+    );
+    if (esBorrador) {
+      this.doc.fontSize(48).font('Helvetica-Bold').fillColor('#ff000033')
+        .text('BORRADOR', { align: 'center', underline: false });
+      this.doc.fillColor('#000000');
+    }
     this._tag('TLP-DEC-001');
     this._titulo2('Contribuyente');
     this._campo('Placeta ID', d.placeta_id); this._campo('Nombre', d.nombre);
     this._campo('DIP', d.dip); this._campo('Tipo', d.tipo_sujeto); this._campo('Cuenta BLP', d.cuenta_id_blp);
-    this._titulo2('Impuestos');
-    this._fila('Patrimonio Medio', `${Number(d.patrimonio_medio||0).toLocaleString()} Pz`);
-    this._fila('IA', `${Number(d.indice_acumulacion||0).toFixed(4)}%`);
-    this._fila('Cuota IRM', `${Number(d.cuota_irm||0).toLocaleString()} Pz`);
-    this._fila('Cuota IGF', `${Number(d.cuota_igf||0).toLocaleString()} Pz`);
-    this._fila('Exenci\u00F3n', d.exencion_aplicada?'S\u00ED':'No');
+
+    // ── Patrimonio y Saldos Diarios ──
+    this._titulo2('Patrimonio y Saldos');
+    this._fila('Patrimonio Medio Mensual', `${Number(d.patrimonio_medio||0).toLocaleString()} Pz`);
+    this._fila('Índice de Acumulación (IA)', `${Number(d.indice_acumulacion||0).toFixed(4)}`);
+    this._fila('Días con datos del banco', `${d.dias_declarados_banco||0} de ${d.dias_activos_mes||30}`);
+    this._fila('Días reconstruidos (CRM)', `${d.dias_reconstruidos_crm||0}`);
+
+    // ── Desglose IRM ──
+    const pm = Number(d.patrimonio_medio || 0);
+    const SALDO_MAX = 500000;
+    const exceso = Math.max(0, pm - SALDO_MAX);
+    const ratio = SALDO_MAX > 0 ? exceso / SALDO_MAX : 0;
+    let tasaIRM = 0, irmDesc = 'No aplica';
+    if (pm <= SALDO_MAX) {
+      irmDesc = 'Patrimonio dentro del límite legal (≤ 500.000 Pz)';
+    } else {
+      if (ratio <= 0.5) tasaIRM = 0.05;
+      else if (ratio <= 1.0) tasaIRM = 0.10;
+      else if (ratio <= 2.0) tasaIRM = 0.20;
+      else tasaIRM = 0.35;
+      irmDesc = `${(tasaIRM * 100).toFixed(0)}% sobre exceso de ${exceso.toLocaleString()} Pz`;
+    }
+    const irmCalc = Number(d.cuota_irm || 0);
+
+    this._titulo2('IRM · Impuesto sobre la Renta de La Placeta');
+    this._fila('Límite exento', '500.000 Pz');
+    this._fila('Patrimonio Medio', `${pm.toLocaleString()} Pz`);
+    this._fila('Exceso sobre límite', `${exceso.toLocaleString()} Pz`);
+    this._fila('Ratio exceso/límite', `${ratio.toFixed(4)}`);
+    this._fila('Tasa aplicable', `${(tasaIRM * 100).toFixed(2)}%`);
+    this._fila('Cálculo', irmDesc);
+    this._fila('Cuota IRM', `${irmCalc.toLocaleString()} Pz`);
+
+    // ── Desglose IGF ──
+    const igfCalc = Number(d.cuota_igf || 0);
+    this._titulo2('IGF · Impuesto sobre Grandes Fortunas');
+    this._fila('Base imponible', `${pm.toLocaleString()} Pz`);
+    this._fila('Tipo aplicable', igfCalc > 0 ? '1.5%' : '0% (exento)');
+    this._fila('Cuota IGF', `${igfCalc.toLocaleString()} Pz`);
+
+    // ── Totales ──
+    this._titulo2('Resumen');
+    this._fila('Total IRM + IGF', `${(irmCalc + igfCalc).toLocaleString()} Pz`);
+    this._fila('Exención aplicada', d.exencion_aplicada ? 'Sí' : 'No');
+    this._fila('Estado', esBorrador ? 'BORRADOR · Pendiente de aprobación' : (d.estado_pago || '—'));
+
     this._titulo2('Control');
-    this._campo('Estado', d.estado_pago); this._campo('D\u00EDas banco', String(d.dias_declarados_banco||0));
-    this._campo('D\u00EDas CRM', String(d.dias_reconstruidos_crm||0)); this._campo('Bypass', d.bypass_junta_directiva?'S\u00ED':'No');
+    this._campo('ID Declaración', d.id || d.ID_DECLARACION || '—');
+    this._campo('Bypass Junta', d.bypass_junta_directiva ? 'Sí' : 'No');
+    if (d.id_permiso_junta) this._campo('ID Permiso', d.id_permiso_junta);
     const hash = d.pdf_hash || crypto.createHash('sha256').update(JSON.stringify(d)+Date.now()).digest('hex');
-    this._footerDoc(`CSV: ${d.csv||hash.substring(0,16).toUpperCase()} \u00B7 Tributos de La Placeta (TLP)`);
+    this._footerDoc(`CSV: ${d.csv||hash.substring(0,16).toUpperCase()} \u00B7 Tributos de La Placeta (TLP) · ${esBorrador ? 'BORRADOR' : 'Documento Oficial'}`);
     return this.doc;
   }
 

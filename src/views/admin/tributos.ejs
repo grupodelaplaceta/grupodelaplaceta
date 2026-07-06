@@ -541,26 +541,68 @@
       const data = await apiFetch('/api/admin/tributos/declarations');
       const tbody = document.querySelector('#declaracionesTable tbody');
       if (!data.length) {
-        tbody.innerHTML = '<tr><td colspan="9" class="loading-cell">No hay declaraciones registradas.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10" class="loading-cell">No hay declaraciones registradas.</td></tr>';
         return;
       }
       tbody.innerHTML = data.map(item => {
         const estado = item.estado_pago || '—';
         const estadoBadge = estado === 'Cobrado_Exito' ? 'badge-activo' : estado === 'Borrador' ? 'badge-pendiente' : estado === 'Emitido' ? 'badge-login' : 'badge-baja';
+        const esBorrador = estado === 'Borrador' || !estado;
         return `<tr>
           <td style="font-size:11px;font-family:monospace">${(item.id || '').slice(0,8)}</td>
           <td>${item.placeta_id || item.contributor_id || '—'}</td>
           <td><span class="pill pill-purple">${item.mes_periodo || '—'}</span></td>
-          <td>${formatMoneda(item.cuota_irm)}</td>
+          <td title="PM: ${formatMoneda(item.patrimonio_medio)}">${formatMoneda(item.cuota_irm)}</td>
           <td>${formatMoneda(item.cuota_igf)}</td>
           <td><span class="badge ${estadoBadge}">${estado}</span></td>
           <td>${item.bypass_junta_directiva ? '✅ Sí' : '—'}</td>
           <td>${item.updated_at ? new Date(item.updated_at).toLocaleDateString('es-ES') : '—'}</td>
-          <td><button class="btn btn-sm btn-glass" onclick="mostrarToast('info','PDF Declaración')" title="Descargar PDF">📄</button></td>
+          <td><button class="btn btn-sm btn-glass" onclick="descargarPDFDeclaracion('${item.id}')" title="Descargar PDF">📄</button></td>
+          <td>${esBorrador ? `<button class="btn btn-sm btn-danger" onclick="eliminarDeclaracion('${item.id}')" title="Eliminar borrador">🗑️</button>` : ''}</td>
         </tr>`;
       }).join('');
     } catch (e) {
-      document.querySelector('#declaracionesTable tbody').innerHTML = '<tr><td colspan="9" class="error-cell">Error al cargar declaraciones</td></tr>';
+      document.querySelector('#declaracionesTable tbody').innerHTML = '<tr><td colspan="10" class="error-cell">Error al cargar declaraciones</td></tr>';
+    }
+  }
+
+  // ── Descargar PDF de declaración ──────────────────────────────────────
+  async function descargarPDFDeclaracion(id) {
+    try {
+      const data = await apiFetch('/api/admin/tributos/declarations');
+      const item = data.find(d => d.id === id);
+      if (!item) { mostrarToast('error', 'Declaración no encontrada'); return; }
+      // Abrir en nueva pestaña o descargar
+      const res = await fetch('/api/admin/tributos/pdf/declaracion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(item)
+      });
+      if (!res.ok) { mostrarToast('error', 'Error al generar PDF'); return; }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `TLP-DECLARACION-${item.mes_periodo || id.slice(0,8)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      mostrarToast('success', '✅ PDF descargado');
+    } catch (e) {
+      mostrarToast('error', 'Error: ' + e.message);
+    }
+  }
+
+  // ── Eliminar declaración (solo borradores) ────────────────────────────
+  async function eliminarDeclaracion(id) {
+    if (!confirm('¿Eliminar esta declaración borrador? Esta acción no se puede deshacer.')) return;
+    try {
+      await apiFetch('/api/admin/tributos/declarations/' + id, { method: 'DELETE' });
+      mostrarToast('success', '🗑️ Borrador eliminado');
+      cargarDeclaraciones();
+    } catch (e) {
+      mostrarToast('error', 'Error: ' + e.message);
     }
   }
 
