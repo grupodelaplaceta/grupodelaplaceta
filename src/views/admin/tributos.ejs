@@ -657,8 +657,30 @@
           '</div></div>' +
           '<div class="stat-card ' + (res.dias_con_datos >= res.total_dias ? 'stat-success' : 'stat-warning') + '"><div class="stat-icon">📊</div><div class="stat-content">' +
             '<span class="stat-value">' + formatMoneda(res.saldo_actual) + '</span>' +
-            '<span class="stat-label">Saldo Actual</span>' +
+            '<span class="stat-label">Saldo Actual (agregado)</span>' +
           '</div></div>';
+
+        // ── Desglose por cuenta bancaria ──
+        const cuentas = res.cuentas || [];
+        if (cuentas.length > 0) {
+          var cuentasHtml = '<div class="section-header" style="margin-top:16px"><div><h3>🏦 Desglose por Cuenta Bancaria</h3></div></div>' +
+            '<div class="table-container"><table class="data-table"><thead><tr>' +
+            '<th>Cuenta</th><th>Tipo</th><th>Saldo (Pz)</th><th>PlacetaID</th><th>IBAN</th><th>% del Total</th></tr></thead><tbody>';
+          var totalSaldo = res.saldo_actual || 0;
+          cuentas.forEach(function(c) {
+            var pct = totalSaldo > 0 ? ((c.balancePz / totalSaldo) * 100).toFixed(1) : '0.0';
+            cuentasHtml += '<tr>' +
+              '<td><strong>' + (c.displayName || c.id || '—') + '</strong></td>' +
+              '<td><span class="pill pill-' + (c.type === 'Savings' ? 'purple' : c.type === 'Investment' ? 'gold' : 'green') + '">' + (c.type || '—') + '</span></td>' +
+              '<td><strong>' + formatMoneda(c.balancePz) + '</strong></td>' +
+              '<td>' + (c.placetaId || '—') + '</td>' +
+              '<td style="font-size:11px;font-family:monospace">' + (c.iban || '—') + '</td>' +
+              '<td>' + pct + '%</td></tr>';
+          });
+          cuentasHtml += '<tr style="font-weight:700;background:var(--p050)"><td>📊 TOTAL</td><td></td><td>' + formatMoneda(totalSaldo) + '</td><td></td><td></td><td>100%</td></tr>';
+          cuentasHtml += '</tbody></table></div>';
+          document.getElementById('reconciliationSummary').insertAdjacentHTML('afterend', cuentasHtml);
+        }
 
         const balances = res.balances || [];
         document.getElementById('dailyBalancesBody').innerHTML = balances.map(function(b) {

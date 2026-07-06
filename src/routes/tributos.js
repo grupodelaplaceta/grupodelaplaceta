@@ -525,6 +525,15 @@ router.post('/reconcile/:placetaId', verificarSesion, verificarRol('administrado
       patrimonio_medio: declaration?.patrimonio_medio || 0,
       saldo_actual: bankSaldoTotal,
       balances: Object.values(dailyMap),
+      cuentas: cuentasDelTitular.map(c => ({
+        id: c.id,
+        displayName: c.displayName || c.id,
+        type: c.type,
+        balancePz: c.balancePz || 0,
+        placetaId: c.placetaId || '',
+        iban: c.iban || '',
+        complianceStatus: c.complianceStatus || 'Clear'
+      })),
       declaration
     });
   } catch (err) {
