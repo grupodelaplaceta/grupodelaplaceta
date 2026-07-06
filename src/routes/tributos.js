@@ -104,24 +104,16 @@ router.post('/contributors/alta-rapida', verificarSesion, verificarRol('administ
     // Para empresas: buscar por EIP en tributos_contribuyentes
     if (tipo === 'Empresa') {
       if (!eip) return res.status(400).json({ error: 'EIP requerido para empresas' });
-      try {
-        const existente = await sbGetTributosContributorByEip(eip);
-        if (existente) return res.json({ success: true, yaExiste: true, contributor: existente });
-        const contributor = await sbCreateTributosContributor({
-          id: crypto.randomUUID?.() || String(Date.now()),
-          placeta_id: `EIP-${eip.replace(/[^A-Z0-9]/g, '')}`,
-          dip: null, nombre: `Empresa ${eip}`, tipo_sujeto: 'Empresa',
-          estado_fiscal: 'Al Dia', fecha_alta_tributos: new Date().toISOString(),
-          roles_json: ['ciudadano', 'empresa'], iban: null, eip
-        });
-        return res.json({ success: true, contributor });
-      } catch (err) {
-        return res.status(500).json({
-          error: 'Error al crear contribuyente empresa',
-          detail: err.message,
-          solution: 'Abre el SQL Editor de Supabase y pega el script de migración.'
-        });
-      }
+      const existente = await sbGetTributosContributorByEip(eip).catch(() => null);
+      if (existente) return res.json({ success: true, yaExiste: true, contributor: existente });
+      const contributor = await sbCreateTributosContributor({
+        id: crypto.randomUUID?.() || String(Date.now()),
+        placeta_id: `EIP-${eip.replace(/[^A-Z0-9]/g, '')}`,
+        dip: null, nombre: `Empresa ${eip}`, tipo_sujeto: 'Empresa',
+        estado_fiscal: 'Al Dia', fecha_alta_tributos: new Date().toISOString(),
+        roles_json: ['ciudadano', 'empresa'], iban: null, eip
+      });
+      return res.json({ success: true, contributor });
     }
 
     // Para personas: buscar por DIP
@@ -132,28 +124,23 @@ router.post('/contributors/alta-rapida', verificarSesion, verificarRol('administ
     const placetaId = usuario.placeid || `PLID-${usuario.dip}`;
     const nombre = usuario.nombre_real || usuario.alias || `Usuario ${dip}`;
 
-    try {
-      const existente = await sbGetTributosContributorByPlacetaId(placetaId);
-      if (existente) return res.json({ success: true, yaExiste: true, contributor: existente });
-    } catch {}
+    const existente = await sbGetTributosContributorByPlacetaId(placetaId).catch(() => null);
+    if (existente) return res.json({ success: true, yaExiste: true, contributor: existente });
 
-    try {
-      const contributor = await sbCreateTributosContributor({
-        id: crypto.randomUUID?.() || String(Date.now()), placeta_id: placetaId,
-      dip,
-      nombre,
-      tipo_sujeto: 'Fisico',
-      estado_fiscal: 'Al Dia',
+    const contributor = await sbCreateTributosContributor({
+      id: crypto.randomUUID?.() || String(Date.now()), placeta_id: placetaId,
+      dip, nombre, tipo_sujeto: 'Fisico', estado_fiscal: 'Al Dia',
       fecha_alta_tributos: new Date().toISOString(),
-      roles_json: ['ciudadano'],
-      iban: null,
-      eip: null
+      roles_json: ['ciudadano'], iban: null, eip: null
     });
 
     return res.json({ success: true, contributor });
   } catch (err) {
-    console.error('[Tributos] Error alta rapida:', err.message);
-    return res.status(500).json({ error: err.message });
+    const msg = err.message?.includes('does not exist')
+      ? 'Tabla tributos_contribuyentes no existe en Supabase. Ejecuta el script SQL primero.'
+      : err.message;
+    console.error('[Tributos] Error alta rapida:', msg);
+    return res.status(500).json({ error: msg });
   }
 });
 

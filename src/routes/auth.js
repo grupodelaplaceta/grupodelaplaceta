@@ -160,7 +160,6 @@ router.post('/register', async (req, res) => {
     else if (edad < 18) franja = 'Tutelada_Senior';
 
     // Verificar lista negra por IP (SQLite)
-    const db = getDb();
     const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
     const ipRepetida = db.prepare('SELECT id FROM solicitantes WHERE ip_registro = ? AND lista_negra = 1').get(ip);
     if (ipRepetida) {
