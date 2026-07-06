@@ -372,9 +372,10 @@ class PDFGenerator {
 
     // ── Desglose IGF ──
     const igfCalc = Number(d.cuota_igf || 0);
-    this._titulo2('IGF · Impuesto sobre Grandes Fortunas');
-    this._fila('Base imponible', `${pm.toLocaleString()} Pz`);
-    this._fila('Tipo aplicable', igfCalc > 0 ? '1.5%' : '0% (exento)');
+    this._titulo2('IGF · Impuesto General sobre el Patrimonio');
+    this._fila('Base imponible (Patrimonio Medio)', `${pm.toLocaleString()} Pz`);
+    this._fila('Tipo impositivo', '1.5%');
+    this._fila('Cálculo', `${pm.toLocaleString()} Pz × 1.5% = ${igfCalc.toLocaleString()} Pz`);
     this._fila('Cuota IGF', `${igfCalc.toLocaleString()} Pz`);
 
     // ── Totales ──

@@ -407,8 +407,8 @@ router.post('/reconcile/:placetaId', verificarSesion, verificarRol('administrado
         // Buscar TODAS las cuentas del titular (solo tipo Personal, Savings, Current, Investment)
         // Excluir: Business (empresas), Tesoro, TGLP (estatales), sys (sistema)
         // Para personas (DIP): solo Personal, Savings, Current, Investment
-        // Para empresas (EIP): solo Business
-        const esPersona = !contributor?.eip;
+        // Para empresas (EIP o tipo_sujeto=Empresa): solo Business
+        const esPersona = contributor?.tipo_sujeto !== 'Empresa' && !contributor?.eip;
         const TIPOS_VALIDOS = esPersona
           ? ['Personal', 'Savings', 'Current', 'Investment']
           : ['Business'];

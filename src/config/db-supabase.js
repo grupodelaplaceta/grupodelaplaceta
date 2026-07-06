@@ -1151,6 +1151,9 @@ export async function sbCalculateDeclarationFromDailyBalances(placetaId, mesPeri
       else tasa = 0.35;
       cuotaIRM = Math.round(exceso * tasa * 100) / 100;
     }
+    // Calcular IGF (Impuesto General sobre el Patrimonio)
+    // Tasa fija del 1.5% sobre el patrimonio medio total
+    cuotaIGF = Math.round(patrimonioMedio * 0.015 * 100) / 100;
     declarationData.cuota_irm = cuotaIRM;
     declarationData.cuota_igf = cuotaIGF;
 
