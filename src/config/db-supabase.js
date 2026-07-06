@@ -1136,6 +1136,24 @@ export async function sbCalculateDeclarationFromDailyBalances(placetaId, mesPeri
       updated_at: new Date().toISOString()
     };
 
+    // Calcular IRM (Impuesto sobre la Renta de La Placeta)
+    // Tasa progresiva sobre el exceso de patrimonio sobre 500.000 Pz
+    let cuotaIRM = 0;
+    let cuotaIGF = 0;
+    const SALDO_MAXIMO = 500000;
+    if (patrimonioMedio > SALDO_MAXIMO) {
+      const exceso = patrimonioMedio - SALDO_MAXIMO;
+      const ratio = exceso / SALDO_MAXIMO;
+      let tasa = 0;
+      if (ratio <= 0.5) tasa = 0.05;
+      else if (ratio <= 1.0) tasa = 0.10;
+      else if (ratio <= 2.0) tasa = 0.20;
+      else tasa = 0.35;
+      cuotaIRM = Math.round(exceso * tasa * 100) / 100;
+    }
+    declarationData.cuota_irm = cuotaIRM;
+    declarationData.cuota_igf = cuotaIGF;
+
     if (existingDeclarations && existingDeclarations.length > 0) {
       const { data, error } = await sb.from('tributos_declaraciones')
         .update(declarationData)
@@ -1154,8 +1172,8 @@ export async function sbCalculateDeclarationFromDailyBalances(placetaId, mesPeri
         cuenta_id_blp: placetaId,
         patrimonio_medio: patrimonioMedio,
         indice_acumulacion: totalDias > 0 ? Number((transactionCount / totalDias).toFixed(4)) : 0,
-        cuota_irm: 0,
-        cuota_igf: 0,
+        cuota_irm: cuotaIRM,
+        cuota_igf: cuotaIGF,
         exencion_aplicada: false,
         dias_declarados_banco: totalDias,
         dias_reconstruidos_crm: Math.max(0, diasActivosMes - totalDias),
