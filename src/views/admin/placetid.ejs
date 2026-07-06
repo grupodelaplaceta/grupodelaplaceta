@@ -94,18 +94,20 @@
     </div>
     <div class="table-container">
       <table class="data-table"><thead><tr><th>Nombre</th><th>Plataforma</th><th>Callback URL</th><th>API Key</th><th>Activo</th><th>Acciones</th></tr></thead>
-        <tbody id="solicitantesBody"><tr><td colspan="6" class="loading-cell">Cargando...</td></tr></tbody>
+        <tbody id="solicitantesBody"><tr><td colspan="7" class="loading-cell">Cargando...</td></tr></tbody>
       </table>
     </div>
 
-    <!-- Modal crear solicitante -->
+    <!-- Modal crear/editar solicitante -->
     <div id="modalCrearSolicitante" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center">
       <div style="background:#fff;border-radius:16px;padding:28px;max-width:600px;width:90%;max-height:90vh;overflow-y:auto">
-        <h3 style="margin:0 0 16px 0">🔌 Nueva aplicación PlacetaID</h3>
+        <h3 style="margin:0 0 16px 0" id="modalCrearTitulo">🔌 Nueva aplicación PlacetaID</h3>
+        <input type="hidden" id="solEditId" value="">
         <div style="display:grid;gap:12px">
           <label><strong>Nombre *</strong><input type="text" id="solNombre" class="form-input" placeholder="Mi App"></label>
           <label><strong>Descripción</strong><textarea id="solDesc" class="form-input" rows="2" placeholder="Descripción de la aplicación"></textarea></label>
           <label><strong>URL de origen / Callback *</strong><input type="text" id="solUrl" class="form-input" placeholder="https://miapp.com/callback"></label>
+          <label><strong>Redirect URIs adicionales</strong><textarea id="solRedirectUris" class="form-input" rows="2" placeholder="https://miapp.com/callback2&#10;https://miapp.com/callback3"></textarea></label>
           <label><strong>Plataforma</strong>
             <select id="solPlataforma" class="form-input">
               <option value="web">Web</option>
@@ -120,13 +122,14 @@
           <label><strong>Logo URL (opcional)</strong><input type="text" id="solLogo" class="form-input" placeholder="https://.../logo.png"></label>
           <label><strong>Scheme (Android/iOS)</strong><input type="text" id="solScheme" class="form-input" placeholder="miapp://"></label>
           <label><strong>Package / Bundle ID</strong><input type="text" id="solPackage" class="form-input" placeholder="com.miapp.android"></label>
-          <div style="display:flex;gap:4px">
+          <div style="display:flex;gap:12px;flex-wrap:wrap">
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="solPKCE" checked> PKCE requerido</label>
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="solWebFallback" checked> Permitir fallback web</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="solActivo" checked> Activo</label>
           </div>
           <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
             <button class="btn btn-secondary" onclick="cerrarModalCrearSolicitante()">Cancelar</button>
-            <button class="btn btn-primary" onclick="crearSolicitante()">💾 Crear aplicación</button>
+            <button class="btn btn-primary" id="btnCrearEditarSolicitante" onclick="guardarSolicitante()">💾 Crear aplicación</button>
           </div>
         </div>
       </div>
@@ -316,59 +319,48 @@
       tbody.innerHTML = lista.map(s => '<tr>' +
         '<td><strong>' + (s.nombre || '—') + '</strong></td>' +
         '<td><span class="pill pill-purple">' + (s.plataforma || '—') + '</span></td>' +
-        '<td style="font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis">' + (s.urlOrigen || '—') + '</td>' +
+        '<td style="font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis" title="' + (s.urlOrigen || '') + '">' + (s.urlOrigen || '—') + '</td>' +
         '<td><code style="font-size:11px;padding:3px 6px;background:var(--bg);border-radius:4px">' + (s.apiKey ? s.apiKey.slice(0,16) + '…' : '—') + '</code></td>' +
         '<td><span class="badge badge-' + (s.activo !== false ? 'activo' : 'suspendido') + '">' + (s.activo !== false ? '✅' : '❌') + '</span></td>' +
         '<td style="display:flex;gap:4px">' +
-          '<button class="btn btn-sm btn-outline" onclick="verSolicitante(\'' + s._id + '\')">🔍</button>' +
+          '<button class="btn btn-sm btn-outline" onclick="verSolicitante(\'' + s._id + '\')" title="Ver detalle">🔍</button>' +
+          '<button class="btn btn-sm btn-outline" onclick="editarSolicitante(\'' + s._id + '\')" title="Editar" style="color:var(--p500)">✏️</button>' +
         '</td></tr>'
       ).join('');
-    } catch(e) { document.getElementById('solicitantesBody').innerHTML = '<tr><td colspan="6" class="error-cell">Error: ' + (e.message||'') + '</td></tr>'; }
+    } catch(e) { document.getElementById('solicitantesBody').innerHTML = '<tr><td colspan="7" class="error-cell">Error: ' + (e.message||'') + '</td></tr>'; }
   }
 
-  async function verSolicitante(id) {
+  // ── Editar solicitante ────────────────────────────────────────────────────
+  async function editarSolicitante(id) {
     try {
       const d = await apiPlacetid('/solicitantes/' + id);
-      let instruccionesHtml = '';
-      try {
-        const ins = await apiPlacetid('/solicitantes/' + id + '/instrucciones');
-        instruccionesHtml = '<div class="card" style="padding:16px;margin-top:12px;background:#f8f6ff">' +
-          '<h4 style="margin:0 0 8px 0">📋 Instrucciones de integración</h4>' +
-          '<div style="font-size:13px;line-height:1.6">' + (ins.html || ins.instructions || JSON.stringify(ins)) + '</div></div>';
-      } catch(e) {}
       const s = d.solicitante || d;
-      document.getElementById('detalleTitulo').textContent = '🔌 ' + (s.nombre || 'App');
-      document.getElementById('detalleContent').innerHTML =
-        '<div style="display:grid;gap:12px">' +
-          '<div><strong>Nombre:</strong> ' + (s.nombre || '—') + '</div>' +
-          '<div><strong>Descripción:</strong> ' + (s.descripcion || '—') + '</div>' +
-          '<div><strong>Callback URL:</strong> <code style="padding:4px 8px;background:var(--bg);border-radius:4px;font-size:13px">' + (s.urlOrigen || '—') + '</code></div>' +
-          '<div><strong>Plataforma:</strong> <span class="pill pill-purple">' + (s.plataforma || '—') + '</span></div>' +
-          '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px">' +
-            '<strong style="color:#166534">🔑 API Key</strong>' +
-            '<div style="display:flex;gap:8px;align-items:center;margin-top:6px">' +
-              '<code style="flex:1;padding:10px;background:#fff;border-radius:6px;font-size:13px;word-break:break-all" id="detalleApiKey">' + (s.apiKey || '—') + '</code>' +
-              '<button class="btn btn-sm btn-primary" onclick="copiarAlPortapapeles(document.getElementById(\'detalleApiKey\').textContent, \'API Key copiada\')">📋 Copiar</button>' +
-            '</div>' +
-          '</div>' +
-          (s.bgColor ? '<div><strong>Color tema:</strong> <span style="display:inline-block;width:20px;height:20px;border-radius:4px;background:' + s.bgColor + ';vertical-align:middle;border:1px solid #ddd"></span> <code>' + s.bgColor + '</code></div>' : '') +
-          (s.logo ? '<div><strong>Logo:</strong> <img src="' + s.logo + '" style="max-height:40px;border-radius:4px"></div>' : '') +
-          (s.appScheme ? '<div><strong>Scheme:</strong> <code>' + s.appScheme + '</code></div>' : '') +
-          (s.packageName ? '<div><strong>Package:</strong> ' + s.packageName + '</div>' : '') +
-          (s.bundleId ? '<div><strong>Bundle ID:</strong> ' + s.bundleId + '</div>' : '') +
-          '<div><strong>PKCE:</strong> ' + (s.pkceRequired ? '✅ Sí' : '❌ No') + '</div>' +
-          '<div><strong>Fallback web:</strong> ' + (s.permitirWebFallback !== false ? '✅ Sí' : '❌ No') + '</div>' +
-          '<div><strong>Estado:</strong> <span class="badge badge-' + (s.activo !== false ? 'activo' : 'suspendido') + '">' + (s.activo !== false ? '✅ Activo' : '❌ Inactivo') + '</span></div>' +
-          instruccionesHtml +
-        '</div>';
-      document.getElementById('modalDetalleSolicitante').style.display = 'flex';
+      document.getElementById('modalCrearTitulo').textContent = '✏️ Editar: ' + (s.nombre || 'App');
+      document.getElementById('solEditId').value = s._id;
+      document.getElementById('solNombre').value = s.nombre || '';
+      document.getElementById('solDesc').value = s.descripcion || '';
+      document.getElementById('solUrl').value = s.urlOrigen || '';
+      document.getElementById('solRedirectUris').value = Array.isArray(s.redirectUris) ? s.redirectUris.join('\n') : (s.redirectUris || '');
+      document.getElementById('solPlataforma').value = s.plataforma || 'web';
+      document.getElementById('solColor').value = s.bgColor || '#3f00d8';
+      document.getElementById('solLogo').value = s.logo || '';
+      document.getElementById('solScheme').value = s.appScheme || '';
+      document.getElementById('solPackage').value = s.packageName || '';
+      document.getElementById('solPKCE').checked = s.pkceRequired !== false;
+      document.getElementById('solWebFallback').checked = s.permitirWebFallback !== false;
+      document.getElementById('solActivo').checked = s.activo !== false;
+      document.getElementById('btnCrearEditarSolicitante').textContent = '💾 Guardar cambios';
+      document.getElementById('modalCrearSolicitante').style.display = 'flex';
     } catch(e) { alert('Error: ' + e.message); }
   }
 
   function abrirModalCrearSolicitante() {
+    document.getElementById('modalCrearTitulo').textContent = '🔌 Nueva aplicación PlacetaID';
+    document.getElementById('solEditId').value = '';
     document.getElementById('solNombre').value = '';
     document.getElementById('solDesc').value = '';
     document.getElementById('solUrl').value = '';
+    document.getElementById('solRedirectUris').value = '';
     document.getElementById('solPlataforma').value = 'web';
     document.getElementById('solColor').value = '#3f00d8';
     document.getElementById('solLogo').value = '';
@@ -376,45 +368,64 @@
     document.getElementById('solPackage').value = '';
     document.getElementById('solPKCE').checked = true;
     document.getElementById('solWebFallback').checked = true;
+    document.getElementById('solActivo').checked = true;
+    document.getElementById('btnCrearEditarSolicitante').textContent = '💾 Crear aplicación';
     document.getElementById('modalCrearSolicitante').style.display = 'flex';
   }
   function cerrarModalCrearSolicitante() { document.getElementById('modalCrearSolicitante').style.display = 'none'; }
   function cerrarModalDetalle() { document.getElementById('modalDetalleSolicitante').style.display = 'none'; }
 
-  async function crearSolicitante() {
+  async function guardarSolicitante() {
     const nombre = document.getElementById('solNombre').value.trim();
     const url = document.getElementById('solUrl').value.trim();
     if (!nombre || !url) return alert('Nombre y URL son obligatorios');
+    const editId = document.getElementById('solEditId').value;
+    const redirectUrisRaw = document.getElementById('solRedirectUris').value.trim();
+    const redirectUris = redirectUrisRaw ? redirectUrisRaw.split('\n').map(u => u.trim()).filter(Boolean) : [url];
+
     try {
       const body = {
         nombre,
         descripcion: document.getElementById('solDesc').value.trim(),
         urlOrigen: url,
-        redirectUris: [url],
+        redirectUris,
         plataforma: document.getElementById('solPlataforma').value,
         bgColor: document.getElementById('solColor').value.trim() || '#3f00d8',
         logo: document.getElementById('solLogo').value.trim() || undefined,
         appScheme: document.getElementById('solScheme').value.trim() || undefined,
         packageName: document.getElementById('solPackage').value.trim() || undefined,
         pkceRequired: document.getElementById('solPKCE').checked,
-        permitirWebFallback: document.getElementById('solWebFallback').checked
+        permitirWebFallback: document.getElementById('solWebFallback').checked,
+        activo: document.getElementById('solActivo').checked
       };
-      const r = await fetch('/api/admin/placetid/solicitantes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-      const data = await r.json();
-      if (!r.ok) return alert('❌ Error: ' + (data.error || data.message || r.status));
-      cerrarModalCrearSolicitante();
-      // Mostrar detalle con API Key
-      if (data.solicitante && data.solicitante._id) {
-        verSolicitante(data.solicitante._id);
-      } else if (data._id) {
-        verSolicitante(data._id);
+
+      let r, data;
+      if (editId) {
+        r = await fetch('/api/admin/placetid/solicitantes/' + editId, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        data = await r.json();
+        if (!r.ok) return alert('❌ Error: ' + (data.error || data.message || r.status));
+        cerrarModalCrearSolicitante();
+        alert('✅ Solicitante actualizado correctamente');
       } else {
-        alert('✅ Solicitante creado. Revisa la lista para ver los detalles.');
+        r = await fetch('/api/admin/placetid/solicitantes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        data = await r.json();
+        if (!r.ok) return alert('❌ Error: ' + (data.error || data.message || r.status));
+        cerrarModalCrearSolicitante();
+        if (data.solicitante && data.solicitante._id) verSolicitante(data.solicitante._id);
+        else if (data._id) verSolicitante(data._id);
+        else alert('✅ Solicitante creado.');
       }
+      cargarSolicitantes();
+    } catch(e) { alert('❌ Error: ' + e.message); }
+  }
       cargarSolicitantes();
     } catch(e) { alert('❌ Error: ' + e.message); }
   }

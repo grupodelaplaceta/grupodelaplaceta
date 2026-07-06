@@ -118,6 +118,22 @@ router.patch('/solicitantes/:id/branding', async (req, res) => {
   } catch (e) { res.status(502).json({ error: e.message }); }
 });
 
+// ── Actualizar solicitante completo (PUT) ────────────────────────────────────
+router.put('/solicitantes/:id', async (req, res) => {
+  try {
+    const token = await getToken();
+    const url = `${API}/admin/solicitantes/${req.params.id}`;
+    const result = await fetch(url, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'X-API-Key': API_KEY },
+      body: JSON.stringify(req.body)
+    });
+    const txt = await result.text();
+    try { res.status(result.status).json(JSON.parse(txt)); }
+    catch { res.status(result.status).json({ raw: txt.substring(0,200) }); }
+  } catch (e) { res.status(502).json({ error: e.message }); }
+});
+
 router.get('/solicitantes/:id/instrucciones', async (req, res) => {
   try { send(res, await call(`/admin/solicitantes/${req.params.id}/instrucciones`)); }
   catch (e) { res.status(502).json({ error: e.message }); }
