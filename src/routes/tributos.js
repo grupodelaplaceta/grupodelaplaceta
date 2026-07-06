@@ -383,10 +383,14 @@ router.post('/reconcile/:placetaId', verificarSesion, verificarRol('administrado
         const state = await r.json();
         const accounts = Array.isArray(state.accounts) ? state.accounts : Object.values(state.accounts || {});
         // Buscar TODAS las cuentas del titular (Personal, Savings, Investment, etc.)
+        // Excluir cuentas estatales (TGLP, Tesoro, Administración, sistema)
         cuentasDelTitular = accounts.filter(a =>
-          a.placetaId === placetaId || a.placetaId === dip ||
-          a.dip === dip || a.dip === placetaId ||
-          a.id === placetaId || a.id === dip
+          (a.placetaId === placetaId || a.placetaId === dip ||
+           a.dip === dip || a.dip === placetaId ||
+           a.id === placetaId || a.id === dip) &&
+          a.id !== 'TGLP' && a.id !== 'sys-lottery' &&
+          a.type !== 'Tesoro' && a.kind !== 'TGLP' &&
+          !a.id?.startsWith('TGLP')
         );
         const accountIds = new Set(cuentasDelTitular.map(a => a.id));
         bankSaldoTotal = cuentasDelTitular.reduce((sum, a) => sum + (a.balancePz || 0), 0);
