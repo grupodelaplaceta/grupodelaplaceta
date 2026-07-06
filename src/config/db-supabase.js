@@ -661,8 +661,26 @@ export async function sbCreateTributosContributor(data) {
   const { data: result, error } = await sb.from('tributos_contribuyentes')
     .insert(data).select().single();
   if (error) {
+    // Intentar crear la tabla automáticamente si no existe
     if (error.message?.includes('does not exist') || error.code === '42P01') {
-      throw new Error('La tabla tributos_contribuyentes no existe en Supabase. Crea las tablas desde el SQL editor.');
+      try {
+        const { supabase } = await import('./supabase.js');
+        const createSQL = `CREATE TABLE IF NOT EXISTS tributos_contribuyentes (
+          id TEXT PRIMARY KEY, placeta_id TEXT UNIQUE NOT NULL, dip TEXT UNIQUE,
+          nombre TEXT NOT NULL, tipo_sujeto TEXT DEFAULT 'Fisico', iban TEXT,
+          estado_fiscal TEXT DEFAULT 'Al Dia', roles_json JSONB DEFAULT '["ciudadano"]',
+          fecha_alta_tributos TIMESTAMPTZ, eip TEXT,
+          created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW()
+        );`;
+        await sb.rpc('exec_sql', { sql: createSQL }).catch(() => {});
+        // Reintentar insert después de crear la tabla
+        const { data: retry, error: retryErr } = await sb.from('tributos_contribuyentes')
+          .insert(data).select().single();
+        if (retryErr) throw new Error('Error al insertar después de crear tabla: ' + retryErr.message);
+        return retry;
+      } catch (createErr) {
+        throw new Error('La tabla tributos_contribuyentes no existe y no se pudo crear automáticamente. Ejecuta el script SQL en Supabase.');
+      }
     }
     throw new Error(error.message);
   }
