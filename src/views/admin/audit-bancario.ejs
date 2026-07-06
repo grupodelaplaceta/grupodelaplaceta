@@ -225,7 +225,6 @@
   </div>
 </div>
 
-<script src="/js/buscador-universal.js"></script>
 <script>
 // ── Utilidades ──────────────────────────────────────────────────────────────
 async function apiFetch(url, opts) {
@@ -309,10 +308,14 @@ async function cargarTesoro() {
 
 async function cargarTarjetas() {
   const d = await tryFetch('/api/bancario-proxy/tarjetas') || MOCK.tarjetas;
-  document.getElementById('totalTarjetas').textContent = d.total;
-  document.getElementById('totalTarjetasNum').textContent = d.total;
-  document.getElementById('activasTarjetasNum').textContent = d.activas;
-  document.getElementById('congeladasTarjetasNum').textContent = (d.total || 0) - (d.activas || 0);
+  const elTotal = document.getElementById('totalTarjetas');
+  if (elTotal) elTotal.textContent = d.total;
+  const elNum = document.getElementById('totalTarjetasNum');
+  if (elNum) elNum.textContent = d.total;
+  const elAct = document.getElementById('activasTarjetasNum');
+  if (elAct) elAct.textContent = d.activas;
+  const elCon = document.getElementById('congeladasTarjetasNum');
+  if (elCon) elCon.textContent = (d.total || 0) - (d.activas || 0);
   const cards = await tryFetch('/api/bancario-proxy/tarjetas-detalle') || MOCK.tarjetasDetalle;
   const tbody = document.getElementById('tarjetasBody');
   if (!cards.length) { tbody.innerHTML = '<tr><td colspan="6" class="loading-cell">Sin tarjetas</td></tr>'; return; }
