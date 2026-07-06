@@ -224,23 +224,47 @@
 
     <!-- Declaraciones -->
     <div id="tabDeclaraciones" class="tab-content" style="display:none">
+      <!-- Filtros y acciones masivas -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px;padding:12px 16px;background:var(--p050);border-radius:var(--radius);border:1px solid var(--p200)">
+        <div style="display:flex;gap:4px;align-items:center">
+          <label style="font-size:12px;font-weight:600;color:var(--text-light)">📅 Mes:</label>
+          <input type="month" id="filterMesPeriodo" style="width:150px;padding:6px 10px;border:2px solid var(--line);border-radius:var(--radius);font-family:var(--font);font-size:13px">
+        </div>
+        <div style="display:flex;gap:4px;align-items:center">
+          <label style="font-size:12px;font-weight:600;color:var(--text-light)">📌 Estado:</label>
+          <select id="filterEstado" style="width:140px;padding:6px 10px;border:2px solid var(--line);border-radius:var(--radius);font-family:var(--font);font-size:13px">
+            <option value="">Todos</option>
+            <option value="Borrador">📝 Borrador</option>
+            <option value="Pendiente_Aprobacion">⏳ Pendiente Aprobación</option>
+            <option value="Aprobada">✅ Aprobada</option>
+            <option value="Emitido">📨 Emitido</option>
+            <option value="Cobrado_Exito">💰 Cobrado</option>
+          </select>
+        </div>
+        <button class="btn btn-sm btn-outline" onclick="filtrarDeclaraciones()">🔍 Filtrar</button>
+        <button class="btn btn-sm btn-primary" onclick="cargarDeclaraciones()">🔄 Refrescar</button>
+        <span style="flex:1"></span>
+        <button class="btn btn-sm btn-success" onclick="abrirModalPublicacionMasiva()" title="Publicar, aprobar o emitir todas las de un mes">📦 Acción masiva</button>
+        <button class="btn btn-sm btn-glass" onclick="cargarDeclaraciones()">📊 Total: <span id="declTotalCount">0</span></button>
+      </div>
       <div class="table-container">
         <table class="data-table" id="declaracionesTable">
           <thead>
             <tr>
-              <th>ID</th>
-              <th>Placeta ID</th>
+              <th style="width:30px"><input type="checkbox" id="selectAllDecl" onchange="toggleSelectAllDecl(this.checked)" title="Seleccionar todas"></th>
+              <th>PlacetaID / Nombre</th>
               <th>Periodo</th>
-              <th>Cuota IRM</th>
-              <th>Cuota IGF</th>
+              <th>IRM</th>
+              <th>IGF</th>
+              <th>Total</th>
               <th>Estado</th>
               <th>Bypass</th>
               <th>Fecha</th>
-              <th>Acción</th>
+              <th style="min-width:200px">Acciones</th>
             </tr>
           </thead>
           <tbody>
-            <tr><td colspan="9" class="loading-cell">Cargando declaraciones...</td></tr>
+            <tr><td colspan="10" class="loading-cell">Cargando declaraciones...</td></tr>
           </tbody>
         </table>
       </div>
@@ -411,6 +435,28 @@
   </div>
 </div>
 
+<!-- ── Modal: Publicación Masiva ──────────────────────────────────────────── -->
+<div class="modal-overlay" id="modalPublicacionMasiva">
+  <div class="modal-window" style="max-width:550px">
+    <div class="modal-header">
+      <h3>📦 Acción Masiva sobre Declaraciones</h3>
+      <button class="modal-close" data-modal-close>✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="margin:0 0 12px 0;font-size:14px;color:var(--text-light)">Selecciona el mes y la acción a aplicar a <strong>TODAS</strong> las declaraciones de ese mes.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+        <label style="flex:1">📅 Mes <input type="month" id="bulkMesPeriodo" style="width:100%"></label>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-sm btn-primary" onclick="ejecutarBulk('publish')" style="flex:1">📤 Publicar todas</button>
+        <button class="btn btn-sm btn-success" onclick="ejecutarBulk('approve')" style="flex:1">✅ Aprobar todas</button>
+        <button class="btn btn-sm btn-warning" onclick="ejecutarBulk('emit')" style="flex:1">📨 Emitir + cobrar</button>
+      </div>
+      <div id="bulkResultado" style="margin-top:16px;display:none"></div>
+    </div>
+  </div>
+</div>
+
 <script>
   // ── Helper: apiFetch para todas las llamadas API ───────────────────────────
   async function apiFetch(url, opts = {}) {
@@ -536,33 +582,204 @@
   }
 
   // ── Load Declarations ─────────────────────────────────────────────────────
+  let _todasDeclaraciones = [];
+
   async function cargarDeclaraciones() {
     try {
       const data = await apiFetch('/api/admin/tributos/declarations');
-      const tbody = document.querySelector('#declaracionesTable tbody');
-      if (!data.length) {
-        tbody.innerHTML = '<tr><td colspan="10" class="loading-cell">No hay declaraciones registradas.</td></tr>';
-        return;
-      }
-      tbody.innerHTML = data.map(item => {
-        const estado = item.estado_pago || '—';
-        const estadoBadge = estado === 'Cobrado_Exito' ? 'badge-activo' : estado === 'Borrador' ? 'badge-pendiente' : estado === 'Emitido' ? 'badge-login' : 'badge-baja';
-        const esBorrador = estado === 'Borrador' || !estado;
-        return `<tr>
-          <td style="font-size:11px;font-family:monospace">${(item.id || '').slice(0,8)}</td>
-          <td>${item.placeta_id || item.contributor_id || '—'}</td>
-          <td><span class="pill pill-purple">${item.mes_periodo || '—'}</span></td>
-          <td title="PM: ${formatMoneda(item.patrimonio_medio)}">${formatMoneda(item.cuota_irm)}</td>
-          <td>${formatMoneda(item.cuota_igf)}</td>
-          <td><span class="badge ${estadoBadge}">${estado}</span></td>
-          <td>${item.bypass_junta_directiva ? '✅ Sí' : '—'}</td>
-          <td>${item.updated_at ? new Date(item.updated_at).toLocaleDateString('es-ES') : '—'}</td>
-          <td><button class="btn btn-sm btn-glass" onclick="descargarPDFDeclaracion('${item.id}')" title="Descargar PDF">📄</button></td>
-          <td>${esBorrador ? `<button class="btn btn-sm btn-danger" onclick="eliminarDeclaracion('${item.id}')" title="Eliminar borrador">🗑️</button>` : ''}</td>
-        </tr>`;
-      }).join('');
+      _todasDeclaraciones = data;
+      aplicarFiltrosYRender();
     } catch (e) {
       document.querySelector('#declaracionesTable tbody').innerHTML = '<tr><td colspan="10" class="error-cell">Error al cargar declaraciones</td></tr>';
+    }
+  }
+
+  function aplicarFiltrosYRender() {
+    const mesFiltro = (document.getElementById('filterMesPeriodo')?.value || '').trim();
+    const estadoFiltro = (document.getElementById('filterEstado')?.value || '').trim();
+    let filtradas = _todasDeclaraciones;
+    if (mesFiltro) filtradas = filtradas.filter(d => d.mes_periodo === mesFiltro);
+    if (estadoFiltro) filtradas = filtradas.filter(d => d.estado_pago === estadoFiltro);
+
+    document.getElementById('declTotalCount').textContent = filtradas.length;
+    const tbody = document.querySelector('#declaracionesTable tbody');
+    if (!filtradas.length) {
+      tbody.innerHTML = '<tr><td colspan="10" class="loading-cell">No hay declaraciones' + (mesFiltro || estadoFiltro ? ' con esos filtros' : '') + '.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = filtradas.map(item => {
+      const estado = item.estado_pago || 'Borrador';
+      const nombreContrib = item.nombre || item.placeta_id || item.contributor_id || '—';
+      const totalCuota = (item.cuota_irm || 0) + (item.cuota_igf || 0);
+      const estadoBadge = estado === 'Cobrado_Exito' ? 'badge-activo'
+        : estado === 'Aprobada' ? 'badge-login'
+        : estado === 'Emitido' ? 'badge-primary'
+        : estado === 'Pendiente_Aprobacion' ? 'badge-pendiente'
+        : estado === 'Borrador' ? 'badge-baja' : 'badge-baja';
+      const bypassExplicado = item.bypass_junta_directiva
+        ? '<span title="Aprobado sin Junta Directiva (bypass)">✅ Bypass</span>'
+        : (item.estado_pago === 'Aprobada' || item.estado_pago === 'Emitido' || item.estado_pago === 'Cobrado_Exito')
+          ? '<span title="Aprobado por Junta Directiva">🏛️ JD</span>'
+          : '—';
+
+      // Botones según estado
+      let acciones = '';
+      if (estado === 'Borrador') {
+        acciones = `
+          <button class="btn btn-sm btn-primary" onclick="publicarDeclaracion('${item.id}')" title="Publicar → Pendiente Aprobación">📤 Publicar</button>
+          <button class="btn btn-sm btn-success" onclick="aprobarDeclaracionDirecta('${item.id}')" title="Aprobar directamente (bypass Junta)">⚡ Bypass + Aprobar</button>
+          <button class="btn btn-sm btn-danger" onclick="eliminarDeclaracion('${item.id}')" title="Eliminar borrador">🗑️</button>`;
+      } else if (estado === 'Pendiente_Aprobacion') {
+        acciones = `
+          <button class="btn btn-sm btn-success" onclick="aprobarDeclaracion('${item.id}')" title="Aprobar para cobro">✅ Aprobar</button>
+          <button class="btn btn-sm btn-outline" onclick="rechazarDeclaracion('${item.id}')" title="Rechazar → vuelve a Borrador">↩️ Rechazar</button>`;
+      } else if (estado === 'Aprobada') {
+        acciones = `
+          <button class="btn btn-sm btn-warning" onclick="emitirDeclaracion('${item.id}')" title="Emitir y cobrar al banco">📨 Emitir + Cobrar</button>`;
+      } else if (estado === 'Emitido') {
+        acciones = `<span style="font-size:12px;color:var(--text-light)">📨 Emitida (pendiente cobro)</span>`;
+      } else if (estado === 'Cobrado_Exito') {
+        acciones = `<span style="font-size:12px;color:var(--success)">💰 Cobrada${item.transaction_id_blp ? ' · ID: ' + item.transaction_id_blp.slice(0,10) : ''}</span>`;
+      }
+      acciones += ` <button class="btn btn-sm btn-glass" onclick="descargarPDFDeclaracion('${item.id}')" title="Descargar PDF">📄</button>`;
+
+      return `<tr>
+        <td><input type="checkbox" class="declCheck" value="${item.id}" data-estado="${estado}"></td>
+        <td><strong>${nombreContrib}</strong><br><small style="color:var(--text-light)">${item.dip || '—'}</small></td>
+        <td><span class="pill pill-purple">${item.mes_periodo || '—'}</span></td>
+        <td title="PM: ${formatMoneda(item.patrimonio_medio)}">${formatMoneda(item.cuota_irm)}</td>
+        <td>${formatMoneda(item.cuota_igf)}</td>
+        <td><strong>${formatMoneda(totalCuota)}</strong></td>
+        <td><span class="badge ${estadoBadge}" style="cursor:help" title="${explicarEstado(estado)}">${estado.replace(/_/g,' ')}</span></td>
+        <td style="font-size:12px">${bypassExplicado}</td>
+        <td>${item.updated_at ? new Date(item.updated_at).toLocaleDateString('es-ES') : '—'}</td>
+        <td style="display:flex;gap:4px;flex-wrap:wrap">${acciones}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  function filtrarDeclaraciones() { aplicarFiltrosYRender(); }
+
+  function explicarEstado(e) {
+    const map = {
+      'Borrador': '📝 Borrador — Sin publicar. Editable',
+      'Pendiente_Aprobacion': '⏳ Pendiente de aprobación por la Junta Directiva',
+      'Aprobada': '✅ Aprobada por la Junta — Lista para emitir y cobrar',
+      'Emitido': '📨 Emitida — Cobro pendiente de procesar',
+      'Cobrado_Exito': '💰 Cobrada con éxito — Pago realizado'
+    };
+    return map[e] || e;
+  }
+
+  function toggleSelectAllDecl(checked) {
+    document.querySelectorAll('.declCheck').forEach(c => c.checked = checked);
+  }
+
+  // ── Acciones individuales ────────────────────────────────────────────────
+
+  // Publicar (Borrador → Pendiente_Aprobacion)
+  async function publicarDeclaracion(id) {
+    try {
+      const bypass = confirm('¿Quieres BYPASS la Junta Directiva?\n\nEl "bypass" permite publicar esta declaración directamente sin esperar la aprobación de la Junta.\n\n• Aceptar = BYPASS (aprobación automática)\n• Cancelar = Pendiente de Junta');
+      const res = await apiFetch('/api/admin/tributos/declarations/' + id + '/publish', {
+        method: 'PUT',
+        body: JSON.stringify({ bypass_junta_directiva: bypass })
+      });
+      mostrarToast('success', bypass ? '⚡ Publicada con bypass (aprobación automática)' : '📤 Publicada. Pendiente de aprobación de la Junta');
+      cargarDeclaraciones();
+    } catch (e) { mostrarToast('error', 'Error: ' + e.message); }
+  }
+
+  // Aprobar (Pendiente_Aprobacion → Aprobada)
+  async function aprobarDeclaracion(id) {
+    try {
+      const res = await apiFetch('/api/admin/tributos/declarations/' + id + '/approve', { method: 'PUT' });
+      mostrarToast('success', '✅ Declaración aprobada por la Junta Directiva');
+      cargarDeclaraciones();
+    } catch (e) { mostrarToast('error', 'Error: ' + e.message); }
+  }
+
+  // Aprobación directa desde Borrador (bypass)
+  async function aprobarDeclaracionDirecta(id) {
+    if (!confirm('⚡ BYPASS: ¿Aprobar esta declaración directamente sin pasar por Junta Directiva?\n\nEsto la publicará y aprobará en un solo paso.')) return;
+    try {
+      const res = await apiFetch('/api/admin/tributos/declarations/' + id + '/publish', {
+        method: 'PUT',
+        body: JSON.stringify({ bypass_junta_directiva: true })
+      });
+      if (res.success) {
+        await apiFetch('/api/admin/tributos/declarations/' + id + '/approve', { method: 'PUT' });
+        mostrarToast('success', '⚡ Bypass completado: declaración publicada y aprobada');
+      }
+      cargarDeclaraciones();
+    } catch (e) { mostrarToast('error', 'Error: ' + e.message); }
+  }
+
+  // Rechazar (Pendiente_Aprobacion → Borrador)
+  async function rechazarDeclaracion(id) {
+    if (!confirm('¿Rechazar esta declaración? Volverá a estado Borrador para su revisión.')) return;
+    try {
+      const res = await apiFetch('/api/admin/tributos/declarations/' + id + '/reject', { method: 'PUT' });
+      mostrarToast('warning', '↩️ Declaración devuelta a Borrador');
+      cargarDeclaraciones();
+    } catch (e) { mostrarToast('error', 'Error: ' + e.message); }
+  }
+
+  // Emitir + cobrar (Aprobada → Emitida/Cobrado_Exito)
+  async function emitirDeclaracion(id) {
+    if (!confirm('📨 ¿Emitir esta declaración?\n\n• Se intentará cobrar el importe directamente desde el banco BLP.\n• La cuenta TGLP recibirá los fondos.')) return;
+    try {
+      mostrarToast('info', '⏳ Procesando emisión y cobro...');
+      const res = await apiFetch('/api/admin/tributos/declarations/' + id + '/emit', { method: 'PUT' });
+      if (res.transactionId) {
+        mostrarToast('success', '💰 Cobro realizado. ID transacción: ' + res.transactionId.slice(0,12));
+      } else if (res.paymentError) {
+        mostrarToast('warning', '📨 Emitida pero el cobro no se completó: ' + res.paymentError);
+      } else {
+        mostrarToast('success', '📨 Declaración emitida correctamente');
+      }
+      cargarDeclaraciones();
+    } catch (e) { mostrarToast('error', 'Error: ' + e.message); }
+  }
+
+  // ── Acciones masivas ─────────────────────────────────────────────────────
+  function abrirModalPublicacionMasiva() {
+    const mesInput = document.getElementById('bulkMesPeriodo');
+    if (mesInput && !mesInput.value) mesInput.value = new Date().toISOString().slice(0, 7);
+    document.getElementById('bulkResultado').style.display = 'none';
+    abrirModal('modalPublicacionMasiva');
+  }
+
+  async function ejecutarBulk(accion) {
+    const mes = document.getElementById('bulkMesPeriodo')?.value;
+    if (!mes) { mostrarToast('error', 'Selecciona un mes'); return; }
+
+    const accionLabels = { publish: '📤 Publicar', approve: '✅ Aprobar', emit: '📨 Emitir' };
+    const confirmMsg = accion === 'publish'
+      ? `¿Publicar TODAS las declaraciones de ${mes}?\n\nLas que estén en Borrador pasarán a Pendiente_Aprobacion.`
+      : accion === 'approve'
+        ? `¿Aprobar TODAS las declaraciones pendientes de ${mes}?\n\nSolo se aprobarán las que estén en estado Pendiente_Aprobacion.`
+        : `¿Emitir y cobrar TODAS las declaraciones aprobadas de ${mes}?\n\nSe intentará cobrar cada una desde el banco BLP.`;
+
+    if (!confirm(confirmMsg)) return;
+
+    mostrarToast('info', '⏳ Procesando...');
+    try {
+      const res = await apiFetch('/api/admin/tributos/declarations/bulk/' + accion, {
+        method: 'PUT',
+        body: JSON.stringify({ mes_periodo: mes })
+      });
+      document.getElementById('bulkResultado').style.display = 'block';
+      document.getElementById('bulkResultado').innerHTML =
+        '<div class="alert alert-success">' +
+        '✅ ' + (accionLabels[accion] || accion) + ': ' + res.procesadas + '/' + res.total + ' procesadas' +
+        (res.errores > 0 ? ' · ❌ ' + res.errores + ' errores' : '') +
+        '</div>';
+      mostrarToast('success', '✅ Acción masiva completada: ' + res.procesadas + ' declaraciones');
+      cargarDeclaraciones();
+    } catch (e) {
+      document.getElementById('bulkResultado').style.display = 'block';
+      document.getElementById('bulkResultado').innerHTML = '<div class="alert alert-danger">❌ Error: ' + e.message + '</div>';
     }
   }
 
@@ -758,6 +975,4 @@
       tipo: 'empresa', placeholder: '🔍 Buscar empresa por nombre o EIP...'
     });
   });
-</script>
-
 </script>

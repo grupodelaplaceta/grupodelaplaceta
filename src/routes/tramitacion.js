@@ -13,12 +13,19 @@ const router = Router();
 router.get('/tramites', verificarSesion, verificarRol('administrador', 'junta'), (req, res) => {
   try {
     const db = getDb();
-    const tramites = db.prepare(`
+    const { estado } = req.query;
+    let query = `
       SELECT d.*, s.alias, s.dip, s.nombre_real, s.email, s.telefono
       FROM documentos_tramites d
       JOIN solicitantes s ON d.usuario_id = s.id
-      ORDER BY d.created_at DESC LIMIT 200
-    `).all();
+    `;
+    const params = [];
+    if (estado) {
+      query += ` WHERE d.estado = ?`;
+      params.push(estado);
+    }
+    query += ` ORDER BY d.created_at DESC LIMIT 200`;
+    const tramites = db.prepare(query).all(...params);
     res.json(tramites);
   } catch (err) {
     res.json([]);
@@ -33,12 +40,78 @@ router.get('/tramites/pendientes', verificarSesion, verificarRol('administrador'
       SELECT d.*, s.alias, s.dip
       FROM documentos_tramites d
       JOIN solicitantes s ON d.usuario_id = s.id
-      WHERE d.estado = 'pendiente' OR d.estado IS NULL
-      ORDER BY d.created_at ASC
+      WHERE d.estado = 'pendiente' OR d.estado IS NULL OR d.estado = 'en_revision'
+      ORDER BY 
+        CASE d.estado WHEN 'en_revision' THEN 0 WHEN 'pendiente' THEN 1 ELSE 2 END,
+        d.created_at ASC
     `).all();
     res.json(pendientes);
   } catch (err) {
     res.json([]);
+  }
+});
+
+// PUT /api/admin/tramites/revisar/:id — Poner en revisión
+router.put('/tramites/revisar/:id', verificarSesion, verificarRol('administrador', 'junta', 'secretario'), (req, res) => {
+  try {
+    const db = getDb();
+    const tramite = db.prepare('SELECT * FROM documentos_tramites WHERE id = ?').get(req.params.id);
+    if (!tramite) return res.status(404).json({ error: 'Trámite no encontrado' });
+
+    db.prepare(`UPDATE documentos_tramites SET estado='en_revision', resuelto_por=?, resuelto_en=datetime(),
+      observaciones=? WHERE id=?`)
+      .run(req.session.usuario.id, req.body.observaciones || 'En revisión', req.params.id);
+
+    const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
+    db.prepare('INSERT INTO logs_auditoria (usuario_id, accion, detalle, ip) VALUES (?,?,?,?)')
+      .run(req.session.usuario.id, 'tramite_revisar', `Trámite #${req.params.id} en revisión: ${tramite.tipo}`, ip);
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/admin/tramites/pedir-documentacion/:id — Solicitar más documentos
+router.put('/tramites/pedir-documentacion/:id', verificarSesion, verificarRol('administrador', 'junta', 'secretario'), (req, res) => {
+  try {
+    const db = getDb();
+    const tramite = db.prepare('SELECT * FROM documentos_tramites WHERE id = ?').get(req.params.id);
+    if (!tramite) return res.status(404).json({ error: 'Trámite no encontrado' });
+
+    const docsRequeridos = req.body.documentos_requeridos || req.body.observaciones || 'Documentación adicional requerida';
+    db.prepare(`UPDATE documentos_tramites SET estado='documentacion_requerida', resuelto_por=?, resuelto_en=datetime(),
+      observaciones=?, documentos_requeridos=? WHERE id=?`)
+      .run(req.session.usuario.id, docsRequeridos, docsRequeridos, req.params.id);
+
+    const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
+    db.prepare('INSERT INTO logs_auditoria (usuario_id, accion, detalle, ip) VALUES (?,?,?,?)')
+      .run(req.session.usuario.id, 'tramite_pedir_docs', `Trámite #${req.params.id}: solicitud de documentación. Docs: ${docsRequeridos}`, ip);
+
+    res.json({ success: true, message: 'Documentación solicitada', documentos_requeridos: docsRequeridos });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/admin/tramites/completar/:id — Marcar como completado
+router.put('/tramites/completar/:id', verificarSesion, verificarRol('administrador', 'junta', 'secretario'), (req, res) => {
+  try {
+    const db = getDb();
+    const tramite = db.prepare('SELECT * FROM documentos_tramites WHERE id = ?').get(req.params.id);
+    if (!tramite) return res.status(404).json({ error: 'Trámite no encontrado' });
+
+    db.prepare(`UPDATE documentos_tramites SET estado='completado', resuelto_por=?, resuelto_en=datetime(),
+      observaciones=? WHERE id=?`)
+      .run(req.session.usuario.id, req.body.observaciones || 'Trámite completado', req.params.id);
+
+    const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
+    db.prepare('INSERT INTO logs_auditoria (usuario_id, accion, detalle, ip) VALUES (?,?,?,?)')
+      .run(req.session.usuario.id, 'tramite_completar', `Trámite #${req.params.id} completado: ${tramite.tipo}`, ip);
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 

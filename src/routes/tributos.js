@@ -9,6 +9,10 @@ import {
   sbUpdateTributosContributor,
   sbListTributosDeclarations,
   sbCreateTributosDeclaration,
+  sbDeleteTributosDeclaration,
+  sbGetTributosDeclaration,
+  sbUpdateTributosDeclaration,
+  sbListTributosDeclaracionesPorMes,
   sbListTributosInvoices,
   sbCreateTributosInvoice,
   sbGetTributosInhibition,
@@ -207,11 +211,186 @@ router.post('/declarations', verificarSesion, verificarRol('administrador', 'jun
 // ── Eliminar declaración (solo borradores) ──────────────────────────────
 router.delete('/declarations/:id', verificarSesion, verificarRol('administrador', 'junta', 'fiscal'), async (req, res) => {
   try {
-    const { sbDeleteTributosDeclaration } = await import('../config/db-supabase.js');
     await sbDeleteTributosDeclaration(req.params.id);
     res.json({ success: true, message: 'Declaración eliminada' });
   } catch (err) {
     console.error('[Tributos] Error eliminar declaration:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Publicar declaración (Borrador → Pendiente_Aprobacion) ─────────────
+router.put('/declarations/:id/publish', verificarSesion, verificarRol('administrador', 'junta', 'fiscal'), async (req, res) => {
+  try {
+    const dec = await sbGetTributosDeclaration(req.params.id);
+    if (!dec) return res.status(404).json({ error: 'Declaración no encontrada' });
+    if (dec.estado_pago !== 'Borrador') return res.status(400).json({ error: 'Solo se pueden publicar borradores', estado_actual: dec.estado_pago });
+
+    const updated = await sbUpdateTributosDeclaration(req.params.id, {
+      estado_pago: 'Pendiente_Aprobacion',
+      bypass_junta_directiva: req.body.bypass_junta_directiva === true,
+      id_permiso_junta: req.body.id_permiso_junta || null
+    });
+    res.json({ success: true, declaration: updated });
+  } catch (err) {
+    console.error('[Tributos] Error publicar declaration:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Aprobar declaración (Pendiente_Aprobacion → Aprobada) ──────────────
+router.put('/declarations/:id/approve', verificarSesion, verificarRol('administrador', 'junta'), async (req, res) => {
+  try {
+    const dec = await sbGetTributosDeclaration(req.params.id);
+    if (!dec) return res.status(404).json({ error: 'Declaración no encontrada' });
+    if (dec.estado_pago !== 'Pendiente_Aprobacion' && dec.estado_pago !== 'Borrador') {
+      return res.status(400).json({ error: 'Solo se pueden aprobar declaraciones en estado Pendiente_Aprobacion o Borrador', estado_actual: dec.estado_pago });
+    }
+
+    const updated = await sbUpdateTributosDeclaration(req.params.id, {
+      estado_pago: 'Aprobada',
+      bypass_junta_directiva: false
+    });
+    res.json({ success: true, declaration: updated });
+  } catch (err) {
+    console.error('[Tributos] Error aprobar declaration:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Rechazar declaración (Pendiente_Aprobacion → Borrador) ─────────────
+router.put('/declarations/:id/reject', verificarSesion, verificarRol('administrador', 'junta'), async (req, res) => {
+  try {
+    const dec = await sbGetTributosDeclaration(req.params.id);
+    if (!dec) return res.status(404).json({ error: 'Declaración no encontrada' });
+    if (dec.estado_pago !== 'Pendiente_Aprobacion') {
+      return res.status(400).json({ error: 'Solo se pueden rechazar declaraciones Pendiente_Aprobacion', estado_actual: dec.estado_pago });
+    }
+    const updated = await sbUpdateTributosDeclaration(req.params.id, {
+      estado_pago: 'Borrador',
+      bypass_junta_directiva: false,
+      id_permiso_junta: null
+    });
+    res.json({ success: true, declaration: updated, message: 'Declaración devuelta a Borrador' });
+  } catch (err) {
+    console.error('[Tributos] Error rechazar declaration:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Emitir declaración (Aprobada → Emitida) + pago al banco ────────────
+router.put('/declarations/:id/emit', verificarSesion, verificarRol('administrador', 'junta'), async (req, res) => {
+  try {
+    const dec = await sbGetTributosDeclaration(req.params.id);
+    if (!dec) return res.status(404).json({ error: 'Declaración no encontrada' });
+    if (dec.estado_pago !== 'Aprobada' && dec.estado_pago !== 'Borrador') {
+      return res.status(400).json({ error: 'Solo se pueden emitir declaraciones Aprobadas', estado_actual: dec.estado_pago });
+    }
+
+    const totalCuota = (dec.cuota_irm || 0) + (dec.cuota_igf || 0);
+    let transactionId = null;
+    let paymentError = null;
+
+    // Intentar pago al banco
+    if (totalCuota > 0 && dec.placeta_id) {
+      try {
+        const CRM_KEY = process.env.CRM_READ_KEY || 'crm-gdlp-shared-key-2026';
+        const payR = await fetch(`${BANCO_API}/api/admin/transfer`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CRM-Key': CRM_KEY },
+          body: JSON.stringify({
+            fromId: dec.placeta_id,
+            toId: 'TGLP',
+            amountPz: totalCuota,
+            concept: `TLP-${dec.mes_periodo} IRM+IGF`,
+            reference: `DEC-${dec.id?.slice(0, 8)}`,
+            type: 'tax_payment'
+          }),
+          signal: AbortSignal.timeout(10000)
+        });
+        if (payR.ok) {
+          const payResult = await payR.json();
+          transactionId = payResult.transactionId || payResult.id || null;
+        } else {
+          paymentError = `Banco rechazó: ${payR.status}`;
+        }
+      } catch (e) {
+        paymentError = `Banco no disponible: ${e.message}`;
+      }
+    }
+
+    const updated = await sbUpdateTributosDeclaration(req.params.id, {
+      estado_pago: transactionId ? 'Cobrado_Exito' : 'Emitido',
+      transaction_id_blp: transactionId
+    });
+
+    res.json({
+      success: true,
+      declaration: updated,
+      transactionId,
+      paymentError,
+      totalCuota
+    });
+  } catch (err) {
+    console.error('[Tributos] Error emitir declaration:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Publicación masiva: publicar/aprobar/emitir TODAS las de un mes ────
+router.put('/declarations/bulk/:accion', verificarSesion, verificarRol('administrador', 'junta'), async (req, res) => {
+  try {
+    const { accion } = req.params; // publish, approve, emit
+    const { mes_periodo, bypass_junta_directiva } = req.body;
+    if (!mes_periodo) return res.status(400).json({ error: 'mes_periodo_requerido' });
+
+    const todas = await sbListTributosDeclaracionesPorMes(mes_periodo);
+    if (!todas.length) return res.json({ success: true, procesadas: 0, message: 'Sin declaraciones para este mes' });
+
+    let ok = 0, errors = [], resultados = [];
+    for (const dec of todas) {
+      try {
+        let updated;
+        if (accion === 'publish') {
+          if (dec.estado_pago !== 'Borrador') continue;
+          updated = await sbUpdateTributosDeclaration(dec.id, {
+            estado_pago: 'Pendiente_Aprobacion',
+            bypass_junta_directiva: bypass_junta_directiva === true,
+            id_permiso_junta: bypass_junta_directiva ? (req.body.id_permiso_junta || `BULK-${Date.now()}`) : null
+          });
+        } else if (accion === 'approve') {
+          if (dec.estado_pago !== 'Pendiente_Aprobacion' && dec.estado_pago !== 'Borrador') continue;
+          updated = await sbUpdateTributosDeclaration(dec.id, { estado_pago: 'Aprobada', bypass_junta_directiva: false });
+        } else if (accion === 'emit') {
+          if (dec.estado_pago !== 'Aprobada' && dec.estado_pago !== 'Borrador') continue;
+          const totalCuota = (dec.cuota_irm || 0) + (dec.cuota_igf || 0);
+          let txId = null;
+          if (totalCuota > 0 && dec.placeta_id) {
+            try {
+              const CRM_KEY = process.env.CRM_READ_KEY || 'crm-gdlp-shared-key-2026';
+              const pr = await fetch(`${BANCO_API}/api/admin/transfer`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CRM-Key': CRM_KEY },
+                body: JSON.stringify({
+                  fromId: dec.placeta_id, toId: 'TGLP', amountPz: totalCuota,
+                  concept: `TLP-${dec.mes_periodo}`, reference: `DEC-${dec.id?.slice(0, 8)}`, type: 'tax_payment'
+                }),
+                signal: AbortSignal.timeout(10000)
+              });
+              if (pr.ok) { const prj = await pr.json(); txId = prj.transactionId || prj.id || null; }
+            } catch {}
+          }
+          updated = await sbUpdateTributosDeclaration(dec.id, {
+            estado_pago: txId ? 'Cobrado_Exito' : 'Emitido',
+            transaction_id_blp: txId
+          });
+        }
+        if (updated) { ok++; resultados.push(updated); }
+      } catch (e) { errors.push(dec.id + ': ' + e.message); }
+    }
+
+    res.json({ success: true, accion, procesadas: ok, errores: errors.length, total: todas.length, resultados });
+  } catch (err) {
+    console.error('[Tributos] Error bulk:', err.message);
     res.status(500).json({ error: err.message });
   }
 });

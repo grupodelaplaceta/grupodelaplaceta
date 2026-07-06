@@ -693,11 +693,29 @@ export async function sbListTributosDeclarations(limit = 50) {
   try {
     const { data, error } = await sb.from('tributos_declaraciones')
       .select('*')
-      .order('created_at', { ascending: false }).limit(limit);
+      .order('mes_periodo', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(limit);
     if (error) throw error;
     return data || [];
   } catch (err) {
     console.error('[Tributos] Supabase query error (declarations):', err.message || err);
+    return [];
+  }
+}
+
+export async function sbListTributosDeclaracionesPorMes(mesPeriodo) {
+  const sb = safeSupabase();
+  if (!sb) return [];
+  try {
+    const { data, error } = await sb.from('tributos_declaraciones')
+      .select('*')
+      .eq('mes_periodo', mesPeriodo)
+      .order('created_at', { ascending: true });
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    console.error('[Tributos] Error list por mes:', err.message || err);
     return [];
   }
 }
@@ -944,6 +962,34 @@ export async function sbCreateTributosDeclaration(data) {
     }).select().single();
   if (error) throw new Error(error.message);
   return result;
+}
+
+export async function sbGetTributosDeclaration(id) {
+  const sb = safeSupabase();
+  if (!sb) throw new Error('Supabase no configurado');
+  const { data, error } = await sb.from('tributos_declaraciones').select('*').eq('id', id).limit(1).single();
+  if (error && error.code !== 'PGRST116') throw new Error(error.message);
+  return data || null;
+}
+
+export async function sbUpdateTributosDeclaration(id, data) {
+  const sb = safeSupabase();
+  if (!sb) throw new Error('Supabase no configurado');
+  const { data: result, error } = await sb.from('tributos_declaraciones')
+    .update({ ...data, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return result;
+}
+
+export async function sbDeleteTributosDeclaration(id) {
+  const sb = safeSupabase();
+  if (!sb) throw new Error('Supabase no configurado');
+  const { error } = await sb.from('tributos_declaraciones').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+  return true;
 }
 
 export async function sbGetTributosInhibition() {

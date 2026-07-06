@@ -16,32 +16,20 @@
 
   <!-- ═══════════ PESTAÑAS ═══════════ -->
   <style>
-    .section-tabs .tab-btn {
-      padding: 10px 18px;
-      border: none;
-      background: transparent;
-      font-weight: 600;
-      font-size: 13px;
-      font-family: var(--font);
-      cursor: pointer;
-      color: var(--text-light);
-      border-bottom: 3px solid transparent;
-      margin-bottom: -2px;
-      transition: all 0.15s ease;
-      white-space: nowrap;
-      border-radius: 8px 8px 0 0;
-    }
-    .section-tabs .tab-btn:hover {
-      color: var(--text);
-      background: var(--surface-2);
-    }
-    .section-tabs .tab-btn.active {
-      color: var(--p500);
-      border-bottom-color: var(--p500);
-      background: transparent;
-    }
+    .section-tabs { display:flex; gap:2px; margin:12px 0; border-bottom:2px solid var(--line); flex-wrap:wrap; overflow-x:auto; }
+    .section-tabs .tab-btn { padding:8px 14px; border:none; background:transparent; font-weight:600; font-size:12px; font-family:var(--font);
+      cursor:pointer; color:var(--text-light); border-bottom:3px solid transparent; margin-bottom:-2px; transition:all 0.15s; white-space:nowrap; }
+    .section-tabs .tab-btn:hover { color:var(--text); background:var(--surface-2); }
+    .section-tabs .tab-btn.active { color:var(--p500); border-bottom-color:var(--p500); }
+    .tab-card { background:var(--surface-glass); backdrop-filter:blur(12px); border-radius:var(--radius-lg); box-shadow:var(--shadow-sm); border:1px solid rgba(255,255,255,0.7); padding:16px; margin-bottom:16px; }
+    .tab-card h3 { font-size:14px; font-weight:700; color:var(--p900); margin:0 0 8px; }
+    .compact-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:8px; }
+    .compact-stat { background:#fff; border-radius:10px; padding:12px 14px; border:1px solid var(--line); }
+    .compact-stat .label { font-size:10px; color:var(--text-light); text-transform:uppercase; letter-spacing:0.5px; font-weight:600; }
+    .compact-stat .value { font-size:18px; font-weight:800; color:var(--p900); display:block; margin-top:2px; }
+    .compact-stat .detail { font-size:11px; color:var(--text-muted); margin-top:2px; }
   </style>
-  <div class="section-tabs" style="display:flex;gap:2px;margin:16px 0;border-bottom:2px solid var(--line);flex-wrap:wrap">
+  <div class="section-tabs">
     <button class="tab-btn active" data-tab="tabTesoro" onclick="switchTab(this,'tabTesoro')">🏛️ Tesorería</button>
     <button class="tab-btn" data-tab="tabCuentas" onclick="switchTab(this,'tabCuentas')">🏦 Cuentas</button>
     <button class="tab-btn" data-tab="tabTransacciones" onclick="switchTab(this,'tabTransacciones')">🔄 Transacciones</button>
@@ -50,7 +38,9 @@
     <button class="tab-btn" data-tab="tabCumplimiento" onclick="switchTab(this,'tabCumplimiento')">⚖️ Cumplimiento</button>
     <button class="tab-btn" data-tab="tabAlertas" onclick="switchTab(this,'tabAlertas')">🚨 Alertas</button>
     <button class="tab-btn" data-tab="tabGestion" onclick="switchTab(this,'tabGestion')">🔧 Gestión</button>
-    <div style="margin-left:auto"><button class="btn btn-sm btn-primary" onclick="cargarTodo()">🔄 Refrescar todo</button></div>
+    <div style="margin-left:auto;display:flex;gap:6px">
+      <button class="btn btn-sm btn-outline" onclick="cargarTodo()">🔄</button>
+    </div>
   </div>
 
   <!-- ═══════════ TAB 1: TESORERÍA ═══════════ -->
@@ -262,6 +252,17 @@ function switchTab(btn, tabId) {
   document.getElementById(tabId).style.display = 'block';
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
+
+  // Lazy load: solo cargar datos la primera vez que se abre el tab
+  if (!btn.dataset.loaded) {
+    btn.dataset.loaded = 'true';
+    const lazy = { tabTesoro: 'cargarTesoro', tabCuentas: 'cargarCuentas', tabTransacciones: 'cargarTransacciones',
+      tabCiudadanos: 'cargarCiudadanos', tabTarjetas: 'cargarTarjetas', tabCumplimiento: 'cargarCumplimiento',
+      tabGestion: 'cargarAuditLogs', tabAlertas: 'cargarAlertas' };
+    if (lazy[tabId] && typeof window[lazy[tabId]] === 'function') window[lazy[tabId]]();
+    if (tabId === 'tabCuentas' && typeof cargarCuentasDetalle === 'function') cargarCuentasDetalle();
+    if (tabId === 'tabAlertas' && typeof cargarNotificaciones === 'function') cargarNotificaciones();
+  }
 }
 function filtrarTabla(searchId, tbodyId) {
   const q = document.getElementById(searchId).value.toLowerCase();

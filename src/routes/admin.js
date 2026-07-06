@@ -115,4 +115,16 @@ router.get('/reporte-completo', verificarSesion, verificarRol('administrador', '
   res.json(reporte);
 });
 
+// GET /api/admin/ciudadanos - Lista completa de ciudadanos (solicitantes)
+router.get('/ciudadanos', verificarSesion, verificarRol('administrador', 'junta'), (req, res) => {
+  const db = getDb();
+  const ciudadanos = db.prepare(`
+    SELECT s.*, 
+      (SELECT COUNT(*) FROM tramites WHERE usuario_id = s.id) as total_tramites
+    FROM solicitantes s
+    ORDER BY s.creado_en DESC
+  `).all();
+  res.json(ciudadanos);
+});
+
 export default router;

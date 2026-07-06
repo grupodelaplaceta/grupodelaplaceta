@@ -5,7 +5,17 @@ import { v4 as uuidv4 } from 'uuid';
 
 const router = Router();
 
-// ── MÓDULO 1: GESTIÓN DE IDENTIDAD Y CONTROL DE ACCESO ─────────────────────
+// GET /api/identidad/usuarios - Lista completa de usuarios
+router.get('/usuarios', verificarSesion, verificarRol('administrador', 'junta'), (req, res) => {
+  const db = getDb();
+  const usuarios = db.prepare(`
+    SELECT s.*, c.tipo_cuenta, c.saldo as saldo_cuenta
+    FROM solicitantes s
+    LEFT JOIN cuentas_bancarias c ON c.usuario_id = s.id
+    ORDER BY s.creado_en DESC
+  `).all();
+  res.json(usuarios);
+});
 
 // GET /api/identidad/pendientes - Lista de solicitudes pendientes (Junta Directiva)
 router.get('/pendientes', verificarSesion, verificarRol('administrador', 'junta'), (req, res) => {
