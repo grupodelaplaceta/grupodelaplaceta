@@ -245,6 +245,21 @@ CREATE TABLE IF NOT EXISTS tributos_audit_logs (
 
 CREATE INDEX IF NOT EXISTS idx_tributos_audit_logs_accion ON tributos_audit_logs(accion, creado_en);
 
+-- Tabla de saldos diarios para el motor de conciliación de Tributos
+CREATE TABLE IF NOT EXISTS tributos_saldos_diarios (
+  id BIGSERIAL PRIMARY KEY,
+  placeta_id TEXT NOT NULL REFERENCES tributos_contribuyentes(placeta_id),
+  mes_periodo TEXT NOT NULL,
+  fecha DATE NOT NULL,
+  saldo NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
+  transactions_count INTEGER DEFAULT 0,
+  origen TEXT DEFAULT 'reconstruido' CHECK (origen IN ('banco', 'reconstruido')),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(placeta_id, fecha)
+);
+
+CREATE INDEX IF NOT EXISTS idx_tributos_saldos_diarios_busqueda ON tributos_saldos_diarios(placeta_id, mes_periodo);
+
 -- 11. CONTENIDOS
 CREATE TABLE IF NOT EXISTS contenidos (
   id BIGSERIAL PRIMARY KEY,

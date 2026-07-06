@@ -791,6 +791,8 @@ export async function sbCreateTributosDeclaration(data) {
   const { data: result, error } = await sb.from('tributos_declaraciones')
     .insert({
       id: data.id,
+      contributor_id: data.contributor_id || null,
+      placeta_id: data.placeta_id || null,
       mes_periodo: data.mes_periodo,
       cuenta_id_blp: data.cuenta_id_blp || '',
       patrimonio_medio: data.patrimonio_medio || 0,
@@ -888,7 +890,7 @@ export async function sbListTributosAuditLogs(limit = 50) {
   try {
     const { data, error } = await sb.from('tributos_audit_logs')
       .select('*')
-      .order('created_at', { ascending: false }).limit(limit);
+      .order('creado_en', { ascending: false }).limit(limit);
     if (error) return [];
     return data || [];
   } catch (err) {

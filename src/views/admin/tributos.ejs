@@ -73,6 +73,11 @@
         <span class="action-title">Nuevo contribuyente</span>
         <span class="action-desc">Dar de alta en el censo fiscal</span>
       </a>
+      <a href="#" class="action-card" onclick="abrirModal('modalAltaRapida'); return false;">
+        <span class="action-icon">⚡</span>
+        <span class="action-title">Alta rápida por DIP</span>
+        <span class="action-desc">Buscar en PlacetaID y dar de alta al instante</span>
+      </a>
       <a href="#" class="action-card" onclick="abrirModal('modalFactura'); return false;">
         <span class="action-icon">📄</span>
         <span class="action-title">Nueva factura</span>
@@ -238,6 +243,65 @@
   </div>
 </div>
 
+<!-- ── Modal: Alta Rápida por DIP ──────────────────────────────────────────── -->
+<div class="modal-overlay" id="modalAltaRapida">
+  <div class="modal-window">
+    <div class="modal-header">
+      <h3>⚡ Alta Rápida por DIP</h3>
+      <button class="modal-close" data-modal-close>✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="formAltaRapida" class="form-grid" style="box-shadow:none;padding:0;border:none;background:none">
+        <label>DIP <input type="text" id="altaRapidaDip" required placeholder="12345678A"></label>
+        <label>Tipo sujeto
+          <select id="altaRapidaTipo">
+            <option value="Fisico">Persona Física</option>
+            <option value="Empresa">Empresa</option>
+          </select>
+        </label>
+        <label id="altaRapidaEipField" style="display:none">EIP <input type="text" id="altaRapidaEip" placeholder="EIP-XXXXXX"></label>
+        <div style="grid-column:1/-1;display:flex;gap:12px;justify-content:flex-end;margin-top:8px">
+          <button type="button" class="btn btn-outline" data-modal-close>Cancelar</button>
+          <button class="btn btn-primary" type="submit">Buscar y dar de alta</button>
+        </div>
+      </form>
+      <div id="altaRapidaResultado" style="margin-top:16px;display:none"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.getElementById('altaRapidaTipo')?.addEventListener('change', function() {
+    document.getElementById('altaRapidaEipField').style.display = this.value === 'Empresa' ? 'block' : 'none';
+  });
+  document.getElementById('formAltaRapida')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const dip = document.getElementById('altaRapidaDip').value.trim().toUpperCase();
+    const tipoSujeto = document.getElementById('altaRapidaTipo').value;
+    const eip = document.getElementById('altaRapidaEip').value.trim().toUpperCase();
+    const resultado = document.getElementById('altaRapidaResultado');
+    resultado.style.display = 'block';
+    resultado.innerHTML = '<span class="spinner"></span> Buscando y registrando...';
+    try {
+      const res = await apiFetch('/api/admin/tributos/contributors/alta-rapida', {
+        method: 'POST',
+        body: JSON.stringify({ dip, tipo_sujeto: tipoSujeto, eip: eip || undefined })
+      });
+      if (res.success) {
+        resultado.innerHTML = '<div class="alert alert-success">✅ Contribuyente dado de alta: <strong>' + (res.contributor?.nombre || dip) + '</strong> (Placeta ID: ' + (res.contributor?.placeta_id || '—') + ')</div>';
+        cargarContribuyentes();
+        cargarTributosResumen();
+        document.getElementById('altaRapidaDip').value = '';
+        document.getElementById('altaRapidaEip').value = '';
+      } else {
+        resultado.innerHTML = '<div class="alert alert-error">❌ ' + (res.error || 'Error al dar de alta') + '</div>';
+      }
+    } catch (err) {
+      resultado.innerHTML = '<div class="alert alert-error">❌ Error: ' + (err.message || err) + '</div>';
+    }
+  });
+</script>
+
 <!-- ── Modal: Nuevo Contribuyente ──────────────────────────────────────────── -->
 <div class="modal-overlay" id="modalContribuyente">
   <div class="modal-window">
@@ -251,13 +315,14 @@
         <label>DIP <input type="text" name="dip" required placeholder="DIP123456"></label>
         <label>Nombre <input type="text" name="nombre" required placeholder="Nombre completo"></label>
         <label>Tipo sujeto
-          <select name="tipo_sujeto">
+          <select name="tipo_sujeto" id="tipoSujetoInput" onchange="document.getElementById('eipField').style.display=this.value==='Empresa'?'block':'none'">
             <option value="Fisico">Persona Física</option>
             <option value="Empresa">Empresa</option>
           </select>
         </label>
         <label>Roles <input type="text" name="roles_json" placeholder="ciudadano"></label>
         <label>IBAN <input type="text" name="iban" placeholder="GDLP-..."></label>
+        <label id="eipField" style="display:none">EIP <input type="text" name="eip" placeholder="EIP-XXXXXX"></label>
         <div style="grid-column:1/-1;display:flex;gap:12px;justify-content:flex-end;margin-top:8px">
           <button type="button" class="btn btn-outline" data-modal-close>Cancelar</button>
           <button class="btn btn-primary" type="submit">Crear contribuyente</button>
