@@ -161,7 +161,17 @@ router.put('/contributors/:placetaId', verificarSesion, verificarRol('administra
 router.get('/declarations', verificarSesion, verificarRol('administrador', 'junta', 'fiscal'), async (req, res) => {
   try {
     const declarations = await sbListTributosDeclarations();
-    return res.json(declarations);
+    // Enriquecer con datos del contribuyente
+    const enriched = await Promise.all(declarations.map(async (d) => {
+      if (!d.nombre && d.placeta_id) {
+        try {
+          const c = await sbGetTributosContributorByPlacetaId(d.placeta_id);
+          if (c) { d.nombre = c.nombre; d.dip = c.dip; d.tipo_sujeto = c.tipo_sujeto; d.eip = c.eip; }
+        } catch {}
+      }
+      return d;
+    }));
+    return res.json(enriched);
   } catch (err) {
     console.error('[Tributos] Error declarations:', err.message);
     return res.json([]);
