@@ -305,6 +305,7 @@
 
 <script>
   var _buscadorAltaPersona, _buscadorAltaEmpresa;
+  var _altaPersonaSeleccionada = null, _altaEmpresaSeleccionada = null;
 
   function selectAltaTipo(tipo) {
     document.getElementById('btnAltaPersona').className = tipo === 'persona' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-outline';
@@ -318,13 +319,12 @@
   document.getElementById('formAltaRapida')?.addEventListener('submit', async function(e) {
     e.preventDefault();
     const tipo = window._altaTipo || 'persona';
-    const selPersona = _buscadorAltaPersona?.getSelected();
-    const selEmpresa = _buscadorAltaEmpresa?.getSelected();
     const resultado = document.getElementById('altaRapidaResultado');
     resultado.style.display = 'block';
 
     if (tipo === 'persona') {
-      if (!selPersona) { resultado.innerHTML = '<div class="alert alert-error">❌ Selecciona una persona del buscador</div>'; return; }
+      const selPersona = _altaPersonaSeleccionada || _buscadorAltaPersona?.getSelected();
+      if (!selPersona || !selPersona.dip) { resultado.innerHTML = '<div class="alert alert-error">❌ Selecciona una persona del buscador</div>'; return; }
       resultado.innerHTML = '<span class="spinner"></span> Buscando y registrando...';
       try {
         const res = await apiFetch('/api/admin/tributos/contributors/alta-rapida', {
@@ -333,11 +333,12 @@
         if (res.success) {
           resultado.innerHTML = '<div class="alert alert-success">✅ ' + (selPersona.displayName || selPersona.nombre || '') + ' dado de alta</div>';
           cargarContribuyentes(); cargarTributosResumen();
-          _buscadorAltaPersona.clear();
+          _buscadorAltaPersona?.clear(); _altaPersonaSeleccionada = null;
         } else resultado.innerHTML = '<div class="alert alert-error">❌ ' + (res.error || 'Error') + '</div>';
       } catch (err) { resultado.innerHTML = '<div class="alert alert-error">❌ ' + (err.message || err) + '</div>'; }
     } else {
-      if (!selEmpresa) { resultado.innerHTML = '<div class="alert alert-error">❌ Selecciona una empresa del buscador</div>'; return; }
+      const selEmpresa = _altaEmpresaSeleccionada || _buscadorAltaEmpresa?.getSelected();
+      if (!selEmpresa || !selEmpresa.eip) { resultado.innerHTML = '<div class="alert alert-error">❌ Selecciona una empresa del buscador</div>'; return; }
       resultado.innerHTML = '<span class="spinner"></span> Buscando y registrando...';
       try {
         const res = await apiFetch('/api/admin/tributos/contributors/alta-rapida', {
@@ -346,7 +347,7 @@
         if (res.success) {
           resultado.innerHTML = '<div class="alert alert-success">✅ ' + (selEmpresa.nombre || 'Empresa') + ' dado de alta</div>';
           cargarContribuyentes(); cargarTributosResumen();
-          _buscadorAltaEmpresa.clear();
+          _buscadorAltaEmpresa?.clear(); _altaEmpresaSeleccionada = null;
         } else resultado.innerHTML = '<div class="alert alert-error">❌ ' + (res.error || 'Error') + '</div>';
       } catch (err) { resultado.innerHTML = '<div class="alert alert-error">❌ ' + (err.message || err) + '</div>'; }
     }
@@ -967,10 +968,12 @@
     if (mesInput) mesInput.value = new Date().toISOString().slice(0, 7);
     // Inicializar buscadores
     _buscadorAltaPersona = crearBuscador('buscadorAltaPersona', {
-      tipo: 'persona', placeholder: '🔍 Buscar por nombre, DIP o PlacetaID...'
+      tipo: 'persona', placeholder: '🔍 Buscar por nombre, DIP o PlacetaID...',
+      onSelect: (item) => { _altaPersonaSeleccionada = item; }
     });
     _buscadorAltaEmpresa = crearBuscador('buscadorAltaEmpresa', {
-      tipo: 'empresa', placeholder: '🔍 Buscar empresa por nombre o EIP...'
+      tipo: 'empresa', placeholder: '🔍 Buscar empresa por nombre o EIP...',
+      onSelect: (item) => { _altaEmpresaSeleccionada = item; }
     });
   });
 </script>
