@@ -1,5 +1,6 @@
 import PDFDocument from 'pdfkit';
 import crypto from 'crypto';
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -62,12 +63,14 @@ class PDFGenerator {
     doc.save();
     if (this.logo) {
       try {
-        doc.image(this.logo, 50, 32, { width: 32 });
+        const logoBuffer = fs.readFileSync(this.logo);
+        doc.image(logoBuffer, 50, 32, { width: 32 });
         doc.font(this._f(true)).fontSize(11).fillColor('#1c005f');
-        doc.text('  TRIBUTOS DE LA PLACETA', 85, 38);
+        doc.text('  TLP', 85, 38);
       } catch (e) {
+        console.error('[PDF] Logo error:', e.message);
         doc.font(this._f(true)).fontSize(11).fillColor('#1c005f');
-        doc.text('TRIBUTOS DE LA PLACETA', 50, 40);
+        doc.text('TLP', 50, 40);
       }
     } else {
       doc.font(this._f(true)).fontSize(11).fillColor('#1c005f');
