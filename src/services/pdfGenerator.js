@@ -5,16 +5,21 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FONTS_DIR = path.join(__dirname, '..', '..', 'public', 'fonts');
+const IMG_DIR = path.join(__dirname, '..', '..', 'public', 'img');
 
 /**
  * Motor de Documentos PDF — Estilo Corporativo GDLP
- * Paleta: purple-900:#1c005f, purple-700:#341087, purple-500:#5a2fc2
+ * Paleta base: purple-900:#1c005f, purple-700:#341087, purple-500:#5a2fc2
+ * Tributos: accent #4e396f
  * Fuente: Outfit con fallback Helvetica
  */
 class PDFGenerator {
-  constructor() {
+  constructor(opts = {}) {
     this.doc = null;
     this._fontsRegistered = false;
+    this.accentColor = opts.accentColor || '#5a2fc2';
+    this.logo = opts.logo || null;
+    this.tipo = opts.tipo || 'general';
   }
 
   _registerFonts(doc) {
@@ -55,8 +60,19 @@ class PDFGenerator {
   _header(titulo, subtitulo, codigo) {
     const doc = this.doc;
     doc.save();
-    doc.font(this._f(true)).fontSize(11).fillColor('#1c005f');
-    doc.text('\u{1F3DB}\u{FE0F}  GRUPO DE LA PLACETA', 50, 40);
+    if (this.logo) {
+      try {
+        doc.image(this.logo, 50, 32, { width: 32 });
+        doc.font(this._f(true)).fontSize(11).fillColor('#1c005f');
+        doc.text('  TRIBUTOS DE LA PLACETA', 85, 38);
+      } catch (e) {
+        doc.font(this._f(true)).fontSize(11).fillColor('#1c005f');
+        doc.text('TRIBUTOS DE LA PLACETA', 50, 40);
+      }
+    } else {
+      doc.font(this._f(true)).fontSize(11).fillColor('#1c005f');
+      doc.text('\u{1F3DB}\u{FE0F}  GRUPO DE LA PLACETA', 50, 40);
+    }
     doc.font(this._f(false, true)).fontSize(7).fillColor('#5c5566');
     doc.text(codigo || 'Documento Oficial', 50, 56);
     if (titulo) {
@@ -64,11 +80,11 @@ class PDFGenerator {
       doc.text(titulo, 50, 78, { width: 500 });
     }
     if (subtitulo) {
-      doc.font(this._f(false, true)).fontSize(8.5).fillColor('#5a2fc2');
+      doc.font(this._f(false, true)).fontSize(8.5).fillColor(this.accentColor);
       doc.text(subtitulo, 50, doc.y + 2, { width: 500 });
     }
     const lineY = Math.max(doc.y + 10, 120);
-    doc.rect(50, lineY, 500, 1.5).fill('#5a2fc2');
+    doc.rect(50, lineY, 500, 1.5).fill(this.accentColor);
     doc.y = lineY + 12;
     doc.restore();
   }
@@ -78,9 +94,10 @@ class PDFGenerator {
     const pg = doc.page;
     const w = pg.width;
     doc.save();
-    doc.rect(50, pg.height - 38, w - 100, 0.5).fill('#5a2fc2');
+    doc.rect(50, pg.height - 38, w - 100, 0.5).fill(this.accentColor);
     doc.font(this._f(false, true)).fontSize(6).fillColor('#5c5566');
-    doc.text('Grupo de La Placeta \u00B7 Documento oficial', 50, pg.height - 33, { width: 350 });
+    const footerText = this.tipo === 'tributos' ? 'Tributos de La Placeta \u00B7 Documento oficial' : 'Grupo de La Placeta \u00B7 Documento oficial';
+    doc.text(footerText, 50, pg.height - 33, { width: 350 });
     const pgN = doc.bufferedPageRange ? doc.bufferedPageRange().count : 1;
     doc.text(`P\u00E1g. ${pgN}`, w - 100, pg.height - 33, { width: 50, align: 'right' });
     doc.restore();
@@ -90,7 +107,7 @@ class PDFGenerator {
     const doc = this.doc;
     doc.save();
     const tw = Math.max(texto.length * 7, 60);
-    doc.roundedRect(50, doc.y - 2, tw + 20, 20, 4).fill('#1c005f');
+    doc.roundedRect(50, doc.y - 2, tw + 20, 20, 4).fill(this.accentColor);
     doc.font(this._f(true)).fontSize(7.5).fillColor('#ffffff');
     doc.text(` ${texto} `, 50, doc.y, { width: tw + 10, align: 'center' });
     doc.y += 26;
@@ -133,7 +150,7 @@ class PDFGenerator {
     const doc = this.doc;
     const y = doc.y;
     doc.save();
-    doc.rect(50, y, 3, 40).fill('#5a2fc2');
+    doc.rect(50, y, 3, 40).fill(this.accentColor);
     doc.font(this._f(false, true)).fontSize(8).fillColor('#1c1226');
     doc.text(t, 63, y + 3, { width: 478, align: 'justify' });
     doc.y = Math.max(doc.y, y + 18) + 5;
@@ -142,7 +159,7 @@ class PDFGenerator {
 
   _linea() {
     const doc = this.doc;
-    doc.moveTo(50, doc.y).lineTo(550, doc.y).lineWidth(1).strokeColor('#5a2fc2').stroke();
+    doc.moveTo(50, doc.y).lineTo(550, doc.y).lineWidth(1).strokeColor(this.accentColor).stroke();
     doc.y += 6;
   }
 

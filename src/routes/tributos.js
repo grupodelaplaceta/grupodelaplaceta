@@ -3,6 +3,11 @@ import { Router } from 'express';
 import { getDb } from '../config/db.js';
 import { verificarSesion, verificarRol } from '../middleware/auth.js';
 import PDFGenerator from '../services/pdfGenerator.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const LOGO_TRIBUTOS = path.join(__dirname, '..', 'public', 'img', 'tributos.png');
 import {
   sbGetTributosSummary,
   sbListTributosContributors,
@@ -802,7 +807,7 @@ router.post('/pdf/:tipo', verificarSesion, verificarRol('administrador', 'junta'
   try {
     const { tipo } = req.params;
     const datos = req.body;
-    const generator = new PDFGenerator();
+    const generator = new PDFGenerator({ accentColor: '#4e396f', logo: LOGO_TRIBUTOS, tipo: 'tributos' });
     let doc;
 
     switch (tipo) {
