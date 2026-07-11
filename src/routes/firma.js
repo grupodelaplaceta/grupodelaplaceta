@@ -1,9 +1,12 @@
 import { Router } from 'express';
-import { verificarSesion } from '../middleware/auth.js';
+import { verificarSesion, verificarRol } from '../middleware/auth.js';
 import FirmaDigitalService from '../services/firmaDigital.js';
 
 const router = Router();
 const firmaService = new FirmaDigitalService();
+
+// Códigos de modelo que SOLO puede firmar el tutor legal (nunca un admin)
+const DOCUMENTOS_TUTOR_ONLY = ['PJ-TYC-001', 'PJ-PRV-001', 'PJ-CON-001'];
 
 // ── SISTEMA DE FIRMA ONLINE VÍA URL PÚBLICA ────────────────────────────────
 
@@ -23,10 +26,24 @@ router.post('/crear', verificarSesion, async (req, res) => {
   }
 });
 
-// POST /api/firma/firmar/:token - Firmar documento mediante URL pública
+// POST /api/firma/firmar/:token - Firmar documento (SOLO el tutor legal, NUNCA admin)
 router.post('/firmar/:token', verificarSesion, async (req, res) => {
   try {
     const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
+    const firmante = await (await import('../config/db-supabase.js')).sbFindSolicitanteById(req.session.usuario.id);
+    const documento = await (await import('../config/db-supabase.js')).sbFindDocumentoFirmadoByUrl(req.params.token);
+
+    // Bloquear si es documento tutor-only y el firmante es admin
+    if (documento && DOCUMENTOS_TUTOR_ONLY.includes(documento.codigo_modelo)) {
+      const esAdmin = firmante?.rol === 'administrador' || firmante?.rol === 'admin' || req.session.usuario?.rol === 'administrador';
+      if (esAdmin) {
+        return res.status(403).json({
+          error: '❌ Los administradores NO pueden firmar documentos legales de Placeta Junior. Solo el tutor legal puede hacerlo desde PlacetaID Móvil.',
+          codigo: 'FIRMA_BLOQUEADA_ADMIN'
+        });
+      }
+    }
+
     const resultado = await firmaService.firmarDocumento(req.params.token, req.session.usuario.id, ip);
     res.json(resultado);
   } catch (err) {

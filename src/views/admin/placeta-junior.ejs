@@ -1,0 +1,505 @@
+<div class="dashboard">
+  <div class="dashboard-header">
+    <h1>🌈 Placeta Junior</h1>
+    <p class="dashboard-date">Gestión completa: menores, documentos, autorizaciones, control parental, impuestos</p>
+    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+      <button class="btn btn-sm btn-glass" onclick="cargarJuniors()">🔄 Refrescar</button>
+      <button class="btn btn-sm btn-success" onclick="sincronizarJuniors()">📥 Sincronizar</button>
+      <button class="btn btn-sm btn-primary" onclick="crearDemo()">🧪 Crear Demo</button>
+      <a href="http://localhost:3005" target="_blank" class="btn btn-sm btn-glass">🚀 Ir a Placeta Junior</a>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-grid" id="juniorStats">
+    <div class="stat-card stat-primary"><div class="stat-icon">👶</div><div class="stat-content"><span class="stat-value" id="totalJuniors">—</span><span class="stat-label">Total Juniors</span></div></div>
+    <div class="stat-card stat-success"><div class="stat-icon">✅</div><div class="stat-content"><span class="stat-value" id="activosJuniors">—</span><span class="stat-label">Activos</span></div></div>
+    <div class="stat-card stat-warning"><div class="stat-icon">⏳</div><div class="stat-content"><span class="stat-value" id="pendientesJuniors">—</span><span class="stat-label">Pendientes Firma</span></div></div>
+    <div class="stat-card stat-info"><div class="stat-icon">🧾</div><div class="stat-content"><span class="stat-value" id="totalIva">—</span><span class="stat-label">IVA pagado (Capitalia→TGLP)</span></div></div>
+  </div>
+
+  <!-- Tabs -->
+  <div style="display:flex;gap:4px;margin-bottom:16px;flex-wrap:wrap;border-bottom:2px solid var(--line);padding-bottom:8px">
+    <button class="tab-btn active" data-tab="menores" onclick="switchTab('menores')">👶 Menores</button>
+    <button class="tab-btn" data-tab="control-parental" onclick="switchTab('control-parental')">🔒 Control Parental</button>
+    <button class="tab-btn" data-tab="autorizaciones" onclick="switchTab('autorizaciones')">📱 Autorizaciones</button>
+    <button class="tab-btn" data-tab="vinculaciones" onclick="switchTab('vinculaciones')">🔗 Vinculaciones</button>
+    <button class="tab-btn" data-tab="documentos" onclick="switchTab('documentos')">📜 Documentos</button>
+    <button class="tab-btn" data-tab="impuestos" onclick="switchTab('impuestos')">🧾 Impuestos</button>
+    <button class="tab-btn" data-tab="placetaid" onclick="switchTab('placetaid')">🆔 PlacetaID</button>
+    <button class="tab-btn" data-tab="pendientes" onclick="switchTab('pendientes')">⏳ Pendientes Firma</button>
+    <button class="tab-btn" data-tab="email" onclick="switchTab('email')">📧 Email Tutores</button>
+    <button class="tab-btn" data-tab="logs" onclick="switchTab('logs')">📋 Logs</button>
+  </div>
+
+  <!-- Tab: Menores -->
+  <div class="tab-content" id="tab-menores">
+    <div class="section">
+      <div class="section-header">
+        <div><h2>Listado de Menores</h2></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <select id="filtroEstado" onchange="cargarJuniors()" style="padding:6px 12px;border:2px solid var(--line);border-radius:var(--radius);font-size:13px">
+            <option value="">Todos</option>
+            <option value="activo">Activos</option>
+            <option value="pendiente_firma_tutor">Pendientes firma</option>
+            <option value="suspendido">Suspendidos</option>
+            <option value="baja">Baja</option>
+          </select>
+          <input type="search" id="searchJunior" oninput="filtrarTabla('searchJunior','juniorsBody')" placeholder="🔍 Buscar..." style="padding:6px 12px;border:2px solid var(--line);border-radius:var(--radius);font-size:13px;width:200px">
+        </div>
+      </div>
+      <div class="table-container">
+        <table class="data-table"><thead><tr><th>DIP</th><th>Nombre</th><th>Edad</th><th>Tutor</th><th>🌟 Nivel</th><th>🪙 Saldo</th><th>Estado</th><th>Registro</th><th>Acciones</th></tr></thead>
+          <tbody id="juniorsBody"><tr><td colspan="9" class="loading-cell">Cargando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: Control Parental -->
+  <div class="tab-content" id="tab-control-parental" style="display:none">
+    <div class="section">
+      <div class="section-header"><div><h2>🔒 Control Parental — Límites configurados</h2></div></div>
+      <div class="table-container" id="cpContainer"><p style="color:var(--text-light)">Cargando...</p></div>
+    </div>
+  </div>
+
+  <!-- Tab: Autorizaciones -->
+  <div class="tab-content" id="tab-autorizaciones" style="display:none">
+    <div class="section">
+      <div class="section-header"><div><h2>📱 Autorizaciones PlacetaID</h2></div></div>
+      <div class="table-container" id="authContainer"><p style="color:var(--text-light)">Cargando...</p></div>
+    </div>
+  </div>
+
+  <!-- Tab: Vinculaciones -->
+  <div class="tab-content" id="tab-vinculaciones" style="display:none">
+    <div class="section">
+      <div class="section-header"><div><h2>🔗 Tutor-Menor — Vinculaciones activas</h2></div></div>
+      <div class="table-container" id="vinculacionesContainer"><p style="color:var(--text-light)">Cargando...</p></div>
+    </div>
+  </div>
+
+  <!-- Tab: Documentos -->
+  <div class="tab-content" id="tab-documentos" style="display:none">
+    <div class="section">
+      <div class="section-header">
+        <div><h2>📜 Documentos Legales Firmados</h2></div>
+        <button class="btn btn-sm btn-primary" onclick="cargarDocumentos()">🔄 Refrescar</button>
+      </div>
+      <div class="table-container" id="docsContainer"><p style="color:var(--text-light)">Cargando...</p></div>
+      <div style="margin-top:16px;display:flex;gap:8px">
+        <a href="http://localhost:3005/documentos/terminos" target="_blank" class="btn btn-sm btn-glass">📄 Términos (PJ-TYC-001)</a>
+        <a href="http://localhost:3005/documentos/privacidad" target="_blank" class="btn btn-sm btn-glass">📄 Privacidad (PJ-PRV-001)</a>
+        <a href="http://localhost:3005/documentos/consentimiento" target="_blank" class="btn btn-sm btn-glass">📄 Consentimiento (PJ-CON-001)</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: Impuestos -->
+  <div class="tab-content" id="tab-impuestos" style="display:none">
+    <div class="section">
+      <div class="section-header"><div><h2>🧾 Impuestos Placeta Junior</h2></div></div>
+      <div id="impuestosContainer">
+        <div class="stats-grid" id="impuestosStats">
+          <div class="stat-card stat-info"><div class="stat-icon">🧾</div><div class="stat-content"><span class="stat-value" id="impTotalIva">—</span><span class="stat-label">Total IVA pagado (12%)</span></div></div>
+          <div class="stat-card stat-primary"><div class="stat-icon">💳</div><div class="stat-content"><span class="stat-value" id="impTotalOp">—</span><span class="stat-label">Operaciones totales</span></div></div>
+          <div class="stat-card stat-success"><div class="stat-icon">💰</div><div class="stat-content"><span class="stat-value" id="impTotalGastado">—</span><span class="stat-label">Total gastado por menores</span></div></div>
+          <div class="stat-card stat-warning"><div class="stat-icon">🏦</div><div class="stat-content"><span class="stat-value" id="impTotalGanado">—</span><span class="stat-label">Total ganado por menores</span></div></div>
+        </div>
+        <div style="background:#f0eeff;border-radius:10px;padding:16px;margin-top:12px;font-size:0.9rem">
+          <strong>💰 Pagador del IVA:</strong> Capitalia (Capitália Empresa)<br>
+          <strong>🏛️ Receptor:</strong> TGLP (Tesoro de La Placeta / Tributos)<br>
+          <strong>📊 % IVA:</strong> 12%<br>
+          <strong>👶 Nota:</strong> Los menores NO pagan impuestos. Capitalia asume el IVA de todas las operaciones.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: PlacetaID -->
+  <div class="tab-content" id="tab-placetaid" style="display:none">
+    <div class="section">
+      <div class="section-header">
+        <div><h2>🆔 Registros PlacetaID (tutores)</h2></div>
+        <button class="btn btn-sm btn-glass" onclick="cargarPlacetaid()">🔄 Refrescar</button>
+      </div>
+      <div class="table-container" id="plidContainer"><p style="color:var(--text-light)">Cargando...</p></div>
+    </div>
+  </div>
+
+  <!-- Tab: Pendientes de Firma -->
+  <div class="tab-content" id="tab-pendientes" style="display:none">
+    <div class="section">
+      <div class="section-header"><div><h2>⏳ Documentos Pendientes de Firma del Tutor</h2></div></div>
+      <div style="background:#fefce8;border-radius:10px;padding:12px;margin-bottom:16px;font-size:0.85rem;border-left:4px solid var(--color-n)">
+        ⚠️ <strong>Solo el tutor legal puede firmar</strong> estos documentos desde <strong>PlacetaID Móvil</strong>. Los administradores del CRM no pueden firmar en nombre del tutor.
+      </div>
+      <div class="table-container" id="pendientesContainer"><p style="color:var(--text-light)">Cargando...</p></div>
+    </div>
+  </div>
+
+  <!-- Tab: Email Tutores -->
+  <div class="tab-content" id="tab-email" style="display:none">
+    <div class="section">
+      <div class="section-header"><div><h2>📧 Enviar Email al Tutor</h2></div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div>
+          <div class="form-group">
+            <label>Seleccionar menor</label>
+            <select id="emailMenor" onchange="autoRellenarEmail()" style="width:100%;padding:10px;border:2px solid var(--line);border-radius:var(--radius);font-size:13px">
+              <option value="">— Seleccionar menor —</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Email del tutor</label>
+            <input type="email" id="emailTutor" style="width:100%;padding:10px;border:2px solid var(--line);border-radius:var(--radius);font-size:13px" placeholder="tutor@email.com">
+          </div>
+          <div class="form-group">
+            <label>Plantilla</label>
+            <select id="emailPlantilla" onchange="previsualizarPlantilla()" style="width:100%;padding:10px;border:2px solid var(--line);border-radius:var(--radius);font-size:13px">
+              <option value="">— Seleccionar plantilla —</option>
+              <option value="pendiente_firma">📋 Pendiente de firma</option>
+              <option value="bono_bienvenida">🎉 Bono de bienvenida</option>
+              <option value="autorizacion_compra">🔔 Autorización de compra</option>
+              <option value="limite_excedido">⚠️ Límite excedido</option>
+              <option value="recordatorio_acceso">🔐 Recordatorio acceso</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="enviarEmail()" style="width:100%;margin-top:8px">📧 Enviar Email</button>
+          <div id="emailResult" style="margin-top:8px"></div>
+        </div>
+        <div>
+          <h3 style="font-size:0.95rem;margin-bottom:8px">📄 Vista previa</h3>
+          <div id="emailPreview" style="background:#fff;border-radius:10px;padding:16px;border:1px solid var(--line);min-height:200px;font-size:0.85rem;white-space:pre-wrap;line-height:1.6;color:var(--text-light)">
+            Seleccione una plantilla para ver la vista previa.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: Logs -->
+  <div class="tab-content" id="tab-logs" style="display:none">
+    <div class="section">
+      <div class="section-header"><div><h2>📋 Logs de Actividad</h2></div></div>
+      <div class="table-container" id="logsContainer"><p style="color:var(--text-light)">Cargando...</p></div>
+    </div>
+  </div>
+</div>
+
+<style>
+.tab-btn { padding:8px 16px; border:none; background:none; font-family:var(--font); font-size:0.9rem; font-weight:600; cursor:pointer; border-radius:8px 8px 0 0; transition:all 0.2s; color:var(--text-light); }
+.tab-btn:hover { color:var(--text); background:rgba(90,47,194,0.06); }
+.tab-btn.active { color:var(--accent); border-bottom:3px solid var(--accent); background:rgba(90,47,194,0.04); }
+</style>
+
+<script>
+let juniorsData = [];
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('.tab-content').forEach(c => c.style.display = c.id === `tab-${tab}` ? '' : 'none');
+  if (tab === 'control-parental') cargarControlParental();
+  if (tab === 'autorizaciones') cargarAutorizaciones();
+  if (tab === 'vinculaciones') cargarVinculaciones();
+  if (tab === 'documentos') cargarDocumentos();
+  if (tab === 'impuestos') cargarImpuestos();
+  if (tab === 'placetaid') cargarPlacetaid();
+  if (tab === 'pendientes') cargarPendientesFirma();
+  if (tab === 'email') cargarMenoresEmail();
+  if (tab === 'logs') cargarLogs();
+}
+
+async function cargarJuniors() {
+  const estado = document.getElementById('filtroEstado').value;
+  const qs = estado ? `?estado=${estado}` : '';
+  try {
+    juniorsData = await apiFetch('/api/admin/junior/list' + qs);
+    document.getElementById('juniorsBody').innerHTML = (!juniorsData || !juniorsData.length)
+      ? '<tr><td colspan="9" class="loading-cell">No hay registros</td></tr>'
+      : juniorsData.map(j => `<tr>
+        <td><code>${j.dip || '—'}</code></td>
+        <td><strong>${j.nombre || ''} ${j.apellidos || ''}</strong></td>
+        <td>${j.edad || '—'}</td>
+        <td><small>${j.tutor?.alias || j.tutor_dip || '—'}</small></td>
+        <td>🌟 ${j.nivel_academia || 1}</td>
+        <td>🪙 ${j.placetas_saldo || 0}</td>
+        <td><span class="status-dot ${j.estado === 'activo' ? 'green' : j.estado === 'pendiente_firma_tutor' ? 'yellow' : 'red'}"></span> ${j.estado === 'pendiente_firma_tutor' ? 'Pendiente firma' : j.estado || '—'}</td>
+        <td><small>${j.creado_en ? new Date(j.creado_en).toLocaleDateString() : '—'}</small></td>
+        <td><div style="display:flex;gap:4px">
+          <button class="btn btn-sm btn-glass" onclick="verDetalle('${j.dip}')" title="Ver">👁️</button>
+          ${j.estado === 'activo' ? `<button class="btn btn-sm btn-danger" onclick="cambiarEstado(${j.id},'suspendido')" title="Suspender">⏸️</button>` : ''}
+          ${j.estado === 'suspendido' || j.estado === 'pendiente_firma_tutor' ? `<button class="btn btn-sm btn-success" onclick="cambiarEstado(${j.id},'activo')" title="Activar">✅</button>` : ''}
+        </div></td>
+      </tr>`).join('');
+    cargarStats();
+  } catch (err) { document.getElementById('juniorsBody').innerHTML = `<tr><td colspan="9" class="loading-cell">Error: ${err.message}</td></tr>`; }
+}
+
+async function cargarStats() {
+  try {
+    const stats = await apiFetch('/api/admin/junior/stats');
+    document.getElementById('totalJuniors').textContent = stats.total || 0;
+    document.getElementById('activosJuniors').textContent = stats.activos || 0;
+    document.getElementById('pendientesJuniors').textContent = stats.pendientes_firma || 0;
+    document.getElementById('totalPlacetas').textContent = (stats.total_placetas_circulacion || 0).toLocaleString();
+    if (stats.impuestos) {
+      document.getElementById('totalIva').textContent = (stats.impuestos.total_iva_pagado || 0).toLocaleString() + ' Pz';
+    }
+  } catch (e) {}
+}
+
+async function cargarControlParental() {
+  try {
+    const data = await apiFetch('/api/admin/junior/control-parental');
+    document.getElementById('cpContainer').innerHTML = (!data || !data.length)
+      ? '<p style="color:var(--text-light)">Sin límites configurados</p>'
+      : `<table class="data-table"><thead><tr><th>Menor</th><th>DIP</th><th>Diario</th><th>Semanal</th><th>Apr. Tutor</th><th>Tiempo</th><th>Requiere aprob.</th></tr></thead>
+      <tbody>${data.map(c => `<tr>
+        <td>${c.junior?.nombre || ''} ${c.junior?.apellidos || ''}</td>
+        <td><code>${c.dip_menor || c.junior?.dip || '—'}</code></td>
+        <td>🔒 ${c.limite_gasto_diario} Pz</td>
+        <td>📅 ${c.limite_gasto_semanal} Pz</td>
+        <td>🚨 ${c.limite_aprobacion_tutor || 1000} Pz</td>
+        <td>⏱️ ${c.tiempo_uso_diario_minutos} min</td>
+        <td>${c.requiere_aprobacion_extra ? '✅ Sí' : '❌ No'}</td>
+      </tr>`).join('')}</tbody></table>`;
+  } catch (err) { document.getElementById('cpContainer').innerHTML = `<p style="color:var(--text-light)">Error: ${err.message}</p>`; }
+}
+
+async function cargarAutorizaciones() {
+  try {
+    const data = await apiFetch('/api/admin/junior/autorizaciones');
+    document.getElementById('authContainer').innerHTML = (!data || !data.length)
+      ? '<p style="color:var(--text-light)">Sin autorizaciones</p>'
+      : `<table class="data-table"><thead><tr><th>Fecha</th><th>Menor</th><th>Acción</th><th>Detalle</th></tr></thead>
+      <tbody>${data.slice(0,50).map(a => `<tr>
+        <td><small>${new Date(a.creado_en).toLocaleString()}</small></td>
+        <td><small>${a.junior?.nombre || ''} ${a.junior?.apellidos || ''}</small></td>
+        <td><code>${a.accion}</code></td>
+        <td><small>${a.detalle || '—'}</small></td>
+      </tr>`).join('')}</tbody></table>`;
+  } catch (err) { document.getElementById('authContainer').innerHTML = `<p>Error: ${err.message}</p>`; }
+}
+
+async function cargarVinculaciones() {
+  try {
+    const data = await apiFetch('/api/admin/junior/vinculaciones');
+    document.getElementById('vinculacionesContainer').innerHTML = (!data || !data.length)
+      ? '<p style="color:var(--text-light)">Sin vinculaciones</p>'
+      : `<table class="data-table"><thead><tr><th>Menor</th><th>DIP Menor</th><th>Tutor</th><th>DIP Tutor</th><th>Firmado</th><th>Estado</th></tr></thead>
+      <tbody>${data.map(v => `<tr>
+        <td>${v.nombre_menor}</td>
+        <td><code>${v.dip_menor}</code></td>
+        <td>${v.nombre_tutor || v.tutor_placetaid || '—'}</td>
+        <td><code>${v.dip_tutor}</code></td>
+        <td><small>${v.firmado_en ? new Date(v.firmado_en).toLocaleDateString() : '—'}</small></td>
+        <td><span class="status-dot ${v.estado === 'activo' ? 'green' : 'yellow'}"></span> ${v.estado}</td>
+      </tr>`).join('')}</tbody></table>`;
+  } catch (err) { document.getElementById('vinculacionesContainer').innerHTML = `<p>Error: ${err.message}</p>`; }
+}
+
+async function cargarDocumentos() {
+  try {
+    const data = await apiFetch('/api/admin/junior/documentos');
+    document.getElementById('docsContainer').innerHTML = (!data || !data.length)
+      ? '<p style="color:var(--text-light)">Sin documentos</p>'
+      : `<table class="data-table"><thead><tr><th>Código</th><th>Título</th><th>Estado</th><th>Firmado por</th><th>Fecha</th></tr></thead>
+      <tbody>${data.slice(0,50).map(d => `<tr>
+        <td><code>${d.codigo_modelo}</code></td>
+        <td>${d.titulo_documento}</td>
+        <td><span class="status-dot ${d.estado === 'firmado' ? 'green' : d.estado === 'pendiente' ? 'yellow' : 'red'}"></span> ${d.estado}</td>
+        <td>${d.firmante?.alias || '—'}</td>
+        <td><small>${d.fecha_firma ? new Date(d.fecha_firma).toLocaleDateString() : (d.creado_en ? new Date(d.creado_en).toLocaleDateString() : '—')}</small></td>
+      </tr>`).join('')}</tbody></table>`;
+  } catch (err) { document.getElementById('docsContainer').innerHTML = `<p>Error: ${err.message}</p>`; }
+}
+
+async function cargarImpuestos() {
+  try {
+    const data = await apiFetch('/api/admin/junior/impuestos');
+    document.getElementById('impTotalIva').textContent = (data.total_iva_pagado || 0).toLocaleString() + ' Pz';
+    document.getElementById('impTotalOp').textContent = (data.total_operaciones || 0);
+    document.getElementById('impTotalGastado').textContent = (data.total_gastado_menores || 0).toLocaleString() + ' Pz';
+    document.getElementById('impTotalGanado').textContent = (data.total_ganado_menores || 0).toLocaleString() + ' Pz';
+  } catch (e) {}
+}
+
+async function cargarPlacetaid() {
+  try {
+    const data = await apiFetch('/api/admin/junior/placetaid');
+    document.getElementById('plidContainer').innerHTML = (!data || !data.length)
+      ? '<p style="color:var(--text-light)">Sin registros PlacetaID</p>'
+      : `<table class="data-table"><thead><tr><th>DIP</th><th>Nombre</th><th>Email</th><th>Rol</th><th>2FA</th><th>Estado</th></tr></thead>
+      <tbody>${data.slice(0,50).map(r => `<tr>
+        <td><code>${r.dip || '—'}</code></td>
+        <td>${r.nombre || ''} ${r.apellidos || ''}</td>
+        <td><small>${r.correo || '—'}</small></td>
+        <td>${r.rol || '—'}</td>
+        <td>${r.totpVerified ? '✅' : '❌'}</td>
+        <td><span class="status-dot ${r.activo ? 'green' : 'red'}"></span> ${r.activo ? 'Activo' : 'Inactivo'}</td>
+      </tr>`).join('')}</tbody></table>`;
+  } catch (err) { document.getElementById('plidContainer').innerHTML = `<p>Error: ${err.message}</p>`; }
+}
+
+// ── PENDIENTES DE FIRMA ─────────────────────────────────────────────────
+async function cargarPendientesFirma() {
+  try {
+    const data = await apiFetch('/api/admin/junior/documentos');
+    const pendientes = (data || []).filter(d => d.estado === 'pendiente' && (d.codigo_modelo || '').startsWith('PJ-'));
+    document.getElementById('pendientesContainer').innerHTML = (!pendientes || !pendientes.length)
+      ? '<p style="color:var(--text-light)">✅ No hay documentos pendientes de firma</p>'
+      : `<table class="data-table"><thead><tr><th>Código</th><th>Título</th><th>Menor (DIP)</th><th>Creado</th><th>Acciones</th></tr></thead>
+      <tbody>${pendientes.map(d => `<tr>
+        <td><code>${d.codigo_modelo}</code></td>
+        <td>${d.titulo_documento}</td>
+        <td><small>${d.usuario?.alias || '—'} (${d.usuario?.dip || '—'})</small></td>
+        <td><small>${d.creado_en ? new Date(d.creado_en).toLocaleDateString() : '—'}</small></td>
+        <td>
+          <span style="font-size:0.8rem;color:var(--color-j);font-weight:600">⏳ Pendiente — Solo firma el tutor desde PlacetaID Móvil</span>
+        </td>
+      </tr>`).join('')}</tbody></table>
+      <div style="margin-top:12px;padding:12px;background:#fef2f2;border-radius:10px;font-size:0.85rem;border-left:4px solid var(--color-j)">
+        <strong>🚫 Los administradores no pueden firmar.</strong> Comparta el enlace de PlacetaID Móvil con el tutor para que firme los documentos.
+      </div>`;
+  } catch (err) { document.getElementById('pendientesContainer').innerHTML = `<p>Error: ${err.message}</p>`; }
+}
+
+// ── EMAIL TUTORES ─────────────────────────────────────────────────────────
+async function cargarMenoresEmail() {
+  try {
+    const data = await apiFetch('/api/admin/junior/list');
+    const select = document.getElementById('emailMenor');
+    if (data && data.length) {
+      select.innerHTML = '<option value="">— Seleccionar menor —</option>' +
+        data.map(j => `<option value="${j.dip}" data-tutor="${j.tutor?.email || j.tutor_dip || ''}" data-nombre="${j.nombre} ${j.apellidos}" data-tutornombre="${j.tutor_nombre || j.tutor?.nombre_real || ''}" data-tutordip="${j.tutor_dip || ''}">${j.nombre} ${j.apellidos} (${j.dip})</option>`).join('');
+    }
+  } catch (err) {}
+}
+
+function autoRellenarEmail() {
+  const sel = document.getElementById('emailMenor');
+  const opt = sel.options[sel.selectedIndex];
+  if (opt && opt.value) {
+    document.getElementById('emailTutor').value = opt.dataset.tutor || '';
+  }
+  previsualizarPlantilla();
+}
+
+async function previsualizarPlantilla() {
+  const id = document.getElementById('emailPlantilla').value;
+  if (!id) { document.getElementById('emailPreview').textContent = 'Seleccione una plantilla.'; return; }
+  try {
+    const data = await apiFetch(`/api/admin/junior/email/vista-previa/${id}`);
+    document.getElementById('emailPreview').textContent = `📧 ${data.asunto}\n\n${data.cuerpo}`;
+  } catch (err) { document.getElementById('emailPreview').textContent = 'Error al cargar plantilla.'; }
+}
+
+async function enviarEmail() {
+  const plantillaId = document.getElementById('emailPlantilla').value;
+  const emailTutor = document.getElementById('emailTutor').value.trim();
+  const sel = document.getElementById('emailMenor');
+  const opt = sel.options[sel.selectedIndex];
+
+  if (!plantillaId || !emailTutor) {
+    document.getElementById('emailResult').innerHTML = '<div class="alert alert-error">Seleccione plantilla y email del tutor</div>';
+    return;
+  }
+
+  const variables = {
+    nombreTutor: opt?.dataset?.tutornombre || 'Tutor',
+    nombreMenor: opt?.dataset?.nombre || 'Menor',
+    dipMenor: opt?.value || '',
+    concepto: 'Desbloquear nivel academia',
+    importe: '50',
+    limiteDiario: '10',
+    gastadoHoy: '8',
+    limiteSemanal: '50'
+  };
+
+  try {
+    const r = await apiFetch('/api/admin/junior/email/enviar', {
+      method: 'POST',
+      body: JSON.stringify({ plantillaId, emailTutor, variables })
+    });
+    document.getElementById('emailResult').innerHTML = `<div class="alert alert-success">${r.mensaje}${r.simulado ? '<br><small>📧 Vista previa del email enviado debajo</small>' : ''}</div>`;
+    if (r.cuerpo) {
+      document.getElementById('emailPreview').textContent = `📧 PARA: ${emailTutor}\n📝 ${r.asunto}\n\n${r.cuerpo}`;
+    }
+  } catch (err) {
+    document.getElementById('emailResult').innerHTML = `<div class="alert alert-error">Error: ${err.message}</div>`;
+  }
+}
+
+async function cargarLogs() {
+  try {
+    const logs = await apiFetch('/api/admin/junior/logs');
+    document.getElementById('logsContainer').innerHTML = (!logs || !logs.length)
+      ? '<p style="color:var(--text-light)">No hay logs</p>'
+      : `<table class="data-table"><thead><tr><th>Fecha</th><th>Junior</th><th>Acción</th><th>Detalle</th></tr></thead>
+      <tbody>${logs.slice(0,50).map(l => `<tr>
+        <td><small>${new Date(l.creado_en).toLocaleString()}</small></td>
+        <td><small>${l.junior?.nombre || '—'} ${l.junior?.apellidos || ''}</small></td>
+        <td><code>${l.accion}</code></td>
+        <td><small>${l.detalle || '—'}</small></td>
+      </tr>`).join('')}</tbody></table>`;
+  } catch (err) { document.getElementById('logsContainer').innerHTML = '<p style="color:var(--text-light)">Error al cargar logs</p>'; }
+}
+
+async function verDetalle(dip) {
+  try {
+    const data = await apiFetch(`/api/admin/junior/${dip}`);
+    const j = data.junior;
+    const cp = data.limites_parentales;
+    mostrarModalHTML('👤 Detalle del Menor', `
+      <div style="margin-bottom:16px">
+        <h4 style="font-size:1.1rem;margin-bottom:8px">${j.nombre} ${j.apellidos}</h4>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:0.9rem">
+          <div><strong>DIP:</strong> ${j.dip}</div>
+          <div><strong>Modalidad:</strong> ${j.modalidad}</div>
+          <div><strong>Edad:</strong> ${j.edad} años</div>
+          <div><strong>Estado:</strong> ${j.estado}</div>
+          <div><strong>🌟 Nivel:</strong> ${j.nivel_academia || 1}</div>
+          <div><strong>🪙 Saldo:</strong> ${j.placetas_saldo || 0}</div>
+        </div>
+      </div>
+      ${j.tutor ? `<div style="background:#f5f3ff;border-radius:8px;padding:12px;margin:12px 0"><strong>Tutor:</strong> ${j.tutor.nombre_real || j.tutor.alias} (DIP: ${j.tutor.dip})<br><small>Email: ${j.tutor.email || '—'}</small></div>` : ''}
+      ${cp ? `<div style="background:#fefce8;border-radius:8px;padding:12px;margin:12px 0"><strong>🔒 Control Parental</strong><br><small>Límite diario: ${cp.limite_gasto_diario} Pz · Semanal: ${cp.limite_gasto_semanal} Pz · Aprobación tutor: ${cp.limite_aprobacion_tutor || 1000} Pz<br>Tiempo uso: ${cp.tiempo_uso_diario_minutos} min/día</small></div>` : '<div style="background:#fef2f2;border-radius:8px;padding:12px;margin:12px 0">⚠️ Sin control parental configurado</div>'}
+    `);
+  } catch (err) { alert('Error: ' + err.message); }
+}
+
+async function cambiarEstado(id, estado) {
+  if (!confirm(`¿Cambiar estado a "${estado}"?`)) return;
+  try {
+    await apiFetch(`/api/admin/junior/${id}/estado`, { method: 'POST', body: JSON.stringify({ estado }) });
+    mostrarToast(`Estado actualizado a: ${estado}`, 'success');
+    cargarJuniors(); cargarStats();
+  } catch (err) { alert('Error: ' + err.message); }
+}
+
+async function sincronizarJuniors() {
+  if (!confirm('¿Sincronizar juniors desde Placeta Junior?')) return;
+  try {
+    const r = await apiFetch('/api/admin/junior/sincronizar', { method: 'POST' });
+    mostrarToast(`Sincronizados ${r.sincronizados} de ${r.total}`, r.sincronizados > 0 ? 'success' : 'info');
+    cargarJuniors(); cargarStats();
+  } catch (err) { alert('Error: ' + err.message); }
+}
+
+async function crearDemo() {
+  try {
+    const r = await apiFetch('/api/admin/junior/demo/crear', { method: 'POST' });
+    mostrarToast(r.message, 'success');
+    cargarJuniors();
+  } catch (err) { alert('Error: ' + err.message); }
+}
+
+function filtrarTabla(searchId, tbodyId) {
+  const q = document.getElementById(searchId).value.toLowerCase();
+  document.querySelectorAll(`#${tbodyId} tr`).forEach(r => r.style.display = r.textContent.toLowerCase().includes(q) ? '' : 'none');
+}
+
+document.addEventListener('DOMContentLoaded', () => { cargarStats(); cargarJuniors(); cargarLogs(); });
+</script>

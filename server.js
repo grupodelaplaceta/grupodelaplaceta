@@ -37,6 +37,8 @@ import documentosRoutes from './src/routes/documentos.js';
 import auditRoutes from './src/routes/audit.js';
 import tramitacionRoutes from './src/routes/tramitacion.js';
 import notificacionesRoutes from './src/routes/notifications.js';
+import juniorAdminRoutes from './src/routes/junior-admin.js';
+import juniorEmailRoutes from './src/routes/junior-email.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -154,6 +156,8 @@ app.use('/', documentosRoutes);
 app.use('/api/admin/audit', auditRoutes);
 app.use('/api/admin', tramitacionRoutes);
 app.use('/api/notificaciones', notificacionesRoutes);
+app.use('/api/admin', juniorAdminRoutes);
+app.use('/api/admin', juniorEmailRoutes);
 app.use('/api/firma', firmaRoutes);
 app.use('/api/placetid', placetidRoutes);
 app.use('/api/contenidos', contenidosRoutes);
@@ -271,6 +275,7 @@ app.get('/admin/tramitacion', verificarAuth, (req, res) => res.render('admin/tra
 app.get('/admin/ciudadanos', verificarAuth, (req, res) => res.render('admin/ciudadanos', { titulo: 'Ciudadanos' }));
 app.get('/admin/empresas', verificarAuth, (req, res) => res.render('admin/empresas', { titulo: 'Empresas y EIP' }));
 app.get('/admin/vigilancia', verificarAuth, (req, res) => res.render('admin/vigilancia', { titulo: 'Vigilancia y Monitoreo' }));
+app.get('/admin/placeta-junior', verificarAuth, (req, res) => res.render('admin/placeta-junior', { titulo: 'Placeta Junior - Gestión' }));
 
 // URLs públicas de firma
 app.get('/firmar/:token', async (req, res) => {
