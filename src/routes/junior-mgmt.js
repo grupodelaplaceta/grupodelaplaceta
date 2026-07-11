@@ -5,8 +5,9 @@ import {
   sbFindSolicitanteByDip, sbUpdateSolicitante,
   sbFindJuniorByDip, sbFindJuniorByTutor, sbListJuniors, sbUpdateJunior,
   sbGetParentalLimits, sbCreateParentalLimit, sbUpdateParentalLimits,
-  sbCreateLog, sbCreateJuniorLog, sbCreatePlacetaTransaction, supabase
+  sbCreateLog, sbCreateJuniorLog, sbCreatePlacetaTransaction
 } from '../config/db-supabase.js';
+import { supabase } from '../config/supabase.js';
 // Funciones bancarias via API backend-banco
 async function bonoBienvenida({ juniorAccountId, juniorDip, tutorDip }) {
   try {

@@ -4,8 +4,9 @@ import {
   sbGetAcademyProgress, sbUpsertAcademyProgress,
   sbUpdatePlacetaBalance,
   sbCreatePlacetaTransaction,
-  sbCreateJuniorLog, sbGetParentalLimits, supabase
+  sbCreateJuniorLog, sbGetParentalLimits
 } from '../config/db-supabase.js';
+import { supabase } from '../config/supabase.js';
 import { generarCuestionarios, COSTO_DESBLOQUEO_POR_NIVEL, getRangoEdad } from '../data/cuestionarios.js';
 // Pago bancario via API backend-banco
 async function desbloquearNivelBanco({ juniorAccountId, costoPlacetas, juniorDip, tutorDip }) {

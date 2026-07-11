@@ -180,21 +180,6 @@ router.post('/register', async (req, res) => {
       junior_id: juniorRecord.id,
       tutor_dip: dni_tutor
     });
-          ip
-        });
-      } catch (bankErr) {
-        console.warn('[Auth] Error creando cuenta/bono para joven:', bankErr.message);
-      }
-
-      return res.json({
-        success: true,
-        message: `Registro completado. Bienvenido a Placeta Junior.${cuentaBancaria ? ' Cuenta bancaria creada con 750 Pz de bienvenida.' : ''}`,
-        redirect: '/dashboard',
-        dip,
-        necesita_firma_tutor: false,
-        cuenta_bancaria: cuentaBancaria
-      });
-    }
   } catch (err) {
     console.error('[Placeta Junior] Error en registro:', err);
     res.status(500).json({ error: 'Error interno del servidor. Inténtelo de nuevo más tarde.' });

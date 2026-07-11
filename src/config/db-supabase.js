@@ -1449,13 +1449,8 @@ export async function sbUpdatePlacetaBalance(juniorId, newSaldo) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  LOGS
+//  LOGS JUNIOR
 // ═══════════════════════════════════════════════════════════════════════════
-
-export async function sbCreateLog(data) {
-  const { error } = await supabase.from('logs_auditoria').insert(data);
-  if (error) console.error('[Placeta Junior] Error insert log:', error.message);
-}
 
 export async function sbCreateJuniorLog(data) {
   const { error } = await supabase.from('junior_logs').insert(data);
