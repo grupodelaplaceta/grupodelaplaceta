@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= titulo %></title>
+  <link rel="stylesheet" href="/css/junior.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌈</text></svg>">
+</head>
+<body>
+  <div class="auth-page">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <a href="/" style="text-decoration:none">
+          <img src="/img/logojunior.jpg" alt="Placeta Junior" style="width:80px;height:80px;border-radius:50%;object-fit:cover;margin-bottom:8px;border:3px solid #f0eeff;box-shadow:0 4px 12px rgba(0,0,0,0.1)">
+          <div class="logo-text">
+            <span style="color:#FF3333">P</span><span style="color:#FF6600">l</span><span style="color:#D6CE52">a</span><span style="color:#336E45">c</span><span style="color:#3A00E1">e</span><span style="color:#4E3B70">t</span><span style="color:#000000">a</span>
+            <span style="color:#000"> Junior</span>
+          </div>
+        </a>
+      </div>
+      <h2>Crear tu cuenta</h2>
+      <p class="auth-subtitle">Elige tu modalidad y completa el registro</p>
+
+      <% if (locals.error) { %><div class="alert alert-error"><%= error %></div><% } %>
+      <% if (locals.success) { %><div class="alert alert-success"><%= success %></div><% } %>
+
+      <div id="errorContainer" class="alert alert-error" style="display:none"></div>
+      <div id="successContainer" class="alert alert-success" style="display:none"></div>
+
+      <form id="registerForm" onsubmit="return handleRegister(event)">
+        <input type="hidden" name="modalidad" value="junior">
+
+        <!-- Datos del menor -->
+        <div class="form-row">
+          <div class="form-group">
+            <label>Nombre del menor</label>
+            <input type="text" name="nombre" id="nombre" required>
+          </div>
+          <div class="form-group">
+            <label>Apellidos</label>
+            <input type="text" name="apellidos" id="apellidos" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Fecha de nacimiento</label>
+          <input type="date" name="fecha_nacimiento" id="fechaNacimiento" required onchange="checkEdad()">
+        </div>
+
+        <div class="form-group">
+          <label>Email de contacto</label>
+          <input type="email" name="email" id="email" required>
+        </div>
+
+        <div class="form-group">
+          <label>Contraseña</label>
+          <input type="password" name="password" id="password" required minlength="6">
+        </div>
+
+        <!-- Datos del tutor (solo para Junior <16) -->
+        <div class="tutor-section" id="tutorSection">
+          <h3 style="font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:1rem;margin-bottom:12px">👨‍👩‍👧 Datos del Tutor Legal</h3>
+          <p style="font-size:0.85rem;color:#6b6b80;margin-bottom:16px">El tutor deberá firmar el alta desde PlacetaID Móvil</p>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Nombre del tutor</label>
+              <input type="text" name="nombre_tutor" id="nombreTutor">
+            </div>
+            <div class="form-group">
+              <label>Apellidos del tutor</label>
+              <input type="text" name="apellidos_tutor" id="apellidosTutor">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>DNI del tutor (se encriptará)</label>
+            <input type="text" name="dni_tutor" id="dniTutor" placeholder="12345678A" maxlength="9">
+          </div>
+        </div>
+
+        <button type="submit" class="btn-submit" id="btnRegister">🌟 Crear cuenta</button>
+      </form>
+
+      <div class="auth-footer">
+        ¿Ya tienes cuenta? <a href="/login">Inicia sesión</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/junior.js"></script>
+  <script>
+    // Tutor section siempre visible (tutor obligatorio)
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('tutorSection').classList.add('visible');
+    });
+
+    function checkEdad() {
+      const fecha = document.getElementById('fechaNacimiento').value;
+      if (!fecha) return;
+      const nacimiento = new Date(fecha);
+      const hoy = new Date(2026, 6, 11);
+      let edad = hoy.getFullYear() - nacimiento.getFullYear();
+      const mesDiff = hoy.getMonth() - nacimiento.getMonth();
+      if (mesDiff < 0 || (mesDiff === 0 && hoy.getDate() < nacimiento.getDate())) edad--;
+
+      if (edad >= 16) {
+        document.getElementById('errorContainer').textContent = 'Placeta Junior es solo para menores de 16 años. Los mayores deben usar PlacetaID estándar.';
+        document.getElementById('errorContainer').style.display = 'block';
+        document.getElementById('btnRegister').disabled = true;
+      } else {
+        document.getElementById('errorContainer').style.display = 'none';
+        document.getElementById('btnRegister').disabled = false;
+      }
+    }
+
+    async function handleRegister(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btnRegister');
+      btn.disabled = true;
+      btn.textContent = '⏳ Registrando...';
+
+      document.getElementById('errorContainer').style.display = 'none';
+      document.getElementById('successContainer').style.display = 'none';
+
+      const formData = new FormData(document.getElementById('registerForm'));
+      const data = Object.fromEntries(formData.entries());
+
+      try {
+        const result = await apiFetch('/api/auth/register', {
+          method: 'POST',
+          body: JSON.stringify(data)
+        });
+
+        document.getElementById('successContainer').textContent = result.message;
+        document.getElementById('successContainer').style.display = 'block';
+
+        if (result.necesita_firma_tutor) {
+          // Mostrar información sobre firma del tutor
+          mostrarModal('📋 Firma del Tutor Requerida', `
+            <div class="alert alert-info">
+              <strong>Registro completado.</strong> El tutor legal debe firmar el alta, los términos y condiciones,
+              y la política de privacidad desde <strong>PlacetaID Móvil</strong>.
+            </div>
+            <div style="background:#f0eeff;border-radius:10px;padding:16px;margin:12px 0">
+              <p style="font-size:0.85rem;color:#4f46e5;margin-bottom:8px"><strong>DIP del menor:</strong></p>
+              <code style="font-size:1.2rem;user-select:all">${result.dip}</code>
+            </div>
+            <p style="font-size:0.85rem;color:#6b6b80">Una vez firmado, el menor podrá acceder a Placeta Junior.</p>
+          `);
+          btn.textContent = '🌟 Crear cuenta';
+          btn.disabled = false;
+        } else {
+          setTimeout(() => { window.location.href = result.redirect; }, 1500);
+        }
+      } catch (err) {
+        document.getElementById('errorContainer').textContent = err.message;
+        document.getElementById('errorContainer').style.display = 'block';
+        btn.textContent = '🌟 Crear cuenta';
+        btn.disabled = false;
+      }
+    }
+  </script>
+</body>
+</html>

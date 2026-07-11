@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= titulo %></title>
+  <link rel="stylesheet" href="/css/junior.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌈</text></svg>">
+</head>
+<body>
+  <!-- Header -->
+  <header class="junior-header">
+    <a href="/dashboard" class="junior-brand">
+      <img src="/img/logojunior.jpg" alt="Placeta Junior" class="brand-logo-img">
+      <span>
+        <span class="logo-letter">P</span><span class="logo-letter">l</span><span class="logo-letter">a</span><span class="logo-letter">c</span><span class="logo-letter">e</span><span class="logo-letter">t</span><span class="logo-letter">a</span>
+        <span style="font-weight:300;opacity:0.7;margin-left:4px;font-size:1rem">Junior</span>
+      </span>
+    </a>
+    <nav class="junior-nav">
+      <a href="/dashboard" class="active">🏠 Inicio</a>
+      <a href="/academia">📚 Academia</a>
+      <a href="/api/auth/logout">🚪 Salir</a>
+    </nav>
+  </header>
+
+  <!-- Dashboard -->
+  <div class="dashboard">
+    <div class="dashboard-header">
+      <div>
+        <h1>¡Hola, <span id="juniorNombre"><%= junior.nombre %></span>! 👋</h1>
+        <p style="color:var(--text-light);font-size:0.9rem">
+          Modalidad: <strong><%= junior.modalidad %></strong> ·
+          DIP: <code style="background:#f0eeff;padding:2px 8px;border-radius:4px;font-size:0.85rem"><%= junior.dip %></code>
+        </p>
+      </div>
+      <div class="saldo-badge">
+        🪙 <span id="saldoDisplay"><%= junior.placetas_saldo || 0 %></span> Placetas
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <span class="stat-value" id="nivelDisplay"><%= junior.nivel_academia || 1 %></span>
+        <span class="stat-label">🌟 Nivel Academia</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value" id="edadDisplay"><%= junior.edad %></span>
+        <span class="stat-label">🎂 Edad</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value" id="modalidadDisplay">
+          <%= junior.modalidad === 'Placeta Junior' ? '🧒' : '🧑' %>
+        </span>
+        <span class="stat-label"><%= junior.modalidad %></span>
+      </div>
+    </div>
+
+    <!-- Main actions -->
+    <div class="section">
+      <div class="section-header">
+        <h2>🚀 Acciones rápidas</h2>
+      </div>
+      <div class="materias-grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
+        <a href="/academia" class="materia-card mate" style="text-decoration:none;color:inherit;display:block">
+          <div class="materia-icon">📚</div>
+          <h3>Ir a la Academia</h3>
+          <p>Cuestionarios y retos</p>
+        </a>
+        <div class="materia-card calculo" onclick="abrirMonedero()" style="cursor:pointer">
+          <div class="materia-icon">🪙</div>
+          <h3>Monedero</h3>
+          <p>Saldo: <strong id="saldoMini"><%= junior.placetas_saldo || 0 %></strong> Pz</p>
+        </div>
+        <div class="materia-card lengua" onclick="verHistorial()" style="cursor:pointer">
+          <div class="materia-icon">📋</div>
+          <h3>Historial</h3>
+          <p>Ver transacciones</p>
+        </div>
+        <div class="materia-card medio" onclick="verProgreso()" style="cursor:pointer">
+          <div class="materia-icon">📊</div>
+          <h3>Mi Progreso</h3>
+          <p>Estadísticas de academia</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Info + Wallet -->
+    <div class="section">
+      <div class="section-header">
+        <h2>💡 Placeta Junior</h2>
+      </div>
+      <div style="background:#fff;border-radius:16px;padding:20px;box-shadow:0 4px 24px rgba(0,0,0,0.06)">
+        <p style="font-size:0.9rem;color:var(--text-light)">
+          🌟 <strong>Gana placetas</strong> completando cuestionarios en la academia.<br>
+          🚀 <strong>Gasta placetas</strong> para desbloquear nuevos niveles de aprendizaje.<br>
+          👨‍👩‍👧 <strong>Tu tutor</strong> controla los límites desde su PlacetaID Móvil.<br>
+          🏦 <strong>Cuenta IBAN APP</strong> (Capitalia) con 750 Pz de bono de bienvenida.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <footer class="junior-footer">
+    <p>© 2026 Grupo de La Placeta · Placeta Junior v1.0</p>
+  </footer>
+
+  <script src="/js/junior.js"></script>
+  <script>
+    async function abrirMonedero() {
+      try {
+        const data = await apiFetch('/api/junior/monedero');
+        const historialHtml = (data.historial || []).slice(0, 10).map(t => `
+          <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0eef6">
+            <div>
+              <div style="font-weight:600;font-size:0.85rem">${t.concepto}</div>
+              <div style="font-size:0.75rem;color:var(--text-light)">${formatFecha(t.creado_en)}</div>
+            </div>
+            <div style="font-weight:700;color:${t.tipo === 'gastar' ? 'var(--color-j)' : 'var(--color-i)'}">
+              ${t.tipo === 'gastar' ? '- ' : '+ '}${t.cantidad} Pz
+            </div>
+          </div>
+        `).join('') || '<p style="color:var(--text-light);font-size:0.85rem">Sin transacciones</p>';
+
+        mostrarModal('🪙 Mi Monedero', `
+          <div style="text-align:center;margin-bottom:16px">
+            <div style="font-size:2.5rem;font-weight:800;color:var(--color-o)">${data.saldo_actual} Pz</div>
+            <div style="font-size:0.85rem;color:var(--text-light)">Saldo actual</div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+            <div style="background:#f0eeff;border-radius:8px;padding:8px;text-align:center">
+              <div style="font-weight:700;font-size:0.9rem">${data.gasto_hoy}/${data.limites.gasto_diario}</div>
+              <div style="font-size:0.75rem;color:var(--text-light)">Gastado hoy</div>
+            </div>
+            <div style="background:#fefce8;border-radius:8px;padding:8px;text-align:center">
+              <div style="font-weight:700;font-size:0.9rem">${data.ingresos_totales}</div>
+              <div style="font-size:0.75rem;color:var(--text-light)">Ganado total</div>
+            </div>
+          </div>
+          <div style="background:#f5f3ff;border-radius:8px;padding:10px;margin-bottom:12px;font-size:0.85rem">
+            <strong>🔒 Límites del tutor:</strong><br>
+            Gasto diario: ${data.limites.gasto_diario} Pz · Semanal: ${data.limites.gasto_semanal} Pz<br>
+            Tiempo uso: ${data.limites.tiempo_uso} min/día<br>
+            ${data.limites.requiere_aprobacion ? '✅ Requiere aprobación para gastos extra' : ''}
+          </div>
+          <div>
+            <h4 style="font-size:0.9rem;margin-bottom:8px">Últimas transacciones</h4>
+            ${historialHtml}
+          </div>
+        `);
+      } catch (err) {
+        mostrarToast('Error al cargar monedero: ' + err.message, 'error');
+      }
+    }
+
+    async function verHistorial() {
+      try {
+        const data = await apiFetch('/api/academy/historial');
+        if (!data || data.length === 0) {
+          mostrarModal('📋 Historial', '<p style="text-align:center;color:var(--text-light)">No hay transacciones todavía.</p>');
+          return;
+        }
+        const html = `<div style="max-height:400px;overflow-y:auto">
+          ${data.map(t => `
+            <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0eef6">
+              <div>
+                <div style="font-weight:600;font-size:0.9rem">${t.concepto}</div>
+                <div style="font-size:0.8rem;color:var(--text-light)">${formatFecha(t.creado_en)}</div>
+              </div>
+              <div style="font-weight:700;font-size:1rem;color:${t.tipo === 'ganar' ? 'var(--color-i)' : 'var(--color-j)'}">
+                ${t.tipo === 'ganar' ? '+' : '-'}${t.cantidad}
+              </div>
+            </div>
+          `).join('')}
+        </div>`;
+        mostrarModal('📋 Historial de Transacciones', html);
+      } catch (err) {
+        mostrarToast('Error al cargar historial', 'error');
+      }
+    }
+
+    async function verProgreso() {
+      try {
+        const data = await apiFetch('/api/academy/cuestionarios');
+        if (!data || !data.progreso) {
+          mostrarModal('📊 Mi Progreso', '<p style="text-align:center;color:var(--text-light)">Aún no has completado ningún cuestionario.</p>');
+          return;
+        }
+        const comp = data.progreso.completados || {};
+        const totalPreguntas = Object.values(comp).flat().length;
+        const html = `
+          <div style="text-align:center;margin-bottom:16px">
+            <div style="font-size:2.5rem;font-weight:800;color:var(--color-o)">${data.progreso.puntuacion_total || 0}</div>
+            <div style="font-size:0.9rem;color:var(--text-light)">Puntos totales</div>
+          </div>
+          <div style="display:grid;gap:8px">
+            ${Object.entries(comp).map(([materia, sesiones]) => `
+              <div style="background:#f8f6ff;border-radius:8px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center">
+                <span style="font-weight:600;font-size:0.9rem">${materia.replace('_', ' ')}</span>
+                <span style="font-size:0.85rem;color:var(--text-light)">${sesiones.length} sesiones · ${sesiones.reduce((s, x) => s + x.aciertos, 0)}/${sesiones.reduce((s, x) => s + x.total, 0)} aciertos</span>
+              </div>
+            `).join('')}
+          </div>
+        `;
+        mostrarModal('📊 Mi Progreso en Academia', html);
+      } catch (err) {
+        mostrarToast('Error al cargar progreso', 'error');
+      }
+    }
+  </script>
+</body>
+</html>

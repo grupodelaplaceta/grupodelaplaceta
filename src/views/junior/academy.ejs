@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= titulo %></title>
+  <link rel="stylesheet" href="/css/junior.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌈</text></svg>">
+</head>
+<body>
+  <header class="junior-header">
+    <a href="/dashboard" class="junior-brand">
+      <img src="/img/logojunior.jpg" alt="Placeta Junior" class="brand-logo-img">
+      <span>
+        <span class="logo-letter">P</span><span class="logo-letter">l</span><span class="logo-letter">a</span><span class="logo-letter">c</span><span class="logo-letter">e</span><span class="logo-letter">t</span><span class="logo-letter">a</span>
+        <span style="font-weight:300;opacity:0.7;margin-left:4px;font-size:1rem">Junior</span>
+      </span>
+    </a>
+    <nav class="junior-nav">
+      <a href="/dashboard">🏠 Inicio</a>
+      <a href="/academia" class="active">📚 Academia</a>
+      <a href="/api/auth/logout">🚪 Salir</a>
+    </nav>
+  </header>
+
+  <div class="dashboard">
+    <div class="dashboard-header">
+      <div>
+        <h1>📚 Academia Placeta</h1>
+        <p style="color:var(--text-light);font-size:0.9rem">Completa cuestionarios, gana placetas y desbloquea nuevos niveles</p>
+      </div>
+      <div class="saldo-badge">
+        🪙 <span id="saldoAcademy">—</span> Placetas · 🌟 Nivel <span id="nivelAcademy">—</span>
+      </div>
+    </div>
+
+    <!-- Nivel Progress -->
+    <div class="section" id="nivelSection">
+      <h2 style="font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:1.1rem;margin-bottom:8px">
+        🌟 Nivel <span id="nivelLabel">1</span>
+      </h2>
+      <div class="nivel-bar">
+        <div class="nivel-fill" id="nivelFill" style="width:100%"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:0.85rem;color:var(--text-light);margin-top:4px">
+        <span>Nivel actual</span>
+        <span><span id="costoDesbloqueo">50</span> placetas para desbloquear siguiente →</span>
+      </div>
+      <button class="btn btn-success btn-sm" id="btnDesbloquear" onclick="desbloquearNivel()" style="margin-top:8px">
+        🚀 Desbloquear siguiente nivel
+      </button>
+    </div>
+
+    <!-- Materias -->
+    <div class="section">
+      <div class="section-header">
+        <h2>Elige una materia</h2>
+      </div>
+      <div class="materias-grid" id="materiasGrid">
+        <div class="materia-card mate" onclick="iniciarQuiz('matematicas')">
+          <div class="materia-icon">🔢</div>
+          <h3>Matemáticas</h3>
+          <p>Números, operaciones y problemas</p>
+          <span class="nivel-badge">Nivel 1</span>
+        </div>
+        <div class="materia-card calculo" onclick="iniciarQuiz('calculo_mental')">
+          <div class="materia-icon">🧮</div>
+          <h3>Cálculo Mental</h3>
+          <p>Agilidad mental con números</p>
+          <span class="nivel-badge">Nivel 1</span>
+        </div>
+        <div class="materia-card lengua" onclick="iniciarQuiz('lengua')">
+          <div class="materia-icon">📖</div>
+          <h3>Lengua</h3>
+          <p>Gramática, vocabulario y ortografía</p>
+          <span class="nivel-badge">Nivel 1</span>
+        </div>
+        <div class="materia-card medio" onclick="iniciarQuiz('medio')">
+          <div class="materia-icon">🌍</div>
+          <h3>Medio</h3>
+          <p>Ciencias, naturaleza y entorno</p>
+          <span class="nivel-badge">Nivel 1</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quiz container (se rellena dinámicamente) -->
+    <div id="quizContainer" style="display:none" class="section">
+      <div class="section-header">
+        <button class="btn btn-outline btn-sm" onclick="cerrarQuiz()">← Volver a materias</button>
+        <span id="quizMateriaNombre" style="font-weight:700"></span>
+      </div>
+      <div class="quiz-container" id="quizContent"></div>
+    </div>
+  </div>
+
+  <footer class="junior-footer">
+    <p>© 2026 Grupo de La Placeta · Placeta Junior v1.0</p>
+  </footer>
+
+  <script src="/js/junior.js"></script>
+  <script>
+    let preguntasActuales = [];
+    let materiaActual = '';
+    let indiceActual = 0;
+    let respuestasActuales = [];
+    let placetasGanadas = 0;
+    let nivelActual = 1;
+    let costoDesbloqueo = 50;
+
+    // Cargar datos al inicio
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        const data = await apiFetch('/api/academy/cuestionarios');
+        nivelActual = data.nivel_actual || 1;
+        costoDesbloqueo = data.costo_desbloqueo || 50;
+        document.getElementById('saldoAcademy').textContent = data.placetas_saldo || 0;
+        document.getElementById('nivelAcademy').textContent = nivelActual;
+        document.getElementById('nivelLabel').textContent = nivelActual;
+        document.getElementById('costoDesbloqueo').textContent = costoDesbloqueo;
+      } catch (err) {
+        mostrarToast('Error al cargar academia', 'error');
+      }
+    });
+
+    function iniciarQuiz(materia) {
+      document.getElementById('materiasGrid').style.display = 'none';
+      document.getElementById('nivelSection').style.display = 'none';
+      document.getElementById('quizContainer').style.display = 'block';
+
+      const nombresMateria = { matematicas: '🔢 Matemáticas', calculo_mental: '🧮 Cálculo Mental', lengua: '📖 Lengua', medio: '🌍 Medio' };
+      document.getElementById('quizMateriaNombre').textContent = nombresMateria[materia] || materia;
+
+      materiaActual = materia;
+      indiceActual = 0;
+      respuestasActuales = [];
+      placetasGanadas = 0;
+
+      apiFetch('/api/academy/cuestionarios').then(data => {
+        preguntasActuales = data.cuestionarios[materia] || [];
+        if (preguntasActuales.length === 0) {
+          document.getElementById('quizContent').innerHTML = '<p style="text-align:center;color:var(--text-light)">No hay cuestionarios disponibles para esta materia.</p>';
+          return;
+        }
+        mostrarPregunta();
+      }).catch(err => {
+        mostrarToast('Error al cargar cuestionarios', 'error');
+      });
+    }
+
+    function mostrarPregunta() {
+      if (indiceActual >= preguntasActuales.length) {
+        mostrarResultados();
+        return;
+      }
+
+      const p = preguntasActuales[indiceActual];
+      const total = preguntasActuales.length;
+
+      let dotsHtml = '';
+      for (let i = 0; i < total; i++) {
+        const cls = i === indiceActual ? 'active' : '';
+        dotsHtml += `<span class="quiz-dot ${cls}"></span>`;
+      }
+
+      let optionsHtml = p.opciones.map((opt, idx) => `
+        <button class="quiz-option" onclick="seleccionarOpcion(${idx})">
+          ${String.fromCharCode(65 + idx)}. ${opt}
+        </button>
+      `).join('');
+
+      document.getElementById('quizContent').innerHTML = `
+        <div class="quiz-progress">${dotsHtml}</div>
+        <div class="quiz-question">
+          <div style="font-size:0.85rem;color:var(--text-light);margin-bottom:8px">
+            Pregunta ${indiceActual + 1} de ${total}
+          </div>
+          <h3>${p.pregunta}</h3>
+          <div class="quiz-options" id="quizOptions">${optionsHtml}</div>
+        </div>
+      `;
+    }
+
+    function seleccionarOpcion(idx) {
+      // Deshabilitar botones
+      document.querySelectorAll('.quiz-option').forEach(btn => btn.disabled = true);
+
+      const p = preguntasActuales[indiceActual];
+      const esCorrecta = idx === 0; // Placeholder - se evalúa en servidor
+
+      // Guardar respuesta
+      respuestasActuales.push({ id: p.id !== undefined ? p.id : indiceActual, opcion: idx });
+
+      // Feedback visual
+      const btns = document.querySelectorAll('.quiz-option');
+      btns.forEach((btn, i) => {
+        btn.classList.remove('selected');
+        // No mostramos correcta/incorrecta hasta evaluar en servidor
+      });
+      btns[idx].classList.add('selected');
+
+      // Siguiente pregunta o evaluar
+      indiceActual++;
+      setTimeout(() => mostrarPregunta(), 300);
+    }
+
+    async function mostrarResultados() {
+      document.getElementById('quizContent').innerHTML = '<div class="spinner"></div>';
+
+      try {
+        const result = await apiFetch('/api/academy/evaluar', {
+          method: 'POST',
+          body: JSON.stringify({
+            materia: materiaActual,
+            respuestas: respuestasActuales
+          })
+        });
+
+        let icon = result.porcentaje >= 60 ? '🎉' : '💪';
+        let mensaje = result.porcentaje >= 60
+          ? `¡Felicidades! Has aprobado con un ${result.porcentaje}%`
+          : `Sigue practicando. Obtuviste un ${result.porcentaje}%`;
+
+        document.getElementById('quizContent').innerHTML = `
+          <div class="quiz-resultado">
+            <div class="result-icon">${icon}</div>
+            <h3>${mensaje}</h3>
+            <div class="placetas-ganadas">🪙 +${result.placetas_ganadas} Placetas</div>
+            <p style="color:var(--text-light);font-size:0.9rem;margin-top:8px">
+              Aciertos: ${result.aciertos} / ${result.total}
+            </p>
+            <div style="margin-top:16px;display:flex;gap:8px;justify-content:center">
+              <button class="btn btn-primary" onclick="cerrarQuiz()">📚 Otras materias</button>
+              <button class="btn btn-outline" onclick="iniciarQuiz('${materiaActual}')">🔄 Repetir</button>
+            </div>
+          </div>
+        `;
+
+        // Actualizar saldo
+        document.getElementById('saldoAcademy').textContent = result.saldo_actual;
+
+        // Mostrar detalles
+        const dots = document.querySelectorAll('.quiz-dot');
+        result.resultados.forEach((r, i) => {
+          if (dots[i]) {
+            dots[i].classList.add(r.correcta ? 'correct' : 'wrong');
+          }
+        });
+      } catch (err) {
+        document.getElementById('quizContent').innerHTML = `
+          <div class="quiz-resultado">
+            <div class="result-icon">❌</div>
+            <h3>Error al evaluar</h3>
+            <p style="color:var(--text-light)">${err.message}</p>
+            <button class="btn btn-primary" style="margin-top:12px" onclick="cerrarQuiz()">Volver</button>
+          </div>
+        `;
+      }
+    }
+
+    function cerrarQuiz() {
+      document.getElementById('quizContainer').style.display = 'none';
+      document.getElementById('materiasGrid').style.display = '';
+      document.getElementById('nivelSection').style.display = '';
+    }
+
+    async function desbloquearNivel() {
+      try {
+        const result = await apiFetch('/api/academy/desbloquear-nivel', { method: 'POST' });
+        mostrarToast(result.message, 'success');
+        document.getElementById('saldoAcademy').textContent = result.saldo_actual;
+        document.getElementById('nivelAcademy').textContent = result.nivel_actual;
+        document.getElementById('nivelLabel').textContent = result.nivel_actual;
+        nivelActual = result.nivel_actual;
+      } catch (err) {
+        mostrarToast(err.message, 'error');
+      }
+    }
+  </script>
+</body>
+</html>

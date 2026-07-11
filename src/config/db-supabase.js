@@ -1326,3 +1326,138 @@ function ejecutarMigracionesSqlite(database) {
   database.run('CREATE INDEX IF NOT EXISTS idx_account_holders_account ON account_holders(account_id)');
   database.run('CREATE INDEX IF NOT EXISTS idx_account_managers_account ON account_managers(account_id)');
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  PLACETA JUNIOR — Funciones específicas
+// ═══════════════════════════════════════════════════════════════════════════
+
+export async function sbCreateJunior(data) {
+  const { data: result, error } = await supabase.from('junior_menores')
+    .insert(data).select().single();
+  if (error) throw new Error(`Error al crear registro junior: ${error.message}`);
+  return result;
+}
+
+export async function sbFindJuniorByDip(dip) {
+  const { data, error } = await supabase.from('junior_menores')
+    .select('*, tutor:solicitantes!junior_menores_tutor_dip_fkey(dip, alias, nombre_real, email)')
+    .eq('dip', dip).limit(1).single();
+  if (error && error.code !== 'PGRST116') return null;
+  return data;
+}
+
+export async function sbFindJuniorByTutor(tutorDip) {
+  const { data, error } = await supabase.from('junior_menores')
+    .select('*, tutor:solicitantes!junior_menores_tutor_dip_fkey(dip, alias, nombre_real, email)')
+    .eq('tutor_dip', tutorDip)
+    .order('creado_en', { ascending: false });
+  if (error) return [];
+  return data || [];
+}
+
+export async function sbListJuniors(filters = {}) {
+  let query = supabase.from('junior_menores')
+    .select('*, tutor:solicitantes!junior_menores_tutor_dip_fkey(dip, alias, nombre_real, email)');
+  if (filters.estado) query = query.eq('estado', filters.estado);
+  if (filters.modalidad) query = query.eq('modalidad', filters.modalidad);
+  query = query.order('creado_en', { ascending: false });
+  const { data, error } = await query;
+  if (error) return [];
+  return data || [];
+}
+
+export async function sbUpdateJunior(id, data) {
+  const { error } = await supabase.from('junior_menores').update(data).eq('id', id);
+  if (error) throw new Error(`Error al actualizar junior: ${error.message}`);
+  return true;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  CONTROL PARENTAL JUNIOR — Límites y configuración
+// ═══════════════════════════════════════════════════════════════════════════
+
+export async function sbCreateParentalLimit(data) {
+  const { data: result, error } = await supabase.from('junior_control_parental')
+    .insert(data).select().single();
+  if (error) throw new Error(`Error al crear límite parental: ${error.message}`);
+  return result;
+}
+
+export async function sbGetParentalLimits(juniorId) {
+  const { data, error } = await supabase.from('junior_control_parental')
+    .select('*').eq('junior_id', juniorId).limit(1).single();
+  if (error && error.code !== 'PGRST116') return null;
+  return data;
+}
+
+export async function sbUpdateParentalLimits(juniorId, data) {
+  const { error } = await supabase.from('junior_control_parental')
+    .update(data).eq('junior_id', juniorId);
+  if (error) throw new Error(`Error al actualizar límites parentales: ${error.message}`);
+  return true;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  ACADEMIA — Progreso y cuestionarios
+// ═══════════════════════════════════════════════════════════════════════════
+
+export async function sbGetAcademyProgress(juniorId) {
+  const { data, error } = await supabase.from('junior_academia')
+    .select('*').eq('junior_id', juniorId).limit(1).single();
+  if (error && error.code !== 'PGRST116') return null;
+  return data;
+}
+
+export async function sbUpsertAcademyProgress(data) {
+  const existing = await sbGetAcademyProgress(data.junior_id);
+  if (existing) {
+    const { error } = await supabase.from('junior_academia')
+      .update(data).eq('junior_id', data.junior_id);
+    if (error) throw new Error(`Error al actualizar progreso academia: ${error.message}`);
+    return true;
+  } else {
+    const { error } = await supabase.from('junior_academia')
+      .insert(data);
+    if (error) throw new Error(`Error al crear progreso academia: ${error.message}`);
+    return true;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  TRANSACCIONES PLACETAS (gastos en academia)
+// ═══════════════════════════════════════════════════════════════════════════
+
+export async function sbCreatePlacetaTransaction(data) {
+  const { data: result, error } = await supabase.from('junior_transacciones')
+    .insert(data).select().single();
+  if (error) throw new Error(`Error al crear transacción: ${error.message}`);
+  return result;
+}
+
+export async function sbGetPlacetaBalance(juniorId) {
+  const { data, error } = await supabase.from('junior_menores')
+    .select('placetas_saldo').eq('id', juniorId).limit(1).single();
+  if (error) return 0;
+  return data?.placetas_saldo || 0;
+}
+
+export async function sbUpdatePlacetaBalance(juniorId, newSaldo) {
+  const { error } = await supabase.from('junior_menores')
+    .update({ placetas_saldo: newSaldo }).eq('id', juniorId);
+  if (error) throw new Error(`Error al actualizar saldo: ${error.message}`);
+  return true;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  LOGS
+// ═══════════════════════════════════════════════════════════════════════════
+
+export async function sbCreateLog(data) {
+  const { error } = await supabase.from('logs_auditoria').insert(data);
+  if (error) console.error('[Placeta Junior] Error insert log:', error.message);
+}
+
+export async function sbCreateJuniorLog(data) {
+  const { error } = await supabase.from('junior_logs').insert(data);
+  if (error) console.error('[Placeta Junior] Error insert junior log:', error.message);
+}

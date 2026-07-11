@@ -39,6 +39,9 @@ import tramitacionRoutes from './src/routes/tramitacion.js';
 import notificacionesRoutes from './src/routes/notifications.js';
 import juniorAdminRoutes from './src/routes/junior-admin.js';
 import juniorEmailRoutes from './src/routes/junior-email.js';
+import juniorAuthRoutes from './src/routes/junior-auth.js';
+import juniorMgmtRoutes from './src/routes/junior-mgmt.js';
+import juniorAcademyRoutes from './src/routes/junior-academy.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -158,6 +161,9 @@ app.use('/api/admin', tramitacionRoutes);
 app.use('/api/notificaciones', notificacionesRoutes);
 app.use('/api/admin', juniorAdminRoutes);
 app.use('/api/admin', juniorEmailRoutes);
+app.use('/api/junior', juniorAuthRoutes);
+app.use('/api/junior', juniorMgmtRoutes);
+app.use('/api/junior/academy', juniorAcademyRoutes);
 app.use('/api/firma', firmaRoutes);
 app.use('/api/placetid', placetidRoutes);
 app.use('/api/contenidos', contenidosRoutes);
@@ -276,6 +282,26 @@ app.get('/admin/ciudadanos', verificarAuth, (req, res) => res.render('admin/ciud
 app.get('/admin/empresas', verificarAuth, (req, res) => res.render('admin/empresas', { titulo: 'Empresas y EIP' }));
 app.get('/admin/vigilancia', verificarAuth, (req, res) => res.render('admin/vigilancia', { titulo: 'Vigilancia y Monitoreo' }));
 app.get('/admin/placeta-junior', verificarAuth, (req, res) => res.render('admin/placeta-junior', { titulo: 'Placeta Junior - Gestión' }));
+
+// ── Rutas Web Placeta Junior ────────────────────────────────────────────────
+app.get('/junior/login', (req, res) => res.render('junior/login', { titulo: 'Placeta Junior - Iniciar Sesión', error: null, layout: false }));
+app.get('/junior/registro', (req, res) => res.render('junior/register', { titulo: 'Placeta Junior - Registro', error: null, success: null, layout: false }));
+app.get('/junior/dashboard', verificarJuniorSession, (req, res) => res.render('junior/dashboard', { titulo: 'Mi Espacio - Placeta Junior', layout: false }));
+app.get('/junior/academia', verificarJuniorSession, (req, res) => res.render('junior/academy', { titulo: 'Academia - Placeta Junior', layout: false }));
+app.get('/junior/documentos/terminos', (req, res) => res.render('junior/terminos-condiciones', { titulo: 'Términos y Condiciones', layout: false }));
+app.get('/junior/documentos/privacidad', (req, res) => res.render('junior/privacidad', { titulo: 'Política de Privacidad', layout: false }));
+app.get('/junior/documentos/consentimiento', (req, res) => res.render('junior/consentimiento-tutor', {
+  titulo: 'Consentimiento del Tutor', layout: false,
+  nombreMenor: req.query.nombre || '', apellidosMenor: req.query.apellidos || '',
+  fechaMenor: req.query.fecha || '', dipMenor: req.query.dip || '',
+  nombreTutor: req.query.tutor_nombre || '', apellidosTutor: req.query.tutor_apellidos || '',
+  emailTutor: req.query.tutor_email || '', firmaHash: req.query.hash || ''
+}));
+
+function verificarJuniorSession(req, res, next) {
+  if (!req.session.junior) return res.redirect('/junior/login');
+  next();
+}
 
 // URLs públicas de firma
 app.get('/firmar/:token', async (req, res) => {

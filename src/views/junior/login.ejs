@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= titulo %></title>
+  <link rel="stylesheet" href="/css/junior.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌈</text></svg>">
+</head>
+<body>
+  <div class="auth-page">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <a href="/" style="text-decoration:none">
+          <img src="/img/logojunior.jpg" alt="Placeta Junior" style="width:80px;height:80px;border-radius:50%;object-fit:cover;margin-bottom:8px;border:3px solid #f0eeff;box-shadow:0 4px 12px rgba(0,0,0,0.1)">
+          <div class="logo-text">
+            <span style="color:#FF3333">P</span><span style="color:#FF6600">l</span><span style="color:#D6CE52">a</span><span style="color:#336E45">c</span><span style="color:#3A00E1">e</span><span style="color:#4E3B70">t</span><span style="color:#000000">a</span>
+            <span style="color:#000"> Junior</span>
+          </div>
+        </a>
+      </div>
+      <h2>Iniciar Sesión</h2>
+      <p class="auth-subtitle">Accede a tu espacio Placeta Junior</p>
+
+      <% if (locals.error) { %><div class="alert alert-error"><%= error %></div><% } %>
+      <div id="errorContainer" class="alert alert-error" style="display:none"></div>
+
+      <div id="loginStep1">
+        <form id="loginForm" onsubmit="return handleLogin(event)">
+          <div class="form-group">
+            <label>DIP del menor</label>
+            <input type="text" name="dip" id="dip" required placeholder="JUNIOR-XXXXXXXX">
+          </div>
+          <div class="form-group">
+            <label>Contraseña</label>
+            <input type="password" name="password" id="password" required placeholder="••••••">
+          </div>
+          <button type="submit" class="btn-submit" id="btnLogin">🔐 Entrar</button>
+        </form>
+
+        <div class="auth-footer">
+          ¿No tienes cuenta? <a href="/registro">Regístrate aquí</a>
+        </div>
+        <div class="auth-footer" style="margin-top:8px">
+          <a href="/">← Volver a inicio</a>
+        </div>
+      </div>
+
+      <!-- Paso 2: Autorización del tutor vía PlacetaID -->
+      <div id="loginStep2" style="display:none">
+        <div style="text-align:center;padding:20px">
+          <div style="font-size:3rem;margin-bottom:16px">📱</div>
+          <h3 style="font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:1.2rem;margin-bottom:8px">
+            Autorización del Tutor
+          </h3>
+          <p style="color:var(--text-light);font-size:0.9rem;margin-bottom:16px" id="authMensaje">
+            Se ha enviado una solicitud al tutor. Debe abrir PlacetaID Móvil y aprobar el acceso.
+          </p>
+          <div class="spinner"></div>
+          <p style="font-size:0.85rem;color:var(--text-light);margin-top:12px">
+            Esperando confirmación del tutor...
+          </p>
+          <div id="codigoDisplay" style="margin-top:16px;padding:12px;background:#f0eeff;border-radius:10px;font-size:1.2rem;font-weight:700;letter-spacing:4px;display:none"></div>
+          <button class="btn btn-outline btn-sm" onclick="cancelarAuth()" style="margin-top:16px">
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/junior.js"></script>
+  <script>
+    let pollInterval = null;
+    let currentRequestId = null;
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btnLogin');
+      btn.disabled = true;
+      btn.textContent = '⏳ Verificando...';
+
+      document.getElementById('errorContainer').style.display = 'none';
+
+      const dip = document.getElementById('dip').value.trim();
+      const password = document.getElementById('password').value;
+
+      try {
+        const result = await apiFetch('/api/auth/login', {
+          method: 'POST',
+          body: JSON.stringify({ dip, password })
+        });
+
+        if (result.requiere_autorizacion_tutor) {
+          // Mostrar pantalla de espera PlacetaID
+          document.getElementById('loginStep1').style.display = 'none';
+          document.getElementById('loginStep2').style.display = 'block';
+          document.getElementById('authMensaje').textContent = result.mensaje;
+
+          if (result.codigo) {
+            const cd = document.getElementById('codigoDisplay');
+            cd.textContent = '🔑 Código: ' + result.codigo;
+            cd.style.display = 'block';
+          }
+
+          currentRequestId = result.requestId;
+          // Iniciar polling cada 3 segundos
+          pollInterval = setInterval(() => pollAuth(result.requestId), 3000);
+        } else {
+          window.location.href = result.redirect;
+        }
+      } catch (err) {
+        document.getElementById('errorContainer').textContent = err.message;
+        document.getElementById('errorContainer').style.display = 'block';
+        btn.textContent = '🔐 Entrar';
+        btn.disabled = false;
+      }
+    }
+
+    async function pollAuth(requestId) {
+      try {
+        const result = await apiFetch(`/api/auth/login/poll/${requestId}`);
+        if (result.aprobado) {
+          clearInterval(pollInterval);
+          mostrarToast('✅ Tutor autorizó el acceso', 'success');
+          setTimeout(() => { window.location.href = result.redirect || '/dashboard'; }, 1000);
+        }
+      } catch (err) {
+        // Continuar esperando
+      }
+    }
+
+    function cancelarAuth() {
+      if (pollInterval) clearInterval(pollInterval);
+      document.getElementById('loginStep2').style.display = 'none';
+      document.getElementById('loginStep1').style.display = 'block';
+      document.getElementById('btnLogin').textContent = '🔐 Entrar';
+      document.getElementById('btnLogin').disabled = false;
+    }
+  </script>
+</body>
+</html>

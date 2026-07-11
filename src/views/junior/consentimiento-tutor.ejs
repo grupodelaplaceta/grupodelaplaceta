@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Consentimiento del Tutor — Placeta Junior</title>
+  <link rel="stylesheet" href="/css/junior.css">
+  <style>
+    .doc-page { max-width: 800px; margin: 0 auto; padding: 40px 24px; }
+    .doc-page h1 { font-family:'Plus Jakarta Sans',sans-serif; font-weight:800; font-size:1.8rem; margin-bottom:8px; }
+    .doc-page .doc-meta { color:var(--text-light); font-size:0.85rem; margin-bottom:32px; padding-bottom:16px; border-bottom:2px solid #e8e6f0; }
+    .doc-page .section { background:#fff; border-radius:10px; padding:20px; margin-bottom:16px; box-shadow:0 2px 8px rgba(0,0,0,0.04); }
+    .doc-page h2 { font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:1.1rem; margin-bottom:12px; color:var(--color-o); }
+    .doc-page p, .doc-page li { font-size:0.9rem; line-height:1.7; }
+    .doc-page .firma-area { margin-top:32px; padding-top:24px; border-top:2px solid #e8e6f0; }
+    .doc-page .firma-area .line { border-bottom:1px solid #000; width:300px; margin:8px 0 4px; }
+    .doc-page .status-badge { display:inline-block; padding:4px 12px; border-radius:50px; background:var(--color-o); color:#fff; font-size:0.75rem; font-weight:600; }
+    .doc-page .checklist label { display:flex; align-items:flex-start; gap:10px; padding:10px 0; cursor:pointer; }
+    .doc-page .checklist input[type="checkbox"] { margin-top:3px; width:18px; height:18px; accent-color:var(--color-o); }
+  </style>
+</head>
+<body>
+  <div class="doc-page">
+    <h1>📋 Consentimiento del Tutor Legal</h1>
+    <div class="doc-meta">
+      <span class="status-badge">Obligatorio</span>
+      <span style="margin-left:12px">Código: <strong>PJ-CON-001</strong></span>
+      <span style="margin-left:12px">Versión: 1.0 — Julio 2026</span>
+    </div>
+
+    <div class="section">
+      <h2>Datos del Menor</h2>
+      <p><strong>Nombre:</strong> <span id="docNombreMenor"><%= locals.nombreMenor || '____________________' %></span></p>
+      <p><strong>Apellidos:</strong> <span id="docApellidosMenor"><%= locals.apellidosMenor || '____________________' %></span></p>
+      <p><strong>Fecha de Nacimiento:</strong> <span id="docFechaMenor"><%= locals.fechaMenor || '____/____/________' %></span></p>
+      <p><strong>DIP Digital:</strong> <span id="docDipMenor"><%= locals.dipMenor || '____________________' %></span></p>
+    </div>
+
+    <div class="section">
+      <h2>Datos del Tutor Legal</h2>
+      <p><strong>Nombre:</strong> <span id="docNombreTutor"><%= locals.nombreTutor || '____________________' %></span></p>
+      <p><strong>Apellidos:</strong> <span id="docApellidosTutor"><%= locals.apellidosTutor || '____________________' %></span></p>
+      <p><strong>DNI:</strong> <span id="docDniTutor">********* (encriptado)</span></p>
+      <p><strong>Email:</strong> <span id="docEmailTutor"><%= locals.emailTutor || '____________________' %></span></p>
+    </div>
+
+    <div class="section">
+      <h2>Declaraciones del Tutor</h2>
+      <p>El abajo firmante, como tutor legal del menor arriba identificado, DECLARA:</p>
+      <ol style="margin-top:12px">
+        <li>Que es <strong>mayor de edad</strong> y ostenta la patria potestad o tutela legal del menor.</li>
+        <li>Que ha leído y comprende los <strong>Términos y Condiciones</strong> de Placeta Junior (PJ-TYC-001).</li>
+        <li>Que ha leído y comprende la <strong>Política de Privacidad</strong> de Placeta Junior (PJ-PRV-001).</li>
+        <li>Que <strong>consiente expresamente</strong> el tratamiento de los datos personales del menor para las finalidades descritas en la Política de Privacidad.</li>
+        <li>Que <strong>autoriza la creación</strong> de una cuenta bancaria infantil en el Banco de La Placeta, con IBAN APP (Capitalia), en cotitularidad con el tutor.</li>
+        <li>Que <strong>acepta los límites por defecto</strong> de control parental (10 Pz/día, 50 Pz/semana) y que podrá modificarlos en cualquier momento desde PlacetaID Móvil.</li>
+        <li>Que <strong>se responsabiliza</strong> del uso que el menor haga de la plataforma.</li>
+        <li>Que <strong>conoce que puede revocar</strong> este consentimiento en cualquier momento contactando a <a href="mailto:privacidad@laplaceta.org">privacidad@laplaceta.org</a>.</li>
+      </ol>
+    </div>
+
+    <div class="section">
+      <h2>Documentos Aceptados</h2>
+      <div class="checklist">
+        <label>
+          <input type="checkbox" checked disabled>
+          <span><strong>Términos y Condiciones</strong> (PJ-TYC-001) — Regulan el uso de Placeta Junior y los derechos y obligaciones de las partes.</span>
+        </label>
+        <label>
+          <input type="checkbox" checked disabled>
+          <span><strong>Política de Privacidad</strong> (PJ-PRV-001) — Describe el tratamiento de datos personales del menor y del tutor.</span>
+        </label>
+        <label>
+          <input type="checkbox" checked disabled>
+          <span><strong>Consentimiento del Tutor</strong> (PJ-CON-001) — El presente documento.</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="firma-area">
+      <h2>Firma Digital</h2>
+      <p>La firma de este documento se realiza electrónicamente a través de <strong>PlacetaID Móvil</strong>.</p>
+      <p>Al firmar mediante PlacetaID, el Tutor acepta todas las declaraciones anteriores y confirma su identidad mediante autenticación en dos fases (2FA).</p>
+
+      <div style="margin-top:24px;padding:20px;background:#f8f6ff;border-radius:10px;text-align:center">
+        <div style="font-size:2rem;margin-bottom:8px">✍️</div>
+        <p><strong>Firmado digitalmente por el Tutor a través de PlacetaID Móvil</strong></p>
+        <p style="font-size:0.85rem;color:var(--text-light)">
+          Fecha: <%= new Date().toLocaleDateString('es-ES', { year:'numeric', month:'long', day:'numeric' }) %><br>
+          Hash de firma: <span id="firmaHash"><%= locals.firmaHash || '____________________' %></span>
+        </p>
+      </div>
+    </div>
+
+    <div class="footer-note" style="margin-top:40px;padding-top:16px;border-top:2px solid #e8e6f0;font-size:0.85rem;color:var(--text-light)">
+      <p><strong>Documento oficial del Grupo de La Placeta</strong></p>
+      <p>Código: PJ-CON-001 | Versión 1.0 | Fecha: Julio 2026</p>
+      <p>Los tres documentos (PJ-TYC-001, PJ-PRV-001, PJ-CON-001) deben ser firmados para completar el alta.</p>
+    </div>
+  </div>
+</body>
+</html>
