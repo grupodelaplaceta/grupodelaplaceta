@@ -86,7 +86,7 @@
       const password = document.getElementById('password').value;
 
       try {
-        const result = await apiFetch('/api/auth/login', {
+        const result = await apiFetch('/api/junior/login', {
           method: 'POST',
           body: JSON.stringify({ dip, password })
         });

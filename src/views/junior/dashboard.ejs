@@ -181,7 +181,7 @@
 
     async function verHistorial() {
       try {
-        const data = await apiFetch('/api/academy/historial');
+        const data = await apiFetch('/api/junior/academy/historial');
         if (!data || data.length === 0) {
           mostrarModal('📋 Historial', '<p style="text-align:center;color:var(--text-light)">No hay transacciones todavía.</p>');
           return;
@@ -207,7 +207,7 @@
 
     async function verProgreso() {
       try {
-        const data = await apiFetch('/api/academy/cuestionarios');
+        const data = await apiFetch('/api/junior/academy/cuestionarios');
         if (!data || !data.progreso) {
           mostrarModal('📊 Mi Progreso', '<p style="text-align:center;color:var(--text-light)">Aún no has completado ningún cuestionario.</p>');
           return;

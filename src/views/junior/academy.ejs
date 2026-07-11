@@ -111,7 +111,7 @@
     // Cargar datos al inicio
     document.addEventListener('DOMContentLoaded', async () => {
       try {
-        const data = await apiFetch('/api/academy/cuestionarios');
+        const data = await apiFetch('/api/junior/academy/cuestionarios');
         nivelActual = data.nivel_actual || 1;
         costoDesbloqueo = data.costo_desbloqueo || 50;
         document.getElementById('saldoAcademy').textContent = data.placetas_saldo || 0;
@@ -136,7 +136,7 @@
       respuestasActuales = [];
       placetasGanadas = 0;
 
-      apiFetch('/api/academy/cuestionarios').then(data => {
+      apiFetch('/api/junior/academy/cuestionarios').then(data => {
         preguntasActuales = data.cuestionarios[materia] || [];
         if (preguntasActuales.length === 0) {
           document.getElementById('quizContent').innerHTML = '<p style="text-align:center;color:var(--text-light)">No hay cuestionarios disponibles para esta materia.</p>';
@@ -208,7 +208,7 @@
       document.getElementById('quizContent').innerHTML = '<div class="spinner"></div>';
 
       try {
-        const result = await apiFetch('/api/academy/evaluar', {
+        const result = await apiFetch('/api/junior/academy/evaluar', {
           method: 'POST',
           body: JSON.stringify({
             materia: materiaActual,
@@ -266,7 +266,7 @@
 
     async function desbloquearNivel() {
       try {
-        const result = await apiFetch('/api/academy/desbloquear-nivel', { method: 'POST' });
+        const result = await apiFetch('/api/junior/academy/desbloquear-nivel', { method: 'POST' });
         mostrarToast(result.message, 'success');
         document.getElementById('saldoAcademy').textContent = result.saldo_actual;
         document.getElementById('nivelAcademy').textContent = result.nivel_actual;
