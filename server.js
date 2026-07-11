@@ -89,7 +89,7 @@ app.get('/favicon.ico', (req, res) => {
 const keyGenerator = (req) => {
   const fwd = req.headers['x-forwarded-for'];
   const ip = fwd ? fwd.split(',')[0].trim() : (req.ip || req.socket?.remoteAddress || 'unknown');
-  return ip;
+  return req.ip || ip;
 };
 
 const limiter = rateLimit({
