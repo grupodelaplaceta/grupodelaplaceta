@@ -2,163 +2,287 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title><%= titulo %></title>
-  <link rel="stylesheet" href="/css/junior/junior.css">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌈</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    @font-face { font-family: 'Handly Casual'; src: url('/fonts/handly-casual.woff2') format('woff2'); font-display: swap; }
+    :root {
+      --j: #FF3333; --u: #FF6600; --n: #D6CE52; --i: #336E45; --o: #3A00E1; --r: #4E3B70;
+      --font: 'Plus Jakarta Sans', sans-serif;
+      --font-handly: 'Handly Casual', cursive;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: var(--font); background: linear-gradient(180deg, #f8f7fc 0%, #edeaff 100%); min-height: 100vh; color: #1a1a2e; }
+    .container { max-width: 480px; margin: 0 auto; padding: 16px; min-height: 100vh; display: flex; flex-direction: column; }
+
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes popIn { 0% { transform: scale(0.8); opacity: 0; } 50% { transform: scale(1.05); } 100% { transform: scale(1); opacity: 1; } }
+    @keyframes bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+    @keyframes wiggle { 0%,100% { transform: rotate(0); } 25% { transform: rotate(-5deg); } 75% { transform: rotate(5deg); } }
+
+    .header { text-align: center; padding: 20px 0 8px; animation: slideDown 0.5s ease-out; }
+    .header img { width: 72px; height: 72px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.1); margin-bottom: 8px; }
+    .header h1 { font-weight: 800; font-size: 1.5rem; background: linear-gradient(90deg, var(--j), var(--u), var(--n), var(--i), var(--o), var(--r)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .header .handly { font-family: var(--font-handly); font-size: 1rem; color: var(--o); }
+    .header p { font-size: 0.85rem; color: #666; margin-top: 4px; }
+
+    .steps { display: flex; justify-content: center; gap: 8px; margin: 16px 0; }
+    .step-dot { width: 10px; height: 10px; border-radius: 50%; background: #ddd; transition: all 0.4s; }
+    .step-dot.active { background: var(--o); transform: scale(1.4); box-shadow: 0 0 8px rgba(58,0,225,0.3); }
+    .step-dot.done { background: var(--i); }
+
+    .card { background: #fff; border-radius: 16px; padding: 24px; box-shadow: 0 4px 24px rgba(0,0,0,0.06); margin-bottom: 16px; animation: slideUp 0.4s ease-out; }
+    .card h2 { font-weight: 700; font-size: 1.1rem; margin-bottom: 4px; }
+    .card .subtitle { font-size: 0.85rem; color: #888; margin-bottom: 20px; }
+    .card .emoji-big { font-size: 2.5rem; text-align: center; margin-bottom: 12px; animation: bounce 2s infinite; }
+
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-weight: 600; font-size: 0.8rem; margin-bottom: 4px; color: #444; }
+    .form-group input { width: 100%; padding: 12px 16px; border: 2px solid #eee; border-radius: 12px; font-family: var(--font); font-size: 0.95rem; transition: all 0.2s; background: #faf9fc; }
+    .form-group input:focus { outline: none; border-color: var(--o); background: #fff; box-shadow: 0 0 0 3px rgba(58,0,225,0.08); }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    .btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 14px; border: none; border-radius: 12px; font-family: var(--font); font-weight: 700; font-size: 1rem; cursor: pointer; transition: all 0.25s; }
+    .btn-primary { background: linear-gradient(135deg, var(--o), var(--r)); color: #fff; }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(58,0,225,0.3); }
+    .btn-primary:disabled { opacity: 0.5; transform: none; cursor: not-allowed; }
+    .btn-success { background: linear-gradient(135deg, var(--i), #2a6b3a); color: #fff; }
+    .btn-success:hover { transform: translateY(-2px); }
+    .btn-outline { background: transparent; border: 2px solid var(--o); color: var(--o); }
+    .btn-outline:hover { background: #f0eeff; }
+    .btn-sm { padding: 10px; font-size: 0.85rem; }
+
+    .tutor-opciones { display: grid; gap: 10px; margin-bottom: 12px; }
+    .tutor-option { padding: 16px; border: 2px solid #eee; border-radius: 12px; cursor: pointer; transition: all 0.2s; text-align: center; background: #faf9fc; }
+    .tutor-option:hover { border-color: var(--o); background: #f0eeff; }
+    .tutor-option.selected { border-color: var(--o); background: #e8e4ff; box-shadow: 0 0 0 3px rgba(58,0,225,0.1); }
+    .tutor-option .t-icon { font-size: 2rem; }
+    .tutor-option .t-title { font-weight: 700; font-size: 0.95rem; margin-top: 8px; }
+    .tutor-option .t-desc { font-size: 0.8rem; color: #888; margin-top: 4px; }
+
+    .success-screen { text-align: center; padding: 20px 0; }
+    .success-screen .big-icon { font-size: 4rem; margin-bottom: 16px; animation: popIn 0.6s ease-out; }
+    .success-screen h2 { font-weight: 800; font-size: 1.4rem; margin-bottom: 8px; }
+
+    .tip { background: #fefce8; border-radius: 12px; padding: 12px 16px; margin: 12px 0; font-size: 0.85rem; border-left: 4px solid var(--n); }
+    .tip-parent { background: #f0eeff; border-radius: 12px; padding: 14px; margin: 12px 0; font-size: 0.85rem; border-left: 4px solid var(--o); }
+
+    .alert { padding: 12px 16px; border-radius: 12px; margin-bottom: 12px; font-size: 0.85rem; }
+    .alert-error { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+    .hidden { display: none; }
+    .mt-8 { margin-top: 8px; }
+    .mt-16 { margin-top: 16px; }
+  </style>
 </head>
 <body>
-  <div class="auth-page">
-    <div class="auth-card">
-      <div class="auth-logo">
-        <a href="/" style="text-decoration:none">
-          <img src="/img/logojunior.jpg" alt="Placeta Junior" style="width:80px;height:80px;border-radius:50%;object-fit:cover;margin-bottom:8px;border:3px solid #f0eeff;box-shadow:0 4px 12px rgba(0,0,0,0.1)">
-          <div class="logo-text">
-            <span style="color:#FF3333">P</span><span style="color:#FF6600">l</span><span style="color:#D6CE52">a</span><span style="color:#336E45">c</span><span style="color:#3A00E1">e</span><span style="color:#4E3B70">t</span><span style="color:#000000">a</span>
-            <span style="color:#000"> Junior</span>
-          </div>
-        </a>
+<div class="container">
+  <div class="header">
+    <img src="/img/logojunior.jpg" alt="Placeta Junior">
+    <p class="handly">¡Hola, pequeño explorador! 🚀</p>
+    <h1>Placeta Junior</h1>
+    <p>Vamos a crear tu cuenta paso a paso</p>
+  </div>
+
+  <div class="steps" id="stepsIndicator">
+    <span class="step-dot active" data-step="1"></span>
+    <span class="step-dot" data-step="2"></span>
+    <span class="step-dot" data-step="3"></span>
+    <span class="step-dot" data-step="4"></span>
+  </div>
+
+  <div id="errorContainer" class="alert alert-error hidden"></div>
+
+  <!-- PASO 1: Datos del menor -->
+  <div class="card" id="step1">
+    <div class="emoji-big">🧒</div>
+    <h2>¿Cómo te llamas?</h2>
+    <p class="subtitle">Primero cuéntanos quién eres</p>
+    <div class="form-row">
+      <div class="form-group"><label>Tu nombre</label><input type="text" id="nombre" placeholder="Ej: Ana"></div>
+      <div class="form-group"><label>Tus apellidos</label><input type="text" id="apellidos" placeholder="Ej: García Pérez"></div>
+    </div>
+    <div class="form-group"><label>🎂 Tu fecha de nacimiento</label><input type="date" id="fechaNacimiento" onchange="checkEdad()"></div>
+    <div class="form-group"><label>📧 Tu email (o el de tus padres)</label><input type="email" id="email" placeholder="tucorreo@email.com"></div>
+    <div class="form-group"><label>🔑 Crea una contraseña</label><input type="password" id="password" placeholder="Mínimo 6 caracteres" minlength="6"></div>
+    <div class="tip">🌟 <strong>¡Tranquilo!</strong> Si tienes dudas, pide ayuda a tu padre o madre. Ellos te guiarán.</div>
+    <button class="btn btn-primary mt-16" onclick="goStep2()">👉 Siguiente</button>
+  </div>
+
+  <!-- PASO 2: ¿Tutor tiene DIP? -->
+  <div class="card hidden" id="step2">
+    <div class="emoji-big">👨‍👩‍👧</div>
+    <h2>¿Tu padre o madre tiene DIP?</h2>
+    <p class="subtitle">Necesitamos que un tutor legal te dé de alta</p>
+    <div class="tip-parent"><strong>👆 Pregunta a tu padre o madre:</strong> "¿Tienes ya un DIP de PlacetaID?"<br><small style="color:#888">El DIP son 8 números + letra (ej: 12345678A)</small></div>
+
+    <div class="tutor-opciones">
+      <div class="tutor-option" onclick="selectTutor(true)" id="tutorSi">
+        <div class="t-icon">✅</div>
+        <div class="t-title">¡Sí, ya tiene DIP!</div>
+        <div class="t-desc">Mi padre/madre ya tiene cuenta</div>
       </div>
-      <h2>Crear tu cuenta</h2>
-      <p class="auth-subtitle">Elige tu modalidad y completa el registro</p>
+      <div class="tutor-option" onclick="selectTutor(false)" id="tutorNo">
+        <div class="t-icon">🆕</div>
+        <div class="t-title">No tiene DIP</div>
+        <div class="t-desc">Se registrará ahora</div>
+      </div>
+    </div>
 
-      <% if (locals.error) { %><div class="alert alert-error"><%= error %></div><% } %>
-      <% if (locals.success) { %><div class="alert alert-success"><%= success %></div><% } %>
+    <div id="tutorConDip" class="hidden">
+      <div class="form-group"><label>DIP de tu padre/madre</label><input type="text" id="dniTutor" placeholder="12345678A" maxlength="9"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Nombre</label><input type="text" id="nombreTutor" placeholder="Nombre"></div>
+        <div class="form-group"><label>Apellidos</label><input type="text" id="apellidosTutor" placeholder="Apellidos"></div>
+      </div>
+      <button class="btn btn-primary mt-8" onclick="goStep3()">👉 Siguiente</button>
+      <button class="btn btn-outline btn-sm mt-8" onclick="resetTutor()" style="width:100%">← No tiene DIP</button>
+    </div>
 
-      <div id="errorContainer" class="alert alert-error" style="display:none"></div>
-      <div id="successContainer" class="alert alert-success" style="display:none"></div>
+    <div id="tutorSinDip" class="hidden">
+      <p style="font-size:0.9rem;color:#888;margin-bottom:12px">¡No pasa nada! Damos de alta a tu padre/madre también:</p>
+      <div class="form-row">
+        <div class="form-group"><label>Nombre</label><input type="text" id="nombreTutorNew" placeholder="Nombre"></div>
+        <div class="form-group"><label>Apellidos</label><input type="text" id="apellidosTutorNew" placeholder="Apellidos"></div>
+      </div>
+      <div class="form-group"><label>DNI (encriptado)</label><input type="text" id="dniTutorNew" placeholder="12345678A" maxlength="9"></div>
+      <div class="form-group"><label>📧 Email del tutor</label><input type="email" id="emailTutorNew" placeholder="tutor@email.com"></div>
+      <div class="tip-parent"><strong>📱 Después:</strong> Tu tutor abrirá PlacetaID Móvil, escaneará un QR, verificará su identidad y firmará tus documentos.</div>
+      <button class="btn btn-primary mt-8" onclick="goStep3()">👉 Siguiente</button>
+      <button class="btn btn-outline btn-sm mt-8" onclick="resetTutor()" style="width:100%">← Mi tutor ya tiene DIP</button>
+    </div>
+    <button class="btn btn-outline btn-sm mt-8" onclick="volver(1)" style="width:100%">← Volver</button>
+  </div>
 
-      <form id="registerForm" onsubmit="return handleRegister(event)">
-        <input type="hidden" name="modalidad" value="junior">
+  <!-- PASO 3: Revisión -->
+  <div class="card hidden" id="step3">
+    <div class="emoji-big">📋</div>
+    <h2>Revisa tus datos</h2>
+    <p class="subtitle">¿Está todo correcto?</p>
+    <div style="background:#f8f6ff;border-radius:12px;padding:16px;margin-bottom:12px">
+      <h3 style="font-size:0.9rem;font-weight:700;margin-bottom:8px;color:var(--o)">🧒 Tus datos</h3>
+      <p id="resumenMenor" style="font-size:0.85rem;line-height:1.8"></p>
+    </div>
+    <div style="background:#fefce8;border-radius:12px;padding:16px;margin-bottom:12px">
+      <h3 style="font-size:0.9rem;font-weight:700;margin-bottom:8px;color:var(--n)">👨‍👩‍👧 Datos del tutor</h3>
+      <p id="resumenTutor" style="font-size:0.85rem;line-height:1.8"></p>
+    </div>
+    <div class="tip">📱 <strong>¿Sabías que...?</strong> Después del registro, tu tutor firmará tus papeles desde PlacetaID Móvil. ¡Avisa a tu padre o madre!</div>
+    <button class="btn btn-success mt-16" id="btnFinalizar" onclick="finalizar()">🚀 ¡Crear mi cuenta!</button>
+    <button class="btn btn-outline btn-sm mt-8" onclick="volver(2)" style="width:100%">← Cambiar datos</button>
+  </div>
 
-        <!-- Datos del menor -->
-        <div class="form-row">
-          <div class="form-group">
-            <label>Nombre del menor</label>
-            <input type="text" name="nombre" id="nombre" required>
-          </div>
-          <div class="form-group">
-            <label>Apellidos</label>
-            <input type="text" name="apellidos" id="apellidos" required>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>Fecha de nacimiento</label>
-          <input type="date" name="fecha_nacimiento" id="fechaNacimiento" required onchange="checkEdad()">
-        </div>
-
-        <div class="form-group">
-          <label>Email de contacto</label>
-          <input type="email" name="email" id="email" required>
-        </div>
-
-        <div class="form-group">
-          <label>Contraseña</label>
-          <input type="password" name="password" id="password" required minlength="6">
-        </div>
-
-        <!-- Datos del tutor (solo para Junior <16) -->
-        <div class="tutor-section" id="tutorSection">
-          <h3 style="font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:1rem;margin-bottom:12px">👨‍👩‍👧 Datos del Tutor Legal</h3>
-          <p style="font-size:0.85rem;color:#6b6b80;margin-bottom:16px">El tutor deberá firmar el alta desde PlacetaID Móvil</p>
-          <div class="form-row">
-            <div class="form-group">
-              <label>Nombre del tutor</label>
-              <input type="text" name="nombre_tutor" id="nombreTutor">
-            </div>
-            <div class="form-group">
-              <label>Apellidos del tutor</label>
-              <input type="text" name="apellidos_tutor" id="apellidosTutor">
-            </div>
-          </div>
-          <div class="form-group">
-            <label>DNI del tutor (se encriptará)</label>
-            <input type="text" name="dni_tutor" id="dniTutor" placeholder="12345678A" maxlength="9">
-          </div>
-        </div>
-
-        <button type="submit" class="btn-submit" id="btnRegister">🌟 Crear cuenta</button>
-      </form>
-
-      <div class="auth-footer">
-        ¿Ya tienes cuenta? <a href="/login">Inicia sesión</a>
+  <!-- PASO 4: Completado -->
+  <div class="card hidden" id="step4">
+    <div class="success-screen">
+      <div class="big-icon">🎉</div>
+      <h2>¡Casi listo!</h2>
+      <p>Tu cuenta está creada.<br><strong>Falta que tu tutor firme:</strong></p>
+      <div style="background:linear-gradient(135deg,var(--o),var(--r));border-radius:16px;padding:20px;margin:16px;color:#fff">
+        <div style="font-size:2rem">📱</div>
+        <p style="font-weight:600">¡Dile a tu padre o madre que abra PlacetaID Móvil!</p>
+      </div>
+      <div id="resultadoRegistro" style="font-size:0.85rem;color:#666;line-height:1.6"></div>
+      <div class="tip-parent" style="text-align:left;margin-top:12px">
+        <strong>📝 Documentos a firmar:</strong><br>
+        ✅ Términos y Condiciones<br>
+        ✅ Política de Privacidad<br>
+        ✅ Consentimiento del Tutor
       </div>
     </div>
   </div>
+</div>
 
-  <script src="/js/junior/junior.js"></script>
-  <script>
-    // Tutor section siempre visible (tutor obligatorio)
-    document.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('tutorSection').classList.add('visible');
-    });
+<script src="/js/junior/junior.js"></script>
+<script>
+let paso = 1, tutorDip = null, data = {};
 
-    function checkEdad() {
-      const fecha = document.getElementById('fechaNacimiento').value;
-      if (!fecha) return;
-      const nacimiento = new Date(fecha);
-      const hoy = new Date(2026, 6, 11);
-      let edad = hoy.getFullYear() - nacimiento.getFullYear();
-      const mesDiff = hoy.getMonth() - nacimiento.getMonth();
-      if (mesDiff < 0 || (mesDiff === 0 && hoy.getDate() < nacimiento.getDate())) edad--;
+function show(n) {
+  for (let i = 1; i <= 4; i++) document.getElementById('step' + i).classList.toggle('hidden', i !== n);
+  document.querySelectorAll('.step-dot').forEach(d => {
+    const s = +d.dataset.step;
+    d.classList.toggle('active', s === n);
+    d.classList.toggle('done', s < n);
+  });
+  paso = n;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
 
-      if (edad >= 16) {
-        document.getElementById('errorContainer').textContent = 'Placeta Junior es solo para menores de 16 años. Los mayores deben usar PlacetaID estándar.';
-        document.getElementById('errorContainer').style.display = 'block';
-        document.getElementById('btnRegister').disabled = true;
-      } else {
-        document.getElementById('errorContainer').style.display = 'none';
-        document.getElementById('btnRegister').disabled = false;
-      }
-    }
+function checkEdad() {
+  const f = document.getElementById('fechaNacimiento').value;
+  if (!f) return;
+  const nac = new Date(f), hoy = new Date(2026,6,11);
+  let edad = hoy.getFullYear() - nac.getFullYear();
+  if (hoy.getMonth() < nac.getMonth() || (hoy.getMonth() === nac.getMonth() && hoy.getDate() < nac.getDate())) edad--;
+  const err = document.getElementById('errorContainer');
+  if (edad >= 16) { err.textContent = '🧒 Placeta Junior es solo para menores de 16 años.'; err.classList.remove('hidden'); }
+  else err.classList.add('hidden');
+}
 
-    async function handleRegister(e) {
-      e.preventDefault();
-      const btn = document.getElementById('btnRegister');
-      btn.disabled = true;
-      btn.textContent = '⏳ Registrando...';
+function goStep2() {
+  const n = document.getElementById('nombre').value.trim(), a = document.getElementById('apellidos').value.trim();
+  const f = document.getElementById('fechaNacimiento').value, e = document.getElementById('email').value.trim(), p = document.getElementById('password').value;
+  if (!n||!a||!f||!e||!p) { mostrarToast('Rellena todos los campos','error'); return; }
+  data = { nombre:n, apellidos:a, fecha:f, email:e, password:p };
+  show(2);
+}
 
-      document.getElementById('errorContainer').style.display = 'none';
-      document.getElementById('successContainer').style.display = 'none';
+function selectTutor(v) {
+  tutorDip = v;
+  ['tutorSi','tutorNo'].forEach(id => document.getElementById(id).classList.toggle('selected', id === (v ? 'tutorSi' : 'tutorNo')));
+  document.getElementById('tutorConDip').classList.toggle('hidden', !v);
+  document.getElementById('tutorSinDip').classList.toggle('hidden', v);
+}
 
-      const formData = new FormData(document.getElementById('registerForm'));
-      const data = Object.fromEntries(formData.entries());
+function resetTutor() {
+  tutorDip = null;
+  ['tutorSi','tutorNo'].forEach(id => document.getElementById(id).classList.remove('selected'));
+  document.getElementById('tutorConDip').classList.add('hidden');
+  document.getElementById('tutorSinDip').classList.add('hidden');
+}
 
-      try {
-        const result = await apiFetch('/api/junior/register', {
-          method: 'POST',
-          body: JSON.stringify(data)
-        });
+function goStep3() {
+  if (tutorDip === null) { mostrarToast('Selecciona si tu tutor tiene DIP','error'); return; }
+  if (tutorDip) {
+    const d = document.getElementById('dniTutor').value.trim(), n = document.getElementById('nombreTutor').value.trim(), a = document.getElementById('apellidosTutor').value.trim();
+    if (!d||!n||!a) { mostrarToast('Rellena los datos del tutor','error'); return; }
+    Object.assign(data, { tutorDip:d, tutorNombre:n, tutorApellidos:a, tutorTieneDip:true });
+  } else {
+    const d = document.getElementById('dniTutorNew').value.trim(), n = document.getElementById('nombreTutorNew').value.trim();
+    const a = document.getElementById('apellidosTutorNew').value.trim(), e = document.getElementById('emailTutorNew').value.trim();
+    if (!d||!n||!a||!e) { mostrarToast('Rellena todos los datos del tutor','error'); return; }
+    if (!/^\d{8}[A-Z]$/.test(d)) { mostrarToast('DNI: 8 dígitos + letra mayúscula','error'); return; }
+    Object.assign(data, { tutorDip:d, tutorNombre:n, tutorApellidos:a, tutorEmail:e, tutorTieneDip:false });
+  }
+  document.getElementById('resumenMenor').innerHTML = `📛 ${data.nombre} ${data.apellidos}<br>🎂 ${data.fecha}<br>📧 ${data.email}`;
+  document.getElementById('resumenTutor').innerHTML = `👤 ${data.tutorNombre} ${data.tutorApellidos}<br>🆔 ${data.tutorDip}${data.tutorTieneDip ? '<br>✅ Ya tiene DIP' : '<br>🆕 Se registrará'}`;
+  show(3);
+}
 
-        document.getElementById('successContainer').textContent = result.message;
-        document.getElementById('successContainer').style.display = 'block';
+async function finalizar() {
+  const btn = document.getElementById('btnFinalizar');
+  btn.disabled = true; btn.textContent = '⏳ Creando...';
+  document.getElementById('errorContainer').classList.add('hidden');
+  try {
+    const r = await apiFetch('/api/junior/register', { method:'POST', body:JSON.stringify({
+      nombre:data.nombre, apellidos:data.apellidos, fecha_nacimiento:data.fecha,
+      email:data.email, password:data.password, modalidad:'junior',
+      nombre_tutor:data.tutorNombre, apellidos_tutor:data.tutorApellidos, dni_tutor:data.tutorDip
+    })});
+    show(4);
+    document.getElementById('resultadoRegistro').innerHTML = `🆔 Tu DIP: <strong>${r.dip}</strong><br><br><small>📱 Tu tutor debe abrir PlacetaID Móvil para firmar</small>`;
+  } catch (err) {
+    document.getElementById('errorContainer').textContent = '❌ ' + err.message;
+    document.getElementById('errorContainer').classList.remove('hidden');
+    btn.disabled = false; btn.textContent = '🚀 ¡Crear mi cuenta!';
+  }
+}
 
-        if (result.necesita_firma_tutor) {
-          // Mostrar información sobre firma del tutor
-          mostrarModal('📋 Firma del Tutor Requerida', `
-            <div class="alert alert-info">
-              <strong>Registro completado.</strong> El tutor legal debe firmar el alta, los términos y condiciones,
-              y la política de privacidad desde <strong>PlacetaID Móvil</strong>.
-            </div>
-            <div style="background:#f0eeff;border-radius:10px;padding:16px;margin:12px 0">
-              <p style="font-size:0.85rem;color:#4f46e5;margin-bottom:8px"><strong>DIP del menor:</strong></p>
-              <code style="font-size:1.2rem;user-select:all">${result.dip}</code>
-            </div>
-            <p style="font-size:0.85rem;color:#6b6b80">Una vez firmado, el menor podrá acceder a Placeta Junior.</p>
-          `);
-          btn.textContent = '🌟 Crear cuenta';
-          btn.disabled = false;
-        } else {
-          setTimeout(() => { window.location.href = result.redirect; }, 1500);
-        }
-      } catch (err) {
-        document.getElementById('errorContainer').textContent = err.message;
-        document.getElementById('errorContainer').style.display = 'block';
-        btn.textContent = '🌟 Crear cuenta';
-        btn.disabled = false;
-      }
-    }
-  </script>
+function volver(n) { show(n); }
+</script>
 </body>
 </html>

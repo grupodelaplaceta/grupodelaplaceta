@@ -88,10 +88,10 @@ app.get('/favicon.ico', (req, res) => {
 // Rate limiting general API
 const keyGenerator = (req) => {
   const fwd = req.headers['x-forwarded-for'];
-  if (fwd) return fwd.split(',')[0].trim();
-  if (req.ip) return req.ip;
-  return req.socket?.remoteAddress || 'unknown';
+  return fwd ? fwd.split(',')[0].trim() : (req.ip || req.socket?.remoteAddress || 'unknown');
 };
+// Silenciar warning de IPv6 (compatible con version actual de express-rate-limit)
+process.env.ERL_IPV6_UNSAFE = '1';
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
