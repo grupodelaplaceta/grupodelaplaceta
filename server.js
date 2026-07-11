@@ -88,8 +88,9 @@ app.get('/favicon.ico', (req, res) => {
 // Rate limiting general API
 const keyGenerator = (req) => {
   const fwd = req.headers['x-forwarded-for'];
-  const ip = fwd ? fwd.split(',')[0].trim() : (req.ip || req.socket?.remoteAddress || 'unknown');
-  return req.ip || ip;
+  if (fwd) return fwd.split(',')[0].trim();
+  if (req.ip) return req.ip;
+  return req.socket?.remoteAddress || 'unknown';
 };
 
 const limiter = rateLimit({
