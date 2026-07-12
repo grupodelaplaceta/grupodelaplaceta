@@ -6,34 +6,28 @@ import {
   sbFindSolicitante, sbFindSolicitanteByEmail, sbFindSolicitanteByDip,
   sbCreateSolicitante, sbUpdateSolicitante,
   sbCreateSolicitudDip,
-  sbFindControlParentalByCodigo, sbCreateControlParental,
+  sbFindControlParentalByCodigo, sbFindControlParentalByDni, sbCreateControlParental,
   sbCreateJunior, sbFindJuniorByDip, sbFindJuniorByTutor,
-  sbCreateLog, sbCreateJuniorLog, sbCreatePlacetaTransaction
+  sbCreateLog, sbCreateJuniorLog, sbCreatePlacetaTransaction,
+  sbCreateTributosContributor, sbGetTributosContributorByPlacetaId
 } from '../config/db-supabase.js';
-// Funciones bancarias se llaman via API del backend-banco
-async function bonoBienvenida({ juniorAccountId, juniorDip, tutorDip }) {
-  try {
-    const BRIDGE = process.env.MONGO_BRIDGE_URL || 'http://localhost:8787';
-    const r = await fetch(`${BRIDGE}/api/state`);
-    if (!r.ok) throw new Error('Banco no disponible');
-    const state = await r.json();
-    const from = state.accounts.find(a => a.id === 'AGLDP');
-    const to = state.accounts.find(a => a.id === juniorAccountId);
-    if (!from || !to) throw new Error('Cuentas no encontradas');
-    if (from.balancePz < 750) throw new Error('Saldo insuficiente en AGLDP');
-    from.balancePz -= 750;
-    to.balancePz += 750;
-    state.transactions = [...(state.transactions || []), {
-      id: `pj-bono-${Date.now()}`, kind: 'Gift', fromAccountId: 'AGLDP', toAccountId: juniorAccountId,
-      amountPz: 750, ivaPz: 0, netAmount: 750, concept: 'Bono Bienvenida Placeta Junior' + (tutorDip === '11111111D' ? ' (Demo)' : ''),
-      status: 'Settled', createdAt: new Date().toISOString()
-    }];
-    await fetch(`${BRIDGE}/api/state`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(state) });
-    return { success: true };
-  } catch (e) { return { success: false, error: e.message }; }
-}
-async function crearCuentaInfantil({ juniorDip, juniorNombre, tutorAccountId, sendLimitPz }) {
-  return { accountId: `u-${juniorDip?.toLowerCase().replace(/-/g, '')}`, iban: `CAPI-${Date.now().toString(36).toUpperCase()}`, exists: false };
+
+const BANCO_API = (process.env.BANCO_API_URL || 'https://api.banco.laplaceta.org').replace(/\/+$/, '');
+const PLACETAID_API = process.env.PLACETAID_API_URL || 'http://localhost:3000';
+const CRM_KEY = process.env.CRM_READ_KEY || 'crm-gdlp-shared-key-2026';
+
+async function apiBanco(action, data = {}) {
+  const r = await fetch(`${BANCO_API}/api/crm-state`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CRM-Key': CRM_KEY },
+    body: JSON.stringify({ action, ...data }),
+    signal: AbortSignal.timeout(10000)
+  });
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({ error: r.statusText }));
+    throw new Error(err.error || 'Error en API banco');
+  }
+  return r.json();
 }
 
 const router = Router();
@@ -170,8 +164,35 @@ router.post('/register', async (req, res) => {
       ip
     });
 
+    // ── Crear solicitud de firma PlacetaID para el tutor ────────────────
+    let placetaidRequest = null;
+    try {
+      const placetaIdResp = await fetch(`${PLACETAID_API}/api/mobil/request`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dip: dni_tutor,
+          servicio: 'Placeta Junior - Registro',
+          servicioUrl: `${process.env.CRM_BASE_URL || 'http://localhost:3001'}/junior-auth/verify/${juniorRecord.id}`,
+          plataforma: 'web'
+        }),
+        signal: AbortSignal.timeout(5000)
+      });
+      if (placetaIdResp.ok) {
+        placetaidRequest = await placetaIdResp.json();
+        await sbCreateJuniorLog({
+          junior_id: juniorRecord.id,
+          accion: 'placetaid_solicitud',
+          detalle: `Solicitud de firma PlacetaID creada. Código: ${placetaidRequest.codigo}. RequestId: ${placetaidRequest.requestId}`,
+          ip
+        });
+      }
+    } catch (pidErr) {
+      console.warn('[Placeta Junior] Error creando solicitud PlacetaID:', pidErr.message);
+    }
+
     // ── Respuesta — siempre pendiente de firma del tutor ──────────────────
-    return res.json({
+    const responseData = {
       success: true,
       message: 'Registro completado. El tutor legal debe firmar el alta, los términos y condiciones, y la política de privacidad desde PlacetaID Móvil para generar el DIP Digital y activar la cuenta.',
       redirect: '/registro/pendiente-firma',
@@ -179,7 +200,14 @@ router.post('/register', async (req, res) => {
       necesita_firma_tutor: true,
       junior_id: juniorRecord.id,
       tutor_dip: dni_tutor
-    });
+    };
+
+    if (placetaidRequest) {
+      responseData.placetaid_codigo = placetaidRequest.codigo;
+      responseData.placetaid_requestId = placetaidRequest.requestId;
+    }
+
+    return res.json(responseData);
   } catch (err) {
     console.error('[Placeta Junior] Error en registro:', err);
     res.status(500).json({ error: 'Error interno del servidor. Inténtelo de nuevo más tarde.' });
@@ -302,6 +330,89 @@ router.get('/login/poll/:requestId', async (req, res) => {
     res.json({ success: true, aprobado: false, status: result.status || 'pending' });
   } catch (err) {
     res.json({ success: false, aprobado: false, error: err.message });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  VERIFY — Webhook para PlacetaID: tutor firmó el registro
+// ═══════════════════════════════════════════════════════════════════════════
+
+router.get('/verify/:juniorId', async (req, res) => {
+  try {
+    const { juniorId } = req.params;
+    if (!juniorId) return res.status(400).json({ error: 'ID de junior requerido' });
+
+    // Buscar junior por ID en Supabase directamente
+    const { supabase } = await import('../config/supabase.js');
+    const { data: junior } = await supabase
+      .from('junior_menores')
+      .select('*, tutor:solicitantes!junior_menores_tutor_dip_fkey(dip, alias, nombre_real, email)')
+      .eq('id', juniorId)
+      .single()
+      .catch(() => ({ data: null }));
+    if (!junior) {
+      return res.status(404).send(`
+        <!DOCTYPE html><html><head><meta charset="utf-8"><title>Error</title>
+        <style>body{font-family:sans-serif;text-align:center;padding:40px;color:#333}
+        .error{color:#c33;font-size:24px;margin:20px 0}</style></head><body>
+        <div class="error">❌</div>
+        <h1>Menor no encontrado</h1>
+        <p>El enlace de verificación no es válido o el registro ya fue procesado.</p>
+        </body></html>
+      `);
+    }
+
+    res.send(`
+      <!DOCTYPE html><html><head><meta charset="utf-8">
+      <title>Verificación Placeta Junior</title>
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      <link rel="preconnect" href="https://fonts.googleapis.com">
+      <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+      <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'Plus Jakarta Sans',sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+        .card{background:#fff;border-radius:24px;padding:40px;max-width:420px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.15)}
+        .icon{font-size:64px;margin-bottom:16px}
+        h1{font-size:24px;font-weight:800;color:#1a1a2e;margin-bottom:8px}
+        p{color:#666;font-size:14px;line-height:1.6;margin-bottom:24px}
+        .code{background:#f0f0ff;border:2px dashed #667eea;border-radius:12px;padding:16px;font-size:32px;font-weight:800;letter-spacing:8px;color:#1a1a2e;margin:16px 0}
+        .status{display:inline-block;padding:8px 20px;border-radius:20px;font-size:13px;font-weight:600;margin:8px 0}
+        .status-pending{background:#fff3cd;color:#856404}
+        .status-active{background:#d4edda;color:#155724}
+        .btn{display:inline-block;padding:12px 32px;border-radius:12px;border:none;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;text-decoration:none;transition:transform .2s,box-shadow .2s}
+        .btn-primary{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;box-shadow:0 4px 15px rgba(102,126,234,.4)}
+        .btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(102,126,234,.5)}
+        .btn-secondary{background:#f0f0ff;color:#667eea;margin-top:12px}
+        .detail{background:#f8f9fa;border-radius:12px;padding:16px;text-align:left;margin:16px 0}
+        .detail-row{display:flex;justify-content:space-between;padding:6px 0;font-size:13px;border-bottom:1px solid #eee}
+        .detail-row:last-child{border-bottom:none}
+        .detail-label{color:#888}
+        .detail-value{font-weight:600;color:#333}
+        @media(max-width:480px){.card{padding:24px}.code{font-size:24px;letter-spacing:4px}}
+      </style></head><body>
+        <div class="card">
+          <div class="icon">${junior.estado === 'activo' ? '✅' : '⏳'}</div>
+          <h1>${junior.estado === 'activo' ? '¡Registro Verificado!' : 'Pendiente de Firma'}</h1>
+          <p>${junior.estado === 'activo'
+            ? 'El tutor legal ha firmado el alta. El menor ya puede acceder a Placeta Junior.'
+            : 'El tutor legal debe abrir PlacetaID Móvil y aprobar la solicitud de firma para activar la cuenta.'}</p>
+          <div class="detail">
+            <div class="detail-row"><span class="detail-label">Menor</span><span class="detail-value">${junior.nombre || ''} ${junior.apellidos || ''}</span></div>
+            <div class="detail-row"><span class="detail-label">DIP</span><span class="detail-value">${junior.dip || ''}</span></div>
+            <div class="detail-row"><span class="detail-label">Tutor</span><span class="detail-value">${junior.tutor_nombre || ''}</span></div>
+            <div class="detail-row"><span class="detail-label">Estado</span><span class="status ${junior.estado === 'activo' ? 'status-active' : 'status-pending'}">${junior.estado === 'activo' ? '✅ Activo' : '⏳ Pendiente firma'}</span></div>
+          </div>
+          ${junior.estado === 'activo'
+            ? '<a href="/junior/login" class="btn btn-primary">Ir a Placeta Junior</a>'
+            : '<div class="code">ABCD</div><p style="font-size:12px;color:#999">O introduce el código en PlacetaID Móvil</p>'
+          }
+          <a href="/junior/register" class="btn btn-secondary">← Volver</a>
+        </div>
+      </body></html>
+    `);
+  } catch (err) {
+    console.error('[Verify] Error:', err.message);
+    res.status(500).send('Error interno');
   }
 });
 

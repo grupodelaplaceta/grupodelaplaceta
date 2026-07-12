@@ -66,15 +66,18 @@ class PDFGenerator {
         const logoBuffer = fs.readFileSync(this.logo);
         doc.image(logoBuffer, 50, 32, { width: 32 });
         doc.font(this._f(true)).fontSize(11).fillColor('#1c005f');
-        doc.text('  TLP', 85, 38);
+        const logoLabel = this.tipo === 'tributos' ? '  TRIBUTOS GDLP' : '  TLP';
+        doc.text(logoLabel, 85, 38);
       } catch (e) {
         console.error('[PDF] Logo error:', e.message);
         doc.font(this._f(true)).fontSize(11).fillColor('#1c005f');
-        doc.text('TLP', 50, 40);
+        const fallback = this.tipo === 'tributos' ? '🏛️  TRIBUTOS GDLP' : '🏛️  GRUPO DE LA PLACETA';
+        doc.text(fallback, 50, 40);
       }
     } else {
       doc.font(this._f(true)).fontSize(11).fillColor('#1c005f');
-      doc.text('\u{1F3DB}\u{FE0F}  GRUPO DE LA PLACETA', 50, 40);
+      const fallback = this.tipo === 'tributos' ? '🏛️  TRIBUTOS GDLP' : '🏛️  GRUPO DE LA PLACETA';
+      doc.text(fallback, 50, 40);
     }
     doc.font(this._f(false, true)).fontSize(7).fillColor('#5c5566');
     doc.text(codigo || 'Documento Oficial', 50, 56);

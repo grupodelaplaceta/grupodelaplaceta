@@ -5,32 +5,26 @@ import {
   sbFindSolicitanteByDip, sbUpdateSolicitante,
   sbFindJuniorByDip, sbFindJuniorByTutor, sbListJuniors, sbUpdateJunior,
   sbGetParentalLimits, sbCreateParentalLimit, sbUpdateParentalLimits,
-  sbCreateLog, sbCreateJuniorLog, sbCreatePlacetaTransaction
+  sbCreateLog, sbCreateJuniorLog, sbCreatePlacetaTransaction,
+  sbCreateTributosContributor, sbGetTributosContributorByPlacetaId
 } from '../config/db-supabase.js';
 import { supabase } from '../config/supabase.js';
-// Funciones bancarias via API backend-banco
-async function bonoBienvenida({ juniorAccountId, juniorDip, tutorDip }) {
-  try {
-    const BRIDGE = process.env.MONGO_BRIDGE_URL || 'http://localhost:8787';
-    const r = await fetch(`${BRIDGE}/api/state`);
-    if (!r.ok) throw new Error('Banco no disponible');
-    const state = await r.json();
-    const from = state.accounts.find(a => a.id === 'AGLDP');
-    const to = state.accounts.find(a => a.id === juniorAccountId);
-    if (!from || !to) throw new Error('Cuentas no encontradas');
-    from.balancePz -= 750;
-    to.balancePz += 750;
-    state.transactions = [...(state.transactions || []), {
-      id: `pj-bono-${Date.now()}`, kind: 'Gift', fromAccountId: 'AGLDP', toAccountId: juniorAccountId,
-      amountPz: 750, ivaPz: 0, concept: 'Bono Bienvenida Placeta Junior' + (tutorDip === '11111111D' ? ' (Demo)' : ''),
-      status: 'Settled', createdAt: new Date().toISOString()
-    }];
-    await fetch(`${BRIDGE}/api/state`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(state) });
-    return { success: true };
-  } catch (e) { return { success: false }; }
-}
-async function crearCuentaInfantil({ juniorDip, juniorNombre }) {
-  return { accountId: `u-${juniorDip?.toLowerCase().replace(/-/g, '')}`, iban: 'CAPI-' + Date.now().toString(36).toUpperCase(), exists: false };
+
+const BANCO_API = (process.env.BANCO_API_URL || 'https://api.banco.laplaceta.org').replace(/\/+$/, '');
+const CRM_KEY = process.env.CRM_READ_KEY || 'crm-gdlp-shared-key-2026';
+
+async function apiBanco(action, data = {}) {
+  const r = await fetch(`${BANCO_API}/api/crm-state`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CRM-Key': CRM_KEY },
+    body: JSON.stringify({ action, ...data }),
+    signal: AbortSignal.timeout(10000)
+  });
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({ error: r.statusText }));
+    throw new Error(err.error || 'Error en API banco');
+  }
+  return r.json();
 }
 
 const router = Router();
@@ -99,20 +93,23 @@ router.post('/vincular', async (req, res) => {
     // ── Crear cuenta bancaria infantil con IBAN APP (Capitalia) ───────
     let cuentaInfo = null;
     try {
-      const accountId = `u-${junior.dip?.toLowerCase().replace(/-/g, '')}`;
-      // Buscar cuenta del tutor en el banco
       const tutorAccountId = `u-${dip_tutor?.toLowerCase().replace(/-/g, '')}`;
 
-      cuentaInfo = await crearCuentaInfantil({
+      cuentaInfo = await apiBanco('crear-cuenta-infantil', {
         juniorDip: junior.dip,
         juniorNombre: `${junior.nombre} ${junior.apellidos}`,
         tutorAccountId,
-        sendLimitPz: 50
+        sendLimitPz: 50,
+        tutorDip: dip_tutor
       });
 
       // ── Dar bono de bienvenida de 750 Pz (AGLDP → menor) ──────────
       try {
-        await bonoBienvenida({ juniorAccountId: cuentaInfo.accountId });
+        await apiBanco('bono-bienvenida', {
+          juniorAccountId: cuentaInfo.accountId,
+          juniorDip: junior.dip,
+          tutorDip: dip_tutor
+        });
         // Registrar las 750 placetas internas también
         const nuevoSaldo = (junior.placetas_saldo || 0) + 750;
         await sbUpdateJunior(junior.id, { placetas_saldo: nuevoSaldo, limite_gasto_diario: 50, limite_gasto_semanal: 200 });
@@ -129,6 +126,54 @@ router.post('/vincular', async (req, res) => {
       }
     } catch (bankErr) {
       console.warn('[Junior] Error creando cuenta bancaria:', bankErr.message);
+    }
+
+    // ── Dar de alta al tutor y al menor en Tributos ──────────────────
+    try {
+      const juniorPlacetaId = `PLID-J${junior.dip?.split('-')[1] || '0000'}`;
+      const tutorPlacetaId = `PLID-${dip_tutor}`;
+
+      // Tutor como contribuyente (si no existe)
+      const tutorExisting = await sbGetTributosContributorByPlacetaId(tutorPlacetaId).catch(() => null);
+      if (!tutorExisting) {
+        await sbCreateTributosContributor({
+          id: crypto.randomUUID(),
+          placeta_id: tutorPlacetaId,
+          dip: dip_tutor,
+          nombre: junior.tutor_nombre || `Tutor ${dip_tutor}`,
+          tipo_sujeto: 'Fisico',
+          estado_fiscal: 'Al Dia',
+          fecha_alta_tributos: new Date().toISOString(),
+          roles_json: ['ciudadano', 'tutor'],
+          iban: null, eip: null
+        });
+      }
+
+      // Menor como contribuyente
+      const juniorExisting = await sbGetTributosContributorByPlacetaId(juniorPlacetaId).catch(() => null);
+      if (!juniorExisting) {
+        await sbCreateTributosContributor({
+          id: crypto.randomUUID(),
+          placeta_id: juniorPlacetaId,
+          dip: junior.dip,
+          nombre: `${junior.nombre} ${junior.apellidos}`,
+          tipo_sujeto: 'Fisico',
+          estado_fiscal: 'Al Dia',
+          fecha_alta_tributos: new Date().toISOString(),
+          roles_json: ['ciudadano', 'menor'],
+          iban: cuentaInfo?.iban || null,
+          eip: null
+        });
+      }
+
+      await sbCreateJuniorLog({
+        junior_id: junior.id,
+        accion: 'alta_tributos',
+        detalle: `Menor y tutor dados de alta en Tributos GDLP`,
+        ip
+      });
+    } catch (tribErr) {
+      console.warn('[Junior] Error alta tributos:', tribErr.message);
     }
 
     // Logs
@@ -151,7 +196,8 @@ router.post('/vincular', async (req, res) => {
       message: `Menor vinculado exitosamente.${cuentaInfo ? ' Cuenta bancaria infantil creada con 750 Pz de bienvenida.' : ''} Ya puede acceder a Placeta Junior.`,
       dip_menor,
       dip_tutor,
-      cuenta_bancaria: cuentaInfo
+      cuenta_bancaria: cuentaInfo,
+      tributos_dados_de_alta: true
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

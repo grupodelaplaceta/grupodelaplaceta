@@ -7,7 +7,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const LOGO_TRIBUTOS = path.join(__dirname, '..', 'public', 'img', 'tributos.png');
+const LOGO_TRIBUTOS = path.join(__dirname, '..', '..', 'public', 'img', 'tributos.png');
 import {
   sbGetTributosSummary,
   sbListTributosContributors,
