@@ -130,8 +130,7 @@ router.post('/register', async (req, res) => {
       password_hash: hashedPassword,
       rol: 'miembro',
       estado: 'pendiente',
-      ip_registro: ip,
-      tutor_id: tutorRecord.id
+      ip_registro: ip
     });
 
     // ── Crear registro en junior_menores ─────────────────────────────────
