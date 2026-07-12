@@ -203,7 +203,9 @@ router.post('/register', async (req, res) => {
       dip,
       necesita_firma_tutor: true,
       junior_id: juniorRecord.id,
-      tutor_dip: dni_tutor
+      tutor_dip: dni_tutor,
+      tutor_nombre: tutorRecord?.nombre_real || nombre_tutor + ' ' + apellidos_tutor,
+      tutor_email: tutorRecord?.email || email
     };
 
     if (placetaidRequest) {
