@@ -38,7 +38,7 @@ const router = Router();
 
 router.post('/register', async (req, res) => {
   try {
-    const { nombre, apellidos, fecha_nacimiento, nombre_tutor, apellidos_tutor, dni_tutor, email, password } = req.body;
+    const { nombre, apellidos, fecha_nacimiento, nombre_tutor, apellidos_tutor, dni_tutor, email, password, tutor_ya_existe } = req.body;
 
     // ── Validaciones básicas ──────────────────────────────────────────────
     if (!nombre || !apellidos || !fecha_nacimiento || !email || !password) {
@@ -54,22 +54,26 @@ router.post('/register', async (req, res) => {
     const mesDiff = hoy.getMonth() - nacimiento.getMonth();
     if (mesDiff < 0 || (mesDiff === 0 && hoy.getDate() < nacimiento.getDate())) edad--;
 
-    // Solo menores de 16 años
     if (edad >= 16) {
       return res.status(400).json({ error: 'Placeta Junior es solo para menores de 16 años. Los mayores deben usar PlacetaID estándar.' });
     }
 
-    // Validar email único
-    const emailExistente = await sbFindSolicitanteByEmail(email);
-    if (emailExistente) {
-      return res.status(400).json({ error: 'El email ya está registrado en el sistema.' });
-    }
-
     const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
-
-    // ── Generar DIP ───────────────────────────────────────────────────────
     const dipRaw = crypto.randomBytes(4).toString('hex').toUpperCase();
     const dip = `JUNIOR-${dipRaw}`;
+
+    // ── Generar email único para el menor ─────────────────────────────────
+    let minorEmail = email;
+    if (tutor_ya_existe) {
+      minorEmail = `junior-${dipRaw.toLowerCase()}@laplaceta.org`;
+      const exist = await sbFindSolicitanteByEmail(minorEmail).catch(() => null);
+      if (exist) minorEmail = `junior-${dipRaw.toLowerCase()}-${Date.now()}@laplaceta.org`;
+    } else {
+      const emailExistente = await sbFindSolicitanteByEmail(email);
+      if (emailExistente) {
+        return res.status(400).json({ error: 'El email ya está registrado en el sistema.' });
+      }
+    }
 
     // ── Encriptar DNI del tutor ───────────────────────────────────────────
     const salt = crypto.randomBytes(16).toString('hex');
@@ -117,7 +121,7 @@ router.post('/register', async (req, res) => {
     const nuevoSolicitante = await sbCreateSolicitante({
       alias,
       nombre_real: `${nombre} ${apellidos}`,
-      email,
+      email: minorEmail,
       fecha_nacimiento,
       edad,
       dip,
@@ -142,7 +146,7 @@ router.post('/register', async (req, res) => {
       tutor_nombre: `${nombre_tutor} ${apellidos_tutor}`,
       dni_tutor_hash: dniHash,
       dni_tutor_salt: salt,
-      email_contacto: email,
+      email_contacto: minorEmail,
       estado: 'pendiente_firma_tutor',
       placetas_saldo: 0,
       nivel_academia: 1,
