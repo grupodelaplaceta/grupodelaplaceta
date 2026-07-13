@@ -282,21 +282,6 @@ router.get('/contributors/:placetaId/calcular', verificarSesion, verificarRol('a
     resultado.cuentas = cuentasUsadas;
     resultado.patrimonio_desglosado = cuentasUsadas.length > 0;
     return res.json(resultado);
-            (t.createdAt || '').startsWith(mes)
-          );
-          for (const tx of txs) {
-            const amount = Math.abs(Number(tx.amountPz || 0));
-            if (tx.toAccountId === account.id) ingresos += amount;
-            if (tx.fromAccountId === account.id) pagos += amount;
-          }
-        }
-      }
-    } catch {}
-    if (!patrimonio) patrimonio = c.patrimonio_estimado || 1000;
-    const resultado = calcularContribucion(c, patrimonio, ingresos, pagos);
-    // Añadir info de movimientos
-    resultado.movimientos_mes = { ingresos, pagos, total_tx: ingresos + pagos > 0 ? 'con movimientos' : 'sin movimientos en el periodo' };
-    return res.json(resultado);
   } catch (err) { return res.status(500).json({ error: err.message }); }
 });
 
