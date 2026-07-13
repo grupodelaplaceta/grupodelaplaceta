@@ -239,15 +239,40 @@ router.get('/contributors/:placetaId/calcular', verificarSesion, verificarRol('a
     const c = await sbGetTributosContributorByPlacetaId(req.params.placetaId);
     if (!c) return res.status(404).json({ error: 'No encontrado' });
     let patrimonio = 0;
+    let ingresos = 0, pagos = 0;
     try {
-      const r = await fetch(`${BANCO_API}/api/account/${c.placeta_id}/balance`, {
-        headers: { 'X-CRM-Key': process.env.CRM_READ_KEY || 'crm-gdlp-shared-key-2026' },
-        signal: AbortSignal.timeout(5000)
+      const r = await fetch(`${BANCO_API}/api/crm-state`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CRM-Key': process.env.CRM_READ_KEY || 'crm-gdlp-shared-key-2026' },
+        body: JSON.stringify({ action: 'get-state' }),
+        signal: AbortSignal.timeout(8000)
       });
-      if (r.ok) { const d = await r.json(); patrimonio = d.balancePz || 0; }
+      if (r.ok) {
+        const state = await r.json();
+        // Buscar cuenta del contribuyente
+        const accountId = `u-${c.dip?.toLowerCase().replace(/-/g, '')}`;
+        const account = state.accounts?.find(a => a.id === accountId || a.placetaId === c.placeta_id);
+        if (account) {
+          patrimonio = account.balancePz || 0;
+          // Calcular ingresos/pagos del mes actual del historial de transacciones
+          const mes = new Date().toISOString().slice(0, 7);
+          const txs = (state.transactions || []).filter(t =>
+            (t.fromAccountId === account.id || t.toAccountId === account.id) &&
+            (t.createdAt || '').startsWith(mes)
+          );
+          for (const tx of txs) {
+            const amount = Math.abs(Number(tx.amountPz || 0));
+            if (tx.toAccountId === account.id) ingresos += amount;
+            if (tx.fromAccountId === account.id) pagos += amount;
+          }
+        }
+      }
     } catch {}
-    if (!patrimonio) patrimonio = c.patrimonio_estimado || 0;
-    return res.json(calcularContribucion(c, patrimonio));
+    if (!patrimonio) patrimonio = c.patrimonio_estimado || 1000;
+    const resultado = calcularContribucion(c, patrimonio, ingresos, pagos);
+    // Añadir info de movimientos
+    resultado.movimientos_mes = { ingresos, pagos, total_tx: ingresos + pagos > 0 ? 'con movimientos' : 'sin movimientos en el periodo' };
+    return res.json(resultado);
   } catch (err) { return res.status(500).json({ error: err.message }); }
 });
 
