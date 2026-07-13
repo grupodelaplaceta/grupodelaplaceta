@@ -597,20 +597,6 @@ export function generarCuestionarios(edad, nivel) {
 
 /**
  * Costo de desbloqueo para cada nivel (Nivel 2-10)
- * Nivel 1 es gratuito
- */
-export const COSTO_DESBLOQUEO_POR_NIVEL = {
-  2: 50,
-  3: 100,
-  4: 150,
-  5: 200,
-  6: 250,
-  7: 300,
-  8: 350,
-  9: 400,
-  10: 500
-};
-
 // ═══════════════════════════════════════════════════════════════════════════
 //  GEOGRAFÍA — Países, continentes, CCAA, ríos, islas
 // ═══════════════════════════════════════════════════════════════════════════
