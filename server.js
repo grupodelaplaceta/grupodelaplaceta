@@ -281,7 +281,7 @@ app.get('/admin/dashboard', verificarAuth, async (req, res) => {
 app.get('/admin/identidad', verificarAuth, (req, res) => res.render('identidad/gestion', { titulo: 'Gestión de Identidad' }));
 app.get('/admin/bancario', verificarAuth, (req, res) => res.render('bancario/gestion', { titulo: 'Gestión Bancaria' }));
 app.get('/admin/finanzas', verificarAuth, (req, res) => res.render('admin/finanzas', { titulo: 'Finanzas' }));
-app.get('/admin/fiscal', verificarAuth, (req, res) => res.render('fiscal/gestion', { titulo: 'Gestión Fiscal' }));
+
 app.get('/admin/tributos', verificarAuth, (req, res) => res.render('admin/tributos', { titulo: 'Gestión de Tributos' }));
 app.get('/admin/placetid', verificarAuth, (req, res) => res.render('admin/placetid', { titulo: 'Administración PlacetaID' }));
 app.get('/admin/ocio', verificarAuth, (req, res) => res.render('ocio/gestion', { titulo: 'Gestión de Ocio y Loterías' }));

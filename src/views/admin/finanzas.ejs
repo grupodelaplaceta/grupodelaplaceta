@@ -1,121 +1,312 @@
 <div class="dashboard">
   <div class="dashboard-header">
     <h1>🏦 Finanzas GDLP</h1>
-    <p class="dashboard-date">Central financiera · Emisión · Contribuyentes · Control monetario</p>
+    <p class="dashboard-date">API Bancaria · Tesorería · Cuentas · Contribuyentes · Ciudadanos</p>
   </div>
 
-  <!-- KPIs desde Supabase -->
+  <!-- KPIs desde API Bancaria -->
   <div class="stats-grid" id="statsFinanzas">
-    <div class="stat-card stat-primary"><div class="stat-icon">👥</div><div class="stat-content"><span class="stat-value" id="kpiCiudadanos">—</span><span class="stat-label">Ciudadanos</span></div></div>
-    <div class="stat-card stat-success"><div class="stat-icon">🌈</div><div class="stat-content"><span class="stat-value" id="kpiJuniors">—</span><span class="stat-label">Juniors</span></div></div>
+    <div class="stat-card stat-primary"><div class="stat-icon">👥</div><div class="stat-content"><span class="stat-value" id="kpiUsuarios">—</span><span class="stat-label">Ciudadanos</span></div></div>
+    <div class="stat-card stat-success"><div class="stat-icon">🏦</div><div class="stat-content"><span class="stat-value" id="kpiCuentas">—</span><span class="stat-label">Cuentas</span></div></div>
+    <div class="stat-card stat-warning"><div class="stat-icon">💰</div><div class="stat-content"><span class="stat-value" id="kpiMasa">—</span><span class="stat-label">Masa Monetaria</span></div></div>
     <div class="stat-card stat-info"><div class="stat-icon">🧾</div><div class="stat-content"><span class="stat-value" id="kpiContribuyentes">—</span><span class="stat-label">Contribuyentes</span></div></div>
-    <div class="stat-card stat-warning"><div class="stat-icon">🏦</div><div class="stat-content"><span class="stat-value" id="kpiCuentas">—</span><span class="stat-label">Cuentas Bancarias</span></div></div>
+    <div class="stat-card"><div class="stat-icon">🏛️</div><div class="stat-content"><span class="stat-value" id="kpiTesoro">—</span><span class="stat-label">Tesoro</span></div></div>
+    <div class="stat-card"><div class="stat-icon">💳</div><div class="stat-content"><span class="stat-value" id="kpiTarjetas">—</span><span class="stat-label">Tarjetas</span></div></div>
   </div>
 
-  <!-- Emisión / Quema -->
-  <div class="section">
-    <h2>🪙 Emisión y Quema Monetaria</h2>
-    <div class="stats-grid">
-      <div class="stat-card">
-        <form id="emisionForm" style="width:100%">
-          <h3 style="margin-bottom:12px">Emitir Placetas</h3>
-          <div class="form-group"><label>Cantidad</label><input type="number" name="cantidad" min="1" required placeholder="10000"></div>
-          <div class="form-group"><label>DIP destino</label><input type="text" name="destino_dip" required placeholder="00000000A"></div>
-          <div class="form-group"><label>Motivo</label><input type="text" name="motivo" placeholder="Pago de nóminas"></div>
-          <button type="submit" class="btn btn-success btn-block">💸 Emitir</button>
-        </form>
+  <style>
+    .section-tabs { display:flex; gap:2px; margin:12px 0; border-bottom:2px solid var(--line); flex-wrap:wrap; overflow-x:auto; }
+    .section-tabs .tab-btn { padding:8px 14px; border:none; background:transparent; font-weight:600; font-size:12px; font-family:var(--font); cursor:pointer; color:var(--text-light); border-bottom:3px solid transparent; margin-bottom:-2px; white-space:nowrap; }
+    .section-tabs .tab-btn:hover { color:var(--text); background:var(--surface-2); }
+    .section-tabs .tab-btn.active { color:var(--p500); border-bottom-color:var(--p500); }
+  </style>
+
+  <div class="section-tabs">
+    <button class="tab-btn active" data-tab="tabTesoro" onclick="switchTab(this,'tabTesoro')">🏛️ Tesorería</button>
+    <button class="tab-btn" data-tab="tabCuentas" onclick="switchTab(this,'tabCuentas')">🏦 Cuentas</button>
+    <button class="tab-btn" data-tab="tabTransacciones" onclick="switchTab(this,'tabTransacciones')">🔄 Transacciones</button>
+    <button class="tab-btn" data-tab="tabContribuyentes" onclick="switchTab(this,'tabContribuyentes')">🧾 Contribuyentes</button>
+    <button class="tab-btn" data-tab="tabCiudadanos" onclick="switchTab(this,'tabCiudadanos')">👥 Ciudadanos</button>
+    <button class="tab-btn" data-tab="tabTarjetas" onclick="switchTab(this,'tabTarjetas')">💳 Tarjetas</button>
+    <button class="tab-btn" data-tab="tabAlertas" onclick="switchTab(this,'tabAlertas')">🚨 Alertas</button>
+  </div>
+
+  <!-- ══ TAB 1: TESORERÍA ══ -->
+  <div id="tabTesoro" class="tab-content">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+      <div class="card" style="padding:20px">
+        <h3 style="margin:0 0 12px 0;color:var(--p500)">🪙 Emitir Placetas</h3>
+        <div style="display:grid;gap:10px">
+          <input type="number" id="emitirCantidad" placeholder="Cantidad" class="form-input">
+          <input type="text" id="emitirDip" placeholder="DIP destino" class="form-input">
+          <input type="text" id="emitirMotivo" placeholder="Motivo" class="form-input">
+          <button class="btn btn-primary" onclick="emitirPz()">Emitir desde Tesoro</button>
+        </div>
       </div>
-      <div class="stat-card">
-        <form id="quemaForm" style="width:100%">
-          <h3 style="margin-bottom:12px">🔥 Quemar Placetas</h3>
-          <div class="form-group"><label>ID Cuenta</label><input type="number" name="cuenta_id" required></div>
-          <div class="form-group"><label>Cantidad</label><input type="number" name="cantidad" min="1" required></div>
-          <div class="form-group"><label>Motivo</label><input type="text" name="motivo" placeholder="Exceso de capital"></div>
-          <button type="submit" class="btn btn-danger btn-block">🔥 Quemar</button>
-        </form>
+      <div class="card" style="padding:20px">
+        <h3 style="margin:0 0 12px 0;color:var(--red)">🔥 Quemar Placetas</h3>
+        <div style="display:grid;gap:10px">
+          <input type="text" id="quemarCuenta" placeholder="ID de Cuenta" class="form-input">
+          <input type="number" id="quemarCantidad" placeholder="Cantidad a retirar" class="form-input">
+          <input type="text" id="quemarMotivo" placeholder="Motivo" class="form-input">
+          <button class="btn btn-danger" onclick="quemarPz()">Quemar (retirar)</button>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="padding:20px">
+      <h3 style="margin:0 0 12px 0">📋 Estado del Tesoro</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px" id="tesoroInfo">
+        <div><strong>Cuenta TGLP:</strong> <span id="tglpId">—</span></div>
+        <div><strong>Saldo Tesoro:</strong> <span id="tglpSaldo">—</span></div>
+        <div><strong>Ciudadanos:</strong> <span id="tglpUsuarios">—</span></div>
+        <div><strong>Cuentas totales:</strong> <span id="tglpCuentas">—</span></div>
       </div>
     </div>
   </div>
 
-  <!-- Contribuyentes Tributos -->
-  <div class="section">
-    <h2>🧾 Contribuyentes (Tributos)</h2>
-    <div class="table-container"><table class="data-table"><thead><tr><th>PlacetaID</th><th>Nombre</th><th>DIP</th><th>Tipo</th><th>Estado Fiscal</th><th>Alta</th></tr></thead>
-      <tbody id="contribuyentesBody"><tr><td colspan="6">Cargando...</td></tr></tbody>
-    </table></div>
-    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn btn-primary btn-sm" onclick="abrirAltaRapida()">➕ Alta rápida por DIP</button>
-      <button class="btn btn-outline btn-sm" onclick="cargarContribuyentes()">🔄 Refrescar</button>
+  <!-- ══ TAB 2: CUENTAS ══ -->
+  <div id="tabCuentas" class="tab-content" style="display:none">
+    <div class="card" style="padding:20px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h3 style="margin:0">Resumen por Tipo</h3>
+        <input type="search" id="searchCuentas" oninput="filtrarTabla('searchCuentas','cuentasBody')" placeholder="🔍 Buscar cuenta..." style="width:220px;padding:8px 12px;border:2px solid var(--line);border-radius:var(--radius);font-family:var(--font);font-size:13px">
+      </div>
+      <div class="table-container"><table class="data-table"><thead><tr><th>Tipo</th><th>Nº Cuentas</th><th>Saldo Total</th><th>Saldo Máximo</th><th>Promedio</th><th>% del Total</th></tr></thead>
+        <tbody id="cuentasBody"><tr><td colspan="6">Cargando...</td></tr></tbody>
+      </table></div>
     </div>
-    <div id="altaResultado" style="margin-top:12px;display:none"></div>
+    <div class="card" style="padding:20px;margin-top:16px">
+      <h3 style="margin:0 0 12px 0">📋 Listado completo</h3>
+      <div class="table-container"><table class="data-table" style="min-width:800px"><thead><tr><th>ID</th><th>Nombre</th><th>Tipo</th><th>Saldo</th><th>PlacetaID</th><th>IBAN</th><th>Estado</th></tr></thead>
+        <tbody id="cuentasDetalleBody"><tr><td colspan="7">Cargando...</td></tr></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- ══ TAB 3: TRANSACCIONES ══ -->
+  <div id="tabTransacciones" class="tab-content" style="display:none">
+    <div class="card" style="padding:20px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h3 style="margin:0">Movimientos del Core</h3>
+        <input type="search" id="searchTx" oninput="filtrarTabla('searchTx','txBody')" placeholder="🔍 Buscar..." style="width:220px;padding:8px 12px;border:2px solid var(--line);border-radius:var(--radius);font-family:var(--font);font-size:13px">
+      </div>
+      <div class="table-container"><table class="data-table"><thead><tr><th>ID</th><th>Fecha</th><th>Tipo</th><th>Origen</th><th>Destino</th><th>Cantidad</th><th>Concepto</th><th>Estado</th></tr></thead>
+        <tbody id="txBody"><tr><td colspan="8">Cargando...</td></tr></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- ══ TAB 4: CONTRIBUYENTES ══ -->
+  <div id="tabContribuyentes" class="tab-content" style="display:none">
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
+      <button class="btn btn-primary btn-sm" onclick="abrirAltaRapida()">➕ Alta rápida</button>
+      <button class="btn btn-outline btn-sm" onclick="cargarContribuyentes()">🔄</button>
+      <input type="search" id="searchContribuyentes" oninput="filtrarTabla('searchContribuyentes','contribuyentesBody')" placeholder="🔍 Buscar..." style="flex:1;max-width:280px;padding:8px 12px;border:2px solid var(--line);border-radius:var(--radius);font-family:var(--font);font-size:13px">
+    </div>
+    <div id="altaResultado" style="margin-bottom:12px;display:none"></div>
+    <div class="card" style="padding:20px">
+      <div class="table-container"><table class="data-table"><thead><tr><th>PlacetaID</th><th>Nombre</th><th>DIP</th><th>Tipo Sujeto</th><th>Estado Fiscal</th><th>Alta</th></tr></thead>
+        <tbody id="contribuyentesBody"><tr><td colspan="6">Cargando...</td></tr></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- ══ TAB 5: CIUDADANOS ══ -->
+  <div id="tabCiudadanos" class="tab-content" style="display:none">
+    <div class="card" style="padding:20px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h3 style="margin:0">Padrón de Ciudadanos</h3>
+        <input type="search" id="searchCiudadanos2" oninput="filtrarTabla('searchCiudadanos2','ciudadanosBody2')" placeholder="🔍 Buscar por DIP, nombre..." style="width:280px;padding:8px 12px;border:2px solid var(--line);border-radius:var(--radius);font-family:var(--font);font-size:13px">
+      </div>
+      <div class="table-container"><table class="data-table"><thead><tr><th>DIP</th><th>Nombre</th><th>Email</th><th>PlacetaID</th><th>Rol</th></tr></thead>
+        <tbody id="ciudadanosBody2"><tr><td colspan="5">Cargando...</td></tr></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- ══ TAB 6: TARJETAS ══ -->
+  <div id="tabTarjetas" class="tab-content" style="display:none">
+    <div class="card" style="padding:20px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h3 style="margin:0">Tarjetas Digitales</h3>
+        <span>Total: <strong id="totalTarjetasNum">—</strong> · Activas: <strong id="activasTarjetasNum">—</strong></span>
+      </div>
+      <div class="table-container"><table class="data-table"><thead><tr><th>ID</th><th>Titular</th><th>Tipo</th><th>Saldo</th><th>Estado</th><th>PlacetaID</th></tr></thead>
+        <tbody id="tarjetasBody"><tr><td colspan="6">Cargando...</td></tr></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- ══ TAB 7: ALERTAS ══ -->
+  <div id="tabAlertas" class="tab-content" style="display:none">
+    <div class="card" style="padding:20px">
+      <h3 style="margin:0 0 12px 0">🚨 Centro de Alertas</h3>
+      <div id="alertasContainer"><p>Cargando...</p></div>
+    </div>
+    <div class="card" style="padding:20px;margin-top:16px">
+      <h3 style="margin:0 0 12px 0">🔔 Notificaciones del Sistema</h3>
+      <div id="notificacionesContainer"><p>Cargando...</p></div>
+    </div>
   </div>
 </div>
 
 <script>
-  async function kpiFetch(url) { try { const r = await fetch(url); if (!r.ok) throw Error(); return r.json(); } catch { return null; } }
-  
-  async function cargarTodo() {
-    // KPIs desde Supabase
-    const [ciud, jrs, cont, ctas] = await Promise.all([
-      kpiFetch('/api/admin/finanzas/kpi-ciudadanos'),
-      kpiFetch('/api/admin/finanzas/kpi-juniors'),
-      kpiFetch('/api/admin/finanzas/kpi-contribuyentes'),
-      kpiFetch('/api/admin/finanzas/kpi-cuentas')
-    ]);
-    document.getElementById('kpiCiudadanos').textContent = ciud?.count ?? '—';
-    document.getElementById('kpiJuniors').textContent = jrs?.count ?? '—';
-    document.getElementById('kpiContribuyentes').textContent = cont?.count ?? '—';
-    document.getElementById('kpiCuentas').textContent = ctas?.count ?? '—';
+// ── Utilidades ──
+async function apiFetch(url, opts) {
+  const r = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...opts });
+  if (!r.ok) {
+    let msg = 'HTTP ' + r.status;
+    try { const e = await r.json(); if (e.error) msg += ': ' + e.error; } catch {}
+    throw new Error(msg);
   }
+  return r.json();
+}
+async function tryFetch(url) { try { return await apiFetch(url); } catch { return null; } }
+function formatPz(n) { return Number(n || 0).toLocaleString('es-ES', { minimumFractionDigits: 2 }) + ' Pz'; }
+function fechaES(d) { return d ? new Date(d).toLocaleString('es-ES') : '—'; }
+function txIdShort(id) { return (id || '').length > 12 ? id.slice(0,12) + '…' : id || '—'; }
+function switchTab(btn, tabId) {
+  document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+  document.getElementById(tabId).style.display = 'block';
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+function filtrarTabla(searchId, tbodyId) {
+  const q = document.getElementById(searchId).value.toLowerCase();
+  document.querySelectorAll(`#${tbodyId} tr`).forEach(r => r.style.display = r.textContent.toLowerCase().includes(q) ? '' : 'none');
+}
 
-  async function cargarContribuyentes() {
-    try {
-      const r = await fetch('/api/admin/finanzas/contribuyentes');
-      const data = await r.json();
-      const tb = document.getElementById('contribuyentesBody');
-      if (!data?.length) { tb.innerHTML = '<tr><td colspan="6">Sin contribuyentes</td></tr>'; return; }
-      tb.innerHTML = data.map(c => '<tr><td>'+ (c.placeta_id||'—') +'</td><td>'+ (c.nombre||'—') +'</td><td>'+ (c.dip||'—') +'</td><td><span class="badge">'+ (c.tipo_sujeto||'—') +'</span></td><td><span class="badge '+ (c.estado_fiscal==='Al Dia'?'badge-activo':c.estado_fiscal==='Capitalia'?'badge-junior':'badge-pendiente') +'">'+ (c.estado_fiscal||'—') +'</span></td><td>'+ (c.fecha_alta_tributos?.slice(0,10)||'—') +'</td></tr>').join('');
-    } catch(e) { document.getElementById('contribuyentesBody').innerHTML = '<tr><td colspan="6">Error: '+e.message+'</td></tr>'; }
+// ── Resumen / KPIs desde API BANCARIA ──
+async function cargarResumen() {
+  const d = await tryFetch('/api/bancario-proxy/resumen');
+  if (!d) {
+    document.getElementById('kpiUsuarios').textContent = '—';
+    document.getElementById('kpiCuentas').textContent = '—';
+    document.getElementById('kpiMasa').textContent = '—';
+    return;
   }
+  document.getElementById('kpiUsuarios').textContent = d.totalUsuarios ?? '—';
+  document.getElementById('kpiCuentas').textContent = d.totalCuentas ?? '—';
+  document.getElementById('kpiMasa').textContent = formatPz(d.saldoTotal);
+  document.getElementById('kpiTesoro').textContent = formatPz(d.tesoro);
+  document.getElementById('tglpUsuarios').textContent = d.totalUsuarios ?? '—';
+  document.getElementById('tglpCuentas').textContent = d.totalCuentas ?? '—';
+}
 
-  async function abrirAltaRapida() {
-    const dip = prompt('DIP del ciudadano a dar de alta en Tributos:');
-    if (!dip) return;
-    document.getElementById('altaResultado').style.display = 'block';
-    document.getElementById('altaResultado').innerHTML = 'Procesando...';
-    try {
-      const r = await fetch('/api/admin/tributos/contributors/alta-rapida', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({dip}) });
-      const data = await r.json();
-      if (data.success) {
-        document.getElementById('altaResultado').innerHTML = '<div class="alert alert-success">✅ '+dip+' dado de alta'+(data.esJunior?' (régimen Capitalia)':'')+'</div>';
-        cargarContribuyentes(); cargarTodo();
-      } else document.getElementById('altaResultado').innerHTML = '<div class="alert alert-error">❌ '+(data.error||'Error')+'</div>';
-    } catch(e) { document.getElementById('altaResultado').innerHTML = '<div class="alert alert-error">❌ '+e.message+'</div>'; }
+// ── Tesoro ──
+async function cargarTesoro() {
+  const d = await tryFetch('/api/bancario-proxy/tesoro');
+  if (!d) return;
+  document.getElementById('tglpId').textContent = d.cuenta?.id || 'TGLP';
+  document.getElementById('tglpSaldo').textContent = formatPz(d.cuenta?.balancePz || 0);
+}
+
+// ── Emisión / Quema ──
+async function emitirPz() {
+  const cant = document.getElementById('emitirCantidad').value;
+  const dip = document.getElementById('emitirDip').value;
+  if (!cant || !dip) return alert('Cantidad y DIP requeridos');
+  try {
+    const d = await apiFetch('/api/bancario-proxy/emitir', { method:'POST', body:JSON.stringify({ cantidad:parseInt(cant), destino_dip:dip, motivo:document.getElementById('emitirMotivo').value||'Emisión admin' }) });
+    alert(d.message || '✅ Emitido');
+  } catch(e) { alert('Error: '+e.message); }
+}
+async function quemarPz() {
+  const id = document.getElementById('quemarCuenta').value;
+  const cant = document.getElementById('quemarCantidad').value;
+  if (!id || !cant) return alert('ID de cuenta y cantidad requeridos');
+  try {
+    const d = await apiFetch('/api/bancario-proxy/quemar', { method:'POST', body:JSON.stringify({ cuenta_id:parseInt(id), cantidad:parseInt(cant), motivo:document.getElementById('quemarMotivo').value||'Quema admin' }) });
+    alert(d.message || '✅ Quemado');
+  } catch(e) { alert('Error: '+e.message); }
+}
+
+// ── Cuentas ──
+async function cargarCuentas() {
+  const d = await tryFetch('/api/bancario-proxy/resumen-cuentas') || [];
+  const tb = document.getElementById('cuentasBody');
+  if (!d.length) { tb.innerHTML = '<tr><td colspan="6">Sin datos</td></tr>'; return; }
+  const totalGlobal = d.reduce((s, t) => s + t.saldoTotal, 0);
+  tb.innerHTML = d.map(t => '<tr><td><strong>' + t.tipo + '</strong></td><td>' + t.count + '</td><td>' + formatPz(t.saldoTotal) + '</td><td>' + formatPz(t.saldoMaximo) + '</td><td>' + formatPz(t.promedio) + '</td><td>' + (totalGlobal > 0 ? (t.saldoTotal / totalGlobal * 100).toFixed(1) + '%' : '—') + '</td></tr>').join('');
+  // Detalle
+  const cuentas = await tryFetch('/api/bancario-proxy/cuentas') || [];
+  const tb2 = document.getElementById('cuentasDetalleBody');
+  if (!cuentas.length) { tb2.innerHTML = '<tr><td colspan="7">Sin cuentas</td></tr>'; return; }
+  tb2.innerHTML = cuentas.map(c => {
+    const estado = c.closedAt ? '🔴 Cerrada' : '✅ Activa';
+    return '<tr><td style="font-size:11px">' + txIdShort(c.id) + '</td><td>' + (c.displayName || '—') + '</td><td>' + (c.type || '—') + '</td><td>' + formatPz(c.balancePz || 0) + '</td><td>' + (c.placetaId || '—') + '</td><td>' + (c.iban || '—') + '</td><td>' + estado + '</td></tr>';
+  }).join('');
+}
+
+// ── Transacciones ──
+async function cargarTransacciones() {
+  const d = await tryFetch('/api/bancario-proxy/movimientos?limit=200') || [];
+  const tb = document.getElementById('txBody');
+  if (!d.length) { tb.innerHTML = '<tr><td colspan="8">Sin movimientos</td></tr>'; return; }
+  tb.innerHTML = d.map(t => '<tr><td style="font-size:11px">' + txIdShort(t.id) + '</td><td>' + fechaES(t.createdAt) + '</td><td><span class="badge badge-' + (t.kind === 'Transfer' ? 'info' : t.kind === 'Emission' ? 'activo' : 'danger') + '">' + (t.kind || '—') + '</span></td><td>' + (t.fromAccountId || '—') + '</td><td>' + (t.toAccountId || '—') + '</td><td>' + formatPz(t.amountPz) + '</td><td>' + (t.note || '—') + '</td><td><span class="badge badge-activo">' + (t.status || '—') + '</span></td></tr>').join('');
+}
+
+// ── Contribuyentes ──
+async function cargarContribuyentes() {
+  try {
+    const r = await fetch('/api/admin/tributos/contributors');
+    const data = await r.json();
+    const tb = document.getElementById('contribuyentesBody');
+    if (!data?.length) { tb.innerHTML = '<tr><td colspan="6">Sin contribuyentes</td></tr>'; return; }
+    tb.innerHTML = data.map(c => '<tr><td>'+ (c.placeta_id||c.PlacetaID||'—') +'</td><td>'+ (c.nombre||c.Nombre||'—') +'</td><td>'+ (c.dip||c.DIP||'—') +'</td><td><span class="badge">'+ (c.tipo_sujeto||c.TipoSujeto||'—') +'</span></td><td><span class="badge '+ ((c.estado_fiscal||c.EstadoFiscal)==='Al Dia'?'badge-activo':(c.estado_fiscal||c.EstadoFiscal)==='Capitalia'?'badge-junior':'badge-pendiente') +'">'+ (c.estado_fiscal||c.EstadoFiscal||'—') +'</span></td><td>'+ ((c.fecha_alta_tributos||c.FechaAltaTributos||'').slice(0,10)||'—') +'</td></tr>').join('');
+    document.getElementById('kpiContribuyentes').textContent = data.length;
+  } catch(e) { document.getElementById('contribuyentesBody').innerHTML = '<tr><td colspan="6">Error</td></tr>'; }
+}
+async function abrirAltaRapida() {
+  const dip = prompt('DIP del ciudadano para alta en Tributos:');
+  if (!dip) return;
+  document.getElementById('altaResultado').style.display = 'block';
+  document.getElementById('altaResultado').innerHTML = 'Procesando...';
+  try {
+    const r = await fetch('/api/admin/tributos/contributors/alta-rapida', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({dip}) });
+    const data = await r.json();
+    document.getElementById('altaResultado').innerHTML = data.success
+      ? '<div class="alert alert-success">✅ '+dip+' dado de alta'+(data.esJunior?' (régimen Capitalia)':'')+'</div>'
+      : '<div class="alert alert-error">❌ '+(data.error||'Error')+'</div>';
+    if (data.success) { cargarContribuyentes(); cargarResumen(); }
+  } catch(e) { document.getElementById('altaResultado').innerHTML = '<div class="alert alert-error">❌ '+e.message+'</div>'; }
+}
+
+// ── Ciudadanos ──
+async function cargarCiudadanos() {
+  const d = await tryFetch('/api/bancario-proxy/usuarios') || [];
+  const tb = document.getElementById('ciudadanosBody2');
+  if (!d.length) { tb.innerHTML = '<tr><td colspan="5">Sin ciudadanos</td></tr>'; return; }
+  tb.innerHTML = d.slice(0,100).map(u => '<tr><td><strong>'+u.dip+'</strong></td><td>'+(u.displayName||'—')+'</td><td>'+(u.email||'—')+'</td><td>'+(u.placetaId||'—')+'</td><td><span class="pill pill-purple">'+(u.role||'miembro')+'</span></td></tr>').join('');
+}
+
+// ── Tarjetas ──
+async function cargarTarjetas() {
+  const resumen = await tryFetch('/api/bancario-proxy/tarjetas');
+  if (resumen) {
+    document.getElementById('totalTarjetasNum').textContent = resumen.total || '—';
+    document.getElementById('activasTarjetasNum').textContent = resumen.activas || '—';
   }
+  const cards = await tryFetch('/api/bancario-proxy/tarjetas-detalle') || [];
+  const tb = document.getElementById('tarjetasBody');
+  if (!cards.length) { tb.innerHTML = '<tr><td colspan="6">Sin tarjetas</td></tr>'; return; }
+  tb.innerHTML = cards.map(c => '<tr><td style="font-size:11px">'+txIdShort(c.id)+'</td><td>'+(c.displayName||'—')+'</td><td>'+(c.type||c.kind||'—')+'</td><td>'+formatPz(c.balancePz||0)+'</td><td><span class="badge badge-'+((c.status==='Frozen'||c.frozen)?'danger':'activo')+'">'+((c.status==='Frozen'||c.frozen)?'❄️ Congelada':'✅ Activa')+'</span></td><td>'+(c.placetaId||'—')+'</td></tr>').join('');
+  document.getElementById('kpiTarjetas').textContent = cards.length;
+}
 
-  // Emission/Quema forms
-  document.getElementById('emisionForm').addEventListener('submit', async e => {
-    e.preventDefault(); const btn = e.target.querySelector('button'); btn.disabled=true; btn.textContent='Emitiendo...';
-    try {
-      const data = Object.fromEntries(new FormData(e.target));
-      const r = await fetch('/api/bancario/emision', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
-      const j = await r.json();
-      alert(j.message || 'Emitido');
-      e.target.reset();
-    } catch(err) { alert('Error: '+err.message); }
-    finally { btn.disabled=false; btn.textContent='💸 Emitir'; }
-  });
-  document.getElementById('quemaForm').addEventListener('submit', async e => {
-    e.preventDefault(); const btn = e.target.querySelector('button'); btn.disabled=true; btn.textContent='Quemando...';
-    try {
-      const data = Object.fromEntries(new FormData(e.target));
-      const r = await fetch('/api/bancario/quema', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
-      const j = await r.json();
-      alert(j.message || 'Quemado');
-      e.target.reset();
-    } catch(err) { alert('Error: '+err.message); }
-    finally { btn.disabled=false; btn.textContent='🔥 Quemar'; }
-  });
+// ── Alertas ──
+async function cargarAlertas() {
+  const d = await tryFetch('/api/bancario-proxy/alertas') || [];
+  const c = document.getElementById('alertasContainer');
+  if (!d.length) { c.innerHTML = '<p>Sin alertas activas</p>'; return; }
+  c.innerHTML = d.map(a => '<div style="padding:10px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px;border-left:4px solid '+(a.severity==='alta'?'var(--red)':a.severity==='media'?'var(--gold)':'var(--info)')+'"><strong>'+(a.tipo||'Alerta')+'</strong> · '+(a.mensaje||'')+'</div>').join('');
+}
+async function cargarNotificaciones() {
+  const c = document.getElementById('notificacionesContainer');
+  c.innerHTML = '<p>Sin notificaciones</p>';
+}
 
-  cargarTodo(); cargarContribuyentes();
+// ── Init ──
+cargarResumen(); cargarTesoro(); cargarCuentas(); cargarTransacciones();
+cargarContribuyentes(); cargarCiudadanos(); cargarTarjetas(); cargarAlertas(); cargarNotificaciones();
 </script>
