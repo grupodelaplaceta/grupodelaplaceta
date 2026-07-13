@@ -465,7 +465,6 @@ router.post('/aprobar-acceso', async (req, res) => {
 //  MIDDLEWARE
 // ═══════════════════════════════════════════════════════════════════════════
 
-import { sbFindJuniorByDip } from '../config/db-supabase.js';
 
 async function verificarJunior(req, res, next) {
   const dip = req.session?.junior?.dip || req.query.dip || req.body?.dip || req.headers['x-junior-dip'];
