@@ -92,7 +92,8 @@ router.post('/login', async (req, res) => {
         dip: alias,
         password,
         servicio: 'GDLP CRM',
-        servicioUrl: `${req.protocol}://${req.get('host')}/placetid/callback`,
+        servicio: 'CRM GDLP',
+        servicioUrl: process.env.PLACETAID_REDIRECT_URI || 'https://www.laplaceta.org/placetid/callback',
         clientId: PLACETAID_CLIENT_ID,
         platform: 'web',
         state: req.body.state || null

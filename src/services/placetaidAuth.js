@@ -24,7 +24,7 @@ export function buildPlacetaidAuthUrl(options = {}) {
   const {
     authBaseUrl = process.env.PLACETAID_AUTH_URL || process.env.PLACETAID_BASE_URL || 'https://id.laplaceta.org',
     clientId = process.env.PLACETAID_API_KEY || 'ccb611655030bdadf7218418dc195dcb',
-    redirectUri,
+    redirectUri = process.env.PLACETAID_REDIRECT_URI || 'https://www.laplaceta.org/placetid/callback',
     state,
     platform = 'web'
   } = options;

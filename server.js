@@ -205,7 +205,8 @@ function getPlacetaidConfig(req) {
     : defaultApiUrl;
   const authBaseUrl = process.env.PLACETAID_AUTH_URL || process.env.PLACETAID_BASE_URL || apiUrl.replace(/\/api$/, '');
   const clientId = process.env.PLACETAID_API_KEY || 'ccb611655030bdadf7218418dc195dcb';
-  const redirectUri = `${protocol}://${host}/placetid/callback`;
+  const redirectUri = process.env.PLACETAID_REDIRECT_URI || 
+    (process.env.VERCEL ? 'https://www.laplaceta.org/placetid/callback' : `${protocol}://${host}/placetid/callback`);
 
   return {
     authBaseUrl,
@@ -244,12 +245,20 @@ app.get('/admin', verificarAuth, (req, res) => {
 app.get('/admin/dashboard', verificarAuth, async (req, res) => {
   // Supabase: stats de usuarios (CRM)
   let totalUsuarios = 0, activos = 0, pendientes = 0;
+  let totalJuniors = 0, juniorsActivos = 0;
+  let docsFirmados = 0, docsPendientes = 0;
   try {
     const todos = await sbListSolicitantes();
     totalUsuarios = todos.length;
     activos = todos.filter(u => u.estado === 'activo').length;
     pendientes = todos.filter(u => u.estado === 'pendiente').length;
-  } catch (e) { /* fallback silencioso */ }
+    const { data: jrs } = await supabase.from('junior_menores').select('*');
+    if (jrs) { totalJuniors = jrs.length; juniorsActivos = jrs.filter(j => j.estado === 'activo').length; }
+    const { count: dfCount } = await supabase.from('documentos_firmados').select('*', { count: 'exact', head: true });
+    docsFirmados = dfCount || 0;
+    const { count: dpCount } = await supabase.from('documentos_firmados').select('*', { count: 'exact', head: true }).eq('estado', 'pendiente');
+    docsPendientes = dpCount || 0;
+  } catch (e) { /* fallback */ }
 
   // SQLite: stats bancarias/fiscal/justicia
   const db = getDb();
@@ -258,9 +267,9 @@ app.get('/admin/dashboard', verificarAuth, async (req, res) => {
   const expedientesAbiertos = db.prepare("SELECT COUNT(*) as total FROM expedientes_disciplinarios WHERE estado NOT IN ('firme','archivado')").get();
   res.render('admin/dashboard', {
     titulo: 'Panel de Administración - GDLP CRM',
-    totalUsuarios,
-    activos,
-    pendientes,
+    totalUsuarios, activos, pendientes,
+    totalJuniors, juniorsActivos,
+    docsFirmados, docsPendientes,
     totalCuentas: totalCuentas?.total || 0,
     masaMonetaria: masaMonetaria?.total || 0,
     expedientesAbiertos: expedientesAbiertos?.total || 0
