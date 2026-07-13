@@ -73,8 +73,8 @@
         : firmados.map(d => `<tr>
           <td><span class="badge badge-activo">${d.codigo_modelo || '—'}</span></td>
           <td><strong>${d.titulo_documento || '—'}</strong></td>
-          <td>${d.firmante_alias || d.firmado_por || '—'}</td>
-          <td>${d.fecha_firma ? formatFecha(d.fecha_firma) : formatFecha(d.creado_en)}</td>
+          <td>${d.solicitantes?.alias || d.firmante_alias || d.firmado_por || '—'}</td>
+          <td>${formatFecha(d.fecha_firma || d.creado_en)}</td>
           <td><span class="tag ${(d.firma_hash || d.hash_documento) ? 'tag-green' : 'tag-gray'}">${(d.firma_hash || d.hash_documento) ? '🔐 Válido' : '⚠️ Sin hash'}</span></td>
           <td style="display:flex;gap:6px">
             <a href="/api/junior/documento-verificable/${d.id}" target="_blank" class="btn btn-sm btn-glass" title="Ver PDF">📄 PDF</a>

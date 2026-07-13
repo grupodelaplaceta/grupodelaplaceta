@@ -61,37 +61,38 @@ class PDFGenerator {
   _header(titulo, subtitulo, codigo) {
     const doc = this.doc;
     doc.save();
+    // Borde institucional superior
+    doc.rect(30, 20, 535, 2).fill(this.accentColor);
     if (this.logo) {
       try {
         const logoBuffer = fs.readFileSync(this.logo);
-        doc.image(logoBuffer, 40, 28, { width: 80 });
-        doc.font(this._f(true)).fontSize(14).fillColor('#1c005f');
+        doc.image(logoBuffer, 40, 28, { width: 90 });
+        doc.font(this._f(true)).fontSize(16).fillColor('#1c005f');
         const logoLabel = this.tipo === 'tributos' ? '  TRIBUTOS GDLP' : '  GRUPO DE LA PLACETA';
-        doc.text(logoLabel, 125, 42);
+        doc.text(logoLabel, 135, 35);
       } catch (e) {
-        console.error('[PDF] Logo error:', e.message);
-        doc.font(this._f(true)).fontSize(14).fillColor('#1c005f');
+        doc.font(this._f(true)).fontSize(18).fillColor('#1c005f');
         const fallback = this.tipo === 'tributos' ? '🏛️  TRIBUTOS GDLP' : '🏛️  GRUPO DE LA PLACETA';
-        doc.text(fallback, 40, 40);
+        doc.text(fallback, 40, 35);
       }
     } else {
-      doc.font(this._f(true)).fontSize(14).fillColor('#1c005f');
+      doc.font(this._f(true)).fontSize(18).fillColor('#1c005f');
       const fallback = this.tipo === 'tributos' ? '🏛️  TRIBUTOS GDLP' : '🏛️  GRUPO DE LA PLACETA';
-      doc.text(fallback, 40, 40);
+      doc.text(fallback, 40, 35);
     }
     doc.font(this._f(false, true)).fontSize(7).fillColor('#5c5566');
-    doc.text(codigo || 'Documento Oficial', 50, 56);
+    doc.text(codigo || 'Documento Oficial', 40, 58);
     if (titulo) {
-      doc.font(this._f(false, false, true)).fontSize(16).fillColor('#1c005f');
-      doc.text(titulo, 50, 78, { width: 500 });
+      doc.font(this._f(false, false, true)).fontSize(18).fillColor('#1c005f');
+      doc.text(titulo, 40, 78, { width: 520 });
     }
     if (subtitulo) {
-      doc.font(this._f(false, true)).fontSize(8.5).fillColor(this.accentColor);
-      doc.text(subtitulo, 50, doc.y + 2, { width: 500 });
+      doc.font(this._f(false, true)).fontSize(9).fillColor(this.accentColor);
+      doc.text(subtitulo, 40, doc.y + 4, { width: 520 });
     }
-    const lineY = Math.max(doc.y + 10, 120);
-    doc.rect(50, lineY, 500, 1.5).fill(this.accentColor);
-    doc.y = lineY + 12;
+    const lineY = Math.max(doc.y + 12, 125);
+    doc.rect(40, lineY, 520, 1.5).fill(this.accentColor);
+    doc.y = lineY + 14;
     doc.restore();
   }
 
@@ -100,12 +101,16 @@ class PDFGenerator {
     const pg = doc.page;
     const w = pg.width;
     doc.save();
-    doc.rect(50, pg.height - 38, w - 100, 0.5).fill(this.accentColor);
-    doc.font(this._f(false, true)).fontSize(6).fillColor('#5c5566');
-    const footerText = this.tipo === 'tributos' ? 'Tributos de La Placeta \u00B7 Documento oficial' : 'Grupo de La Placeta \u00B7 Documento oficial';
-    doc.text(footerText, 50, pg.height - 33, { width: 350 });
+    doc.rect(40, pg.height - 38, w - 80, 0.5).fill(this.accentColor);
+    doc.font(this._f(false, true)).fontSize(6.5).fillColor('#5c5566');
+    const footerText = this.tipo === 'tributos'
+      ? 'Tributos de La Placeta · Documento oficial · NIF: G-12345678'
+      : 'Grupo de La Placeta · Documento oficial · CIF: G-87654321 · Asociación inscrita en el Registro Nacional';
+    doc.text(footerText, 40, pg.height - 33, { width: 400 });
     const pgN = doc.bufferedPageRange ? doc.bufferedPageRange().count : 1;
-    doc.text(`P\u00E1g. ${pgN}`, w - 100, pg.height - 33, { width: 50, align: 'right' });
+    doc.text(`Página ${pgN}`, w - 100, pg.height - 33, { width: 60, align: 'right' });
+    doc.font(this._f(false, true)).fontSize(5.5).fillColor('#9a8aaa');
+    doc.text(`Generado el ${new Date().toLocaleDateString('es-ES', { day:'numeric', month:'long', year:'numeric' })} · SHA-256 verificable`, 40, pg.height - 24, { width: 500 });
     doc.restore();
   }
 
@@ -217,13 +222,22 @@ class PDFGenerator {
     const doc = this.doc;
     const hash = crypto.createHash('sha256').update(JSON.stringify(datos) + Date.now()).digest('hex');
     this._linea();
-    doc.moveDown(0.3);
-    doc.font(this._f(true)).fontSize(9).fillColor('#1c005f');
-    doc.text('C\u00DAMPLEASE Y NOTIF\u00CDQUESE.', 50, doc.y, { width: 500, align: 'center' });
-    doc.moveDown(1.2);
-    doc.font(this._f()).fontSize(7).fillColor('#5c5566');
-    doc.text('DEPARTAMENTO DE JUSTICIA \u00B7 GRUPO DE LA PLACETA', 50, doc.y, { width: 500, align: 'center' });
+    doc.moveDown(0.5);
+    doc.font(this._f(true)).fontSize(10).fillColor('#1c005f');
+    doc.text('CÚMPLEASE Y NOTIFÍQUESE.', 40, doc.y, { width: 520, align: 'center' });
+    doc.moveDown(1.5);
+    doc.rect(160, doc.y, 280, 1).fill('#1c005f');
+    doc.moveDown(0.5);
+    doc.font(this._f()).fontSize(8).fillColor('#5c5566');
+    doc.text('Fdo.: La Administración del Grupo de La Placeta', 40, doc.y, { width: 520, align: 'center' });
     doc.moveDown(1);
+    doc.font(this._f(false, true)).fontSize(7).fillColor('#5c5566');
+    doc.text('DEPARTAMENTO DE JUSTICIA · GRUPO DE LA PLACETA', 40, doc.y, { width: 520, align: 'center' });
+    doc.moveDown(0.5);
+    doc.font(this._f(false, true)).fontSize(6).fillColor('#9a8aaa');
+    doc.text(`Código Seguro de Verificación: ${hash.substring(0, 20)}...`, 40, doc.y, { width: 520, align: 'center' });
+    doc.text('Puede verificar este documento en https://grupodelaplaceta.vercel.app/admin/firmas', 40, doc.y, { width: 520, align: 'center' });
+  }
     doc.text('Documento generado electr\u00F3nicamente', 50, doc.y, { width: 500, align: 'center' });
     doc.font(this._f(false, true)).fontSize(6).fillColor('#9c7ee6');
     doc.text(`SHA-256: ${hash.substring(0, 20)}...`, 50, doc.y + 10, { width: 500, align: 'center' });

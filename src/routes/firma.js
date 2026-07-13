@@ -133,6 +133,7 @@ router.post('/firmar-manuscrito', verificarSesion, async (req, res) => {
       url_firma: firma_base64,
       hash_documento: firmaHash,
       firma_hash: firmaHash,
+      fecha_firma: ahora,
       firmado_por: firmante.id,
       estado: 'firmado',
       creado_en: ahora
