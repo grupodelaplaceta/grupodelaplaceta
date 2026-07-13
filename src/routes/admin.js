@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { getDb } from '../config/db.js';
 import { verificarSesion, verificarRol } from '../middleware/auth.js';
+import { supabase } from '../config/supabase.js';
 
 const router = Router();
 
@@ -115,16 +116,24 @@ router.get('/reporte-completo', verificarSesion, verificarRol('administrador', '
   res.json(reporte);
 });
 
-// GET /api/admin/ciudadanos - Lista completa de ciudadanos (solicitantes)
-router.get('/ciudadanos', verificarSesion, verificarRol('administrador', 'junta'), (req, res) => {
-  const db = getDb();
-  const ciudadanos = db.prepare(`
-    SELECT s.*, 
-      (SELECT COUNT(*) FROM tramites WHERE usuario_id = s.id) as total_tramites
-    FROM solicitantes s
-    ORDER BY s.creado_en DESC
-  `).all();
-  res.json(ciudadanos);
+// GET /api/admin/ciudadanos - Lista completa de ciudadanos desde Supabase
+router.get('/ciudadanos', verificarSesion, verificarRol('administrador', 'junta'), async (req, res) => {
+  try {
+    // Primero Supabase
+    const { data: solicitantes, error } = await supabase
+      .from('solicitantes')
+      .select('*')
+      .order('creado_en', { ascending: false })
+      .limit(500);
+    if (!error && solicitantes) return res.json(solicitantes);
+  } catch (_) {}
+  // Fallback SQLite
+  try {
+    const db = getDb();
+    const ciudadanos = db.prepare('SELECT * FROM solicitantes ORDER BY creado_en DESC').all();
+    return res.json(ciudadanos || []);
+  } catch (_) {}
+  res.json([]);
 });
 
 export default router;
