@@ -365,6 +365,17 @@ router.get('/proyectos', (req, res) => {
 
 router.get('/voley-club', (req, res) => { res.redirect('/proyectos'); });
 
+// ══ PLACETA JUNIOR ═══════════════════════════════════════════
+router.get('/junior', (req, res) => {
+  res.render('public/junior', { titulo: 'Placeta Junior', layout: 'layouts/publico', pathActual: '/junior' });
+});
+router.get('/junior/legal', (req, res) => {
+  res.render('public/junior-legal', { titulo: 'Textos Legales Junior', layout: 'layouts/publico', pathActual: '/junior' });
+});
+router.get('/normativas', (req, res) => {
+  res.render('public/normativas', { titulo: 'Normativas', layout: 'layouts/publico', pathActual: '/normativas' });
+});
+
 // ── DESCARGA DE PDFs DE TRÁMITES ────────────────────────────────────────────
 
 router.get('/tramites/pdf/:tipo', async (req, res) => {

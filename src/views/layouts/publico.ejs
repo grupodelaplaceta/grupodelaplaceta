@@ -22,6 +22,7 @@
         <a href="/tramites" class="nav-item <%= pathActual.startsWith('/tramites') ? 'active' : '' %>">Trámites</a>
         <a href="/junta" class="nav-item <%= pathActual === '/junta' ? 'active' : '' %>">Junta</a>
         <a href="/proyectos" class="nav-item <%= pathActual === '/proyectos' ? 'active' : '' %>">Proyectos</a>
+        <a href="/junior" class="nav-item <%= pathActual.startsWith('/junior') ? 'active' : '' %>" style="color:#FF6600">Junior</a>
         <% if (usuario) { %>
         <a href="/ciudadano" class="nav-item <%= pathActual.startsWith('/ciudadano') ? 'active' : '' %>">Mi Área</a>
         <a href="/api/auth/logout" class="nav-item nav-item-outline">Salir</a>
