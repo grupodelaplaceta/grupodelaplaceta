@@ -43,6 +43,7 @@ import juniorAuthRoutes from './src/routes/junior-auth.js';
 import juniorMgmtRoutes from './src/routes/junior-mgmt.js';
 import juniorAcademyRoutes from './src/routes/junior-academy.js';
 import juniorLegalRoutes from './src/routes/junior-legal.js';
+import juniorAmigosRoutes from './src/routes/junior-amigos.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -167,6 +168,7 @@ app.use('/api/junior', juniorAuthRoutes);
 app.use('/api/junior', juniorMgmtRoutes);
 app.use('/api/junior/academy', juniorAcademyRoutes);
 app.use('/api/junior', juniorLegalRoutes);
+app.use('/api/junior/amigos', juniorAmigosRoutes);
 app.use('/api/firma', firmaRoutes);
 app.use('/api/placetid', placetidRoutes);
 app.use('/api/contenidos', contenidosRoutes);

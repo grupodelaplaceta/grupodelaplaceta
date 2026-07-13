@@ -12,6 +12,21 @@ import { generarCuestionarios, COSTO_DESBLOQUEO_POR_NIVEL, getRangoEdad } from '
 const BANCO_API = (process.env.BANCO_API_URL || 'https://api.banco.laplaceta.org').replace(/\/+$/, '');
 const CRM_KEY = process.env.CRM_READ_KEY || 'crm-gdlp-shared-key-2026';
 
+// ── Notificar al tutor vía PlacetaID ─────────────────────────
+async function notificarTutor(junior, concepto, detalles, monto = 0) {
+  if (!junior.tutor_dip) return;
+  try {
+    const { solicitarAutorizacionTutor } = await import('../services/placetaidService.js');
+    await solicitarAutorizacionTutor({
+      dipTutor: junior.tutor_dip,
+      concepto,
+      monto,
+      dipMenor: junior.dip,
+      detalles: detalles || ''
+    });
+  } catch (_) { /* PlacetaID offline, ignorar */ }
+}
+
 async function apiBanco(action, data = {}) {
   try {
     const r = await fetch(`${BANCO_API}/api/crm-state`, {
@@ -208,6 +223,15 @@ router.post('/evaluar', verificarJunior, async (req, res) => {
       detalle: `Materia: ${materia}, Nivel: ${nivel}, Aciertos: ${aciertos}/${totalPreguntas} (${porcentaje}%), Placetas: +${totalPlacetasGanadas}`, ip
     });
 
+    // Notificar al tutor si aprueba (>60%)
+    if (porcentaje >= 60) {
+      notificarTutor(junior,
+        `${junior.nombre} completó ${materia} nivel ${nivel}`,
+        `Aciertos: ${aciertos}/${totalPreguntas} (${porcentaje}%). Ganó ${totalPlacetasGanadas} Pz.`,
+        totalPlacetasGanadas
+      );
+    }
+
     if (req.session?.junior) req.session.junior.placetas_saldo = nuevoSaldo;
 
     res.json({
@@ -328,6 +352,13 @@ router.post('/desbloquear-nivel', verificarJunior, async (req, res) => {
       junior_id: junior.id, accion: 'nivel_desbloqueado',
       detalle: `Nivel ${siguienteNivel} desbloqueado por ${costo} Pz${pagoBancario ? '. Pago bancario OK + IVA Capitalia→TGLP' : ''}`, ip
     });
+
+    // Notificar al tutor del avance
+    notificarTutor(junior,
+      `🎓 ${junior.nombre} subió al nivel ${siguienteNivel}`,
+      `Desbloqueó el nivel ${siguienteNivel} de la academia por ${costo} Pz. Saldo: ${nuevoSaldo} Pz.`,
+      costo
+    );
 
     if (req.session?.junior) {
       req.session.junior.placetas_saldo = nuevoSaldo;
