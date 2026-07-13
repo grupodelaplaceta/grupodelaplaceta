@@ -12,16 +12,6 @@
 </div>
 
 <script>
-  document.getElementById('crearDocumentoForm').addEventListener('submit', async e => {
-    e.preventDefault();
-    const data = Object.fromEntries(new FormData(e.target));
-    try {
-      const result = await apiFetch('/api/firma/crear', {method:'POST', body:JSON.stringify(data)});
-      mostrarMensaje('success', `Documento creado: ${result.codigo_modelo}`);
-      e.target.reset(); cargarDocumentos();
-    } catch(e) { mostrarMensaje('error', e.message); }
-  });
-
   async function cargarDocumentos() {
     try {
       const docs = await apiFetch('/api/firma/documentos');
