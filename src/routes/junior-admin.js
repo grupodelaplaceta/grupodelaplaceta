@@ -124,7 +124,7 @@ router.get('/junior/impuestos', verificarSesion, verificarRol('administrador', '
 router.get('/junior/documentos', verificarSesion, verificarRol('administrador'), async (req, res) => {
   try {
     const d = await s('documentos_firmados', '*, firmante:solicitantes!documentos_firmados_firmado_por_fkey(alias,dip)', { in: { codigo_modelo: ['PJ-TYC-001','PJ-PRV-001','PJ-CON-001'] }, order: { field: 'creado_en', asc: false }, limit: 100 });
-    return res.json(d || []);
+    return res.json(Array.isArray(d) ? d : []);
   } catch { return res.json([]); }
 });
 
