@@ -595,8 +595,9 @@ export function generarCuestionarios(edad, nivel) {
   return resultado;
 }
 
-/**
+/*
  * Costo de desbloqueo para cada nivel (Nivel 2-10)
+ */
 // ═══════════════════════════════════════════════════════════════════════════
 //  GEOGRAFÍA — Países, continentes, CCAA, ríos, islas
 // ═══════════════════════════════════════════════════════════════════════════
