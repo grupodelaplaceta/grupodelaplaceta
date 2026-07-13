@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import { supabase } from '../config/supabase.js';
+import { getDb } from '../config/db.js';
 
 const router = Router();
 const API = 'https://id.laplaceta.org/api';
@@ -9,7 +11,6 @@ let _exp = 0;
 async function getToken() {
   if (_token && Date.now() < _exp) return _token;
 
-  // Autenticar via API Key (plid26 acepta ccb611... como admin)
   const r = await fetch(`${API}/admin/stats`, {
     headers: { 'X-API-Key': API_KEY }
   });
@@ -31,35 +32,103 @@ function send(res, result) {
   if (result.status === 403 && result.data?.error?.includes('administradores')) {
     return res.status(502).json({
       error: 'El token no tiene permisos de administrador.',
-      solucion: 'Despliega verifyAdminApiKey en PLID26 (plid26-main/server.js) o asigna rol administrador al usuario demo.'
+      solucion: 'Despliega verifyAdminApiKey en PLID26 o asigna rol administrador al usuario demo.',
+      fallback: true
     });
   }
   res.status(result.status).json(result.data);
 }
 
+// ── Fallback local ─────────────────────────────────────────────────────────
+async function localRegistros() {
+  try {
+    if (supabase) {
+      const { data } = await supabase.from('solicitantes').select('dip,nombre_real,alias,email,rol,estado,creado_en').limit(500);
+      if (data) return data.map(r => ({
+        dip: r.dip, nombre: r.nombre_real, alias: r.alias, email: r.email,
+        rol: r.rol, activo: r.estado === 'activo', bloqueado: r.estado === 'suspendido',
+        intentosFallidos: 0, totpVerified: false, createdAt: r.creado_en
+      }));
+    }
+    const db = getDb();
+    const rows = db.prepare("SELECT dip,nombre_real,alias,email,rol,estado,creado_en FROM solicitantes ORDER BY creado_en DESC LIMIT 500").all();
+    return rows.map(r => ({
+      dip: r.dip, nombre: r.nombre_real, alias: r.alias, email: r.email,
+      rol: r.rol, activo: r.estado === 'activo', bloqueado: r.estado === 'suspendido',
+      intentosFallidos: 0, totpVerified: false, createdAt: r.creado_en
+    }));
+  } catch { return []; }
+}
+
+async function localToggle(dip) {
+  try {
+    if (supabase) {
+      const { data } = await supabase.from('solicitantes').select('estado').eq('dip', dip).single();
+      const newState = data?.estado === 'suspendido' ? 'activo' : 'suspendido';
+      await supabase.from('solicitantes').update({ estado: newState }).eq('dip', dip);
+      return { ok: true, activo: newState === 'activo', mensaje: `Estado cambiado a: ${newState}` };
+    }
+    const db = getDb();
+    const u = db.prepare("SELECT estado FROM solicitantes WHERE dip=?").get(dip);
+    if (!u) return null;
+    const newState = u.estado === 'suspendido' ? 'activo' : 'suspendido';
+    db.prepare("UPDATE solicitantes SET estado=? WHERE dip=?").run(newState, dip);
+    return { ok: true, activo: newState === 'activo', mensaje: `Estado cambiado a: ${newState}` };
+  } catch { return null; }
+}
+
+async function localDesbloquear(dip) {
+  try {
+    if (supabase) {
+      await supabase.from('solicitantes').update({ estado: 'activo' }).eq('dip', dip);
+      return { ok: true, mensaje: `DIP ${dip} desbloqueado (local)` };
+    }
+    const db = getDb();
+    db.prepare("UPDATE solicitantes SET estado='activo' WHERE dip=?").run(dip);
+    return { ok: true, mensaje: `DIP ${dip} desbloqueado (local)` };
+  } catch { return null; }
+}
+
 router.get('/stats', async (req, res) => {
-  try { send(res, await call('/admin/stats')); }
-  catch (e) { res.status(502).json({ error: e.message }); }
+  try { const r = await call('/admin/stats'); send(res, r); }
+  catch {
+    const regs = await localRegistros();
+    res.json({ total: regs.length, activos: regs.filter(r => r.activo && !r.bloqueado).length, bloqueados: regs.filter(r => r.bloqueado).length, online: false });
+  }
 });
 
 router.get('/registros', async (req, res) => {
-  try { send(res, await call('/admin/registros')); }
-  catch (e) { res.status(502).json({ error: e.message }); }
+  try { const r = await call('/admin/registros'); send(res, r); }
+  catch {
+    const regs = await localRegistros();
+    const count = regs.length;
+    const activos = regs.filter(r => r.activo && !r.bloqueado).length;
+    const bloqueados = regs.filter(r => r.bloqueado).length;
+    res.json({ registros: regs, total: count, activos, bloqueados, online: false });
+  }
 });
 
 router.get('/logs', async (req, res) => {
   try { send(res, await call(`/admin/logs?limit=${req.query.limit || 50}`)); }
-  catch (e) { res.status(502).json({ error: e.message }); }
+  catch { res.json({ logs: [], online: false, mensaje: 'PLID26 no disponible. Los logs requieren conexión directa.' }); }
 });
 
 router.post('/desbloquear/:dip', async (req, res) => {
   try { send(res, await call(`/admin/desbloquear/${req.params.dip}`)); }
-  catch (e) { res.status(502).json({ error: e.message }); }
+  catch {
+    const result = await localDesbloquear(req.params.dip);
+    if (result) res.json(result);
+    else res.status(502).json({ error: 'PLID26 no disponible y no hay fallback local', online: false });
+  }
 });
 
 router.post('/toggle/:dip', async (req, res) => {
   try { send(res, await call(`/admin/toggle/${req.params.dip}`)); }
-  catch (e) { res.status(502).json({ error: e.message }); }
+  catch {
+    const result = await localToggle(req.params.dip);
+    if (result) res.json(result);
+    else res.status(502).json({ error: 'PLID26 no disponible y no hay fallback local', online: false });
+  }
 });
 
 // ── Solicitantes (apps integradas en PlacetaID) ─────────────────────────────

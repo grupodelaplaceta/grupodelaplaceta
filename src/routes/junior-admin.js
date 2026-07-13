@@ -196,6 +196,52 @@ router.get('/junior/placetaid', verificarSesion, verificarRol('administrador'), 
   } catch { return res.json([]); }
 });
 
+// ── 9bis. CUENTAS BANCARIAS ────────────────────────────────────────────────
+router.get('/junior/cuentas', verificarSesion, verificarRol('administrador', 'junta'), async (req, res) => {
+  try {
+    const { dip } = req.query;
+    const db = getDb();
+    let cuentas = [];
+    // Intentar desde Supabase
+    const sbCuentas = await s('cuentas_bancarias', '*', { eq: { tipo_cuenta: 'Junior' }, order: { field: 'creado_en', asc: false }, limit: 200 });
+    if (sbCuentas && sbCuentas.length) cuentas = sbCuentas;
+    else {
+      // Fallback SQLite
+      const rows = dip
+        ? db.prepare("SELECT * FROM cuentas_bancarias WHERE tipo_cuenta='Junior' AND (placeta_id = ? OR id = ?)").all(dip, dip)
+        : db.prepare("SELECT * FROM cuentas_bancarias WHERE tipo_cuenta='Junior' ORDER BY creado_en DESC LIMIT 200").all();
+      cuentas = rows || [];
+    }
+    // Enriquecer con nombre del junior
+    const juniors = await s('junior_menores', 'dip,nombre,apellidos,placetas_saldo', { limit: 500 }) || [];
+    cuentas = cuentas.map(c => {
+      const j = juniors.find(j => j.dip === (c.placeta_id || c.dip));
+      return { ...c, junior_nombre: j ? `${j.nombre} ${j.apellidos}` : '—', junior_saldo: j?.placetas_saldo || 0 };
+    });
+    return res.json(cuentas);
+  } catch (err) { return res.json([]); }
+});
+
+router.post('/junior/:id/crear-cuenta-bancaria', verificarSesion, verificarRol('administrador', 'junta'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const db = getDb();
+    const junior = db.prepare("SELECT * FROM junior_menores WHERE id = ?").get(id);
+    if (!junior) return res.status(404).json({ error: 'Junior no encontrado' });
+    const BANCO_API = (process.env.BANCO_API_URL || 'https://api.banco.laplaceta.org').replace(/\/+$/, '');
+    const CRM_KEY = process.env.CRM_READ_KEY || 'crm-gdlp-shared-key-2026';
+    const r = await fetch(`${BANCO_API}/api/crm-state`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CRM-Key': CRM_KEY },
+      body: JSON.stringify({ action: 'crear-cuenta-infantil', juniorDip: junior.dip, juniorNombre: `${junior.nombre} ${junior.apellidos}`, tutorAccountId: `u-${junior.tutor_dip?.toLowerCase().replace(/-/g,'')}`, sendLimitPz: 50, tutorDip: junior.tutor_dip }),
+      signal: AbortSignal.timeout(10000)
+    });
+    if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.error || 'Error API banco'); }
+    const data = await r.json();
+    return res.json({ success: true, message: `Cuenta creada: ${data.accountId}`, cuenta: data });
+  } catch (err) { return res.status(500).json({ error: err.message }); }
+});
+
 // ── 10. DEMO ────────────────────────────────────────────────────────────────
 router.post('/junior/demo/crear', verificarSesion, verificarRol('administrador'), async (req, res) => {
   try {

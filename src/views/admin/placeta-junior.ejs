@@ -28,6 +28,7 @@
     <button class="tab-btn" data-tab="impuestos" onclick="switchTab('impuestos')">🧾 Impuestos</button>
     <button class="tab-btn" data-tab="placetaid" onclick="switchTab('placetaid')">🆔 PlacetaID</button>
     <button class="tab-btn" data-tab="pendientes" onclick="switchTab('pendientes')">⏳ Pendientes Firma</button>
+    <button class="tab-btn" data-tab="cuentas" onclick="switchTab('cuentas')">🏦 Cuentas</button>
     <button class="tab-btn" data-tab="email" onclick="switchTab('email')">📧 Email Tutores</button>
     <button class="tab-btn" data-tab="logs" onclick="switchTab('logs')">📋 Logs</button>
   </div>
@@ -139,6 +140,17 @@
     </div>
   </div>
 
+  <!-- Tab: Cuentas Bancarias -->
+  <div class="tab-content" id="tab-cuentas" style="display:none">
+    <div class="section">
+      <div class="section-header">
+        <div><h2>🏦 Cuentas Bancarias Junior</h2></div>
+        <button class="btn btn-sm btn-primary" onclick="cargarCuentas()">🔄 Refrescar</button>
+      </div>
+      <div class="table-container" id="cuentasContainer"><p style="color:var(--text-light);padding:20px;text-align:center">Cargando cuentas bancarias...</p></div>
+    </div>
+  </div>
+
   <!-- Tab: Email Tutores -->
   <div class="tab-content" id="tab-email" style="display:none">
     <div class="section">
@@ -207,6 +219,7 @@ function switchTab(tab) {
   if (tab === 'impuestos') cargarImpuestos();
   if (tab === 'placetaid') cargarPlacetaid();
   if (tab === 'pendientes') cargarPendientesFirma();
+  if (tab === 'cuentas') cargarCuentas();
   if (tab === 'email') cargarMenoresEmail();
   if (tab === 'logs') cargarLogs();
 }
@@ -411,6 +424,28 @@ async function cargarPendientesFirma() {
   } catch (err) { document.getElementById('pendientesContainer').innerHTML = `<p>Error: ${err.message}</p>`; }
 }
 
+// ── CUENTAS BANCARIAS ─────────────────────────────────────────────────────
+async function cargarCuentas() {
+  try {
+    const cuentas = await apiFetch('/api/admin/junior/cuentas');
+    const c = document.getElementById('cuentasContainer');
+    if (!cuentas || !cuentas.length) {
+      c.innerHTML = '<div class="empty-state"><div class="empty-icon">🏦</div><p>Sin cuentas bancarias junior</p><div class="sub">Las cuentas se crean automáticamente al vincular un tutor</div></div>';
+      return;
+    }
+    c.innerHTML = `<table class="data-table"><thead><tr><th>ID Cuenta</th><th>Junior</th><th>Tipo</th><th>Saldo (Pz)</th><th>IBAN</th><th>Saldo Placeta</th><th>Estado</th></tr></thead>
+      <tbody>${cuentas.map(ct => `<tr>
+        <td><code>${ct.id}</code></td>
+        <td><strong>${ct.junior_nombre || '—'}</strong></td>
+        <td><span class="pill pill-purple">${ct.tipo_cuenta || ct.tipo || 'Junior'}</span></td>
+        <td><strong>${(ct.saldo || 0).toLocaleString('es-ES')} Pz</strong></td>
+        <td><small>${ct.iban || '—'}</small></td>
+        <td>🪙 ${(ct.junior_saldo || 0).toLocaleString('es-ES')}</td>
+        <td><span class="status-dot ${ct.estado === 'activa' ? 'green' : 'red'}"></span> ${ct.estado || '—'}</td>
+      </tr>`).join('')}</tbody></table>`;
+  } catch (err) { document.getElementById('cuentasContainer').innerHTML = `<p style="color:var(--text-light);padding:20px">Error: ${err.message}</p>`; }
+}
+
 // ── EMAIL TUTORES ─────────────────────────────────────────────────────────
 async function cargarMenoresEmail() {
   try {
@@ -546,5 +581,5 @@ function filtrarTabla(searchId, tbodyId) {
   document.querySelectorAll(`#${tbodyId} tr`).forEach(r => r.style.display = r.textContent.toLowerCase().includes(q) ? '' : 'none');
 }
 
-document.addEventListener('DOMContentLoaded', () => { cargarStats(); cargarJuniors(); cargarLogs(); });
+document.addEventListener('DOMContentLoaded', () => { cargarStats(); cargarJuniors(); cargarLogs(); cargarCuentas(); });
 </script>
