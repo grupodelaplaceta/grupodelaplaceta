@@ -393,9 +393,9 @@ router.post('/generar-dip-digital', verificarJunior, async (req, res) => {
 router.get('/menores/:dipTutor', async (req, res) => {
   try {
     const menores = await sbFindJuniorByTutor(req.params.dipTutor);
-    res.json(menores || []);
+    return res.json(Array.isArray(menores) ? menores : []);
   } catch (err) {
-    res.json([]);
+    return res.json([]);
   }
 });
 
