@@ -176,10 +176,21 @@ async function cargarCiudadanos() {
     const dipsPlacetaid = new Set((placetaidRegistros || []).map(r => r.dip));
 
     if (!d.length) { tbody.innerHTML = '<tr><td colspan="9" class="loading-cell">Sin ciudadanos</td></tr>'; return; }
-    tbody.innerHTML = d.map(u => {
+    // Filtrar demos y ordenar: adultos primero, juniors después
+    const reales = d.filter(u => !u.dip?.toLowerCase().includes('demo') && u.dip !== '11111111D');
+    const demos = d.filter(u => u.dip?.toLowerCase().includes('demo') || u.dip === '11111111D');
+    const ordenados = [...reales, ...demos];
+    
+    tbody.innerHTML = ordenados.map(u => {
       const enPlacetaid = dipsPlacetaid.has(u.dip);
-      return '<tr>' +
-      '<td><strong>' + (u.dip || '—') + '</strong></td>' +
+      const esDemo = u.dip?.toLowerCase().includes('demo') || u.dip === '11111111D';
+      const esJunior = u.dip?.endsWith('J') || u.franja_edad?.startsWith('Tutelada');
+      let tipoBadge = '';
+      if (esDemo) tipoBadge = '<span class="badge" style="background:#FF6600;color:#fff;font-size:10px">DEMO</span>';
+      else if (esJunior) tipoBadge = '<span class="badge" style="background:#FF6600;color:#fff;font-size:10px">JR</span>';
+      
+      return '<tr' + (esDemo ? ' style="opacity:.5"' : '') + '>' +
+      '<td><strong>' + (u.dip || '—') + '</strong> ' + tipoBadge + '</td>' +
       '<td>' + (u.nombre_real || '—') + '</td>' +
       '<td>' + (u.alias || '—') + '</td>' +
       '<td>' + (u.placeid || '—') + '</td>' +
@@ -192,9 +203,18 @@ async function cargarCiudadanos() {
           ? '<button class="btn btn-sm btn-primary" onclick="generarEnlaceRegistro(\'' + u.dip + '\')">🔗 Enlace</button>'
           : '<button class="btn btn-sm btn-success" onclick="crearEnPlacetaID(\'' + u.dip + '\',\'' + (u.nombre_real || '').replace(/'/g,"\\'") + '\',\'' + (u.email || '').replace(/'/g,"\\'") + '\')">➕ PlacetaID</button>'
         ) +
+        '<button class="btn btn-sm btn-danger" onclick="eliminarCiudadano(\'' + u.dip + '\',\'' + (u.nombre_real || u.alias || '').replace(/'/g,"\\'") + '\')">🗑️</button>' +
       '</td></tr>';
     }).join('');
   } catch(e) { document.getElementById('ciudadanosBody').innerHTML = '<tr><td colspan="9" class="error-cell">' + e.message + '</td></tr>'; }
+}
+
+async function eliminarCiudadano(dip, nombre) {
+  if (!confirm('¿Eliminar a ' + (nombre||dip) + '? Esta acción no se puede deshacer.')) return;
+  try {
+    await apiFetch('/api/admin/ciudadanos/' + dip, { method: 'DELETE' });
+    cargarCiudadanos();
+  } catch(e) { alert('Error: ' + e.message); }
 }
 document.addEventListener('DOMContentLoaded', cargarCiudadanos);
 </script>

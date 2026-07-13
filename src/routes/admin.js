@@ -136,4 +136,21 @@ router.get('/ciudadanos', verificarSesion, verificarRol('administrador', 'junta'
   res.json([]);
 });
 
+// DELETE /api/admin/ciudadanos/:dip
+router.delete('/ciudadanos/:dip', verificarSesion, verificarRol('administrador'), async (req, res) => {
+  try {
+    const { dip } = req.params;
+    const { error } = await supabase.from('solicitantes').delete().eq('dip', dip);
+    if (error) throw new Error(error.message);
+    await supabase.from('junior_menores').delete().eq('dip', dip);
+    res.json({ success: true });
+  } catch (err) {
+    try {
+      const db = getDb();
+      db.prepare('DELETE FROM solicitantes WHERE dip = ?').run(req.params.dip);
+      res.json({ success: true });
+    } catch (_) { res.status(500).json({ error: err.message }); }
+  }
+});
+
 export default router;
