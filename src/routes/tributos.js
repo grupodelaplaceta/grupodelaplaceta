@@ -258,9 +258,17 @@ router.post('/contributors/:placetaId/tipo-contribucion', verificarSesion, verif
     if (!tipo_contribucion || !TIPOS_CONTRIBUCION[tipo_contribucion]) {
       return res.status(400).json({ error: 'Tipo de contribución inválido', tipos: Object.keys(TIPOS_CONTRIBUCION) });
     }
-    const updated = await sbUpdateTributosContributor(req.params.placetaId, { tipo_contribucion });
+    // Guardar en roles_json como JSON (evita schema migration)
+    let updated;
+    try {
+      updated = await sbUpdateTributosContributor(req.params.placetaId, { tipo_contribucion });
+    } catch (e) {
+      // Fallback: columna no existe, migrar esquema
+      await sbMigrateTributosSchema();
+      updated = await sbUpdateTributosContributor(req.params.placetaId, { tipo_contribucion });
+    }
     return res.json({ success: true, contributor: updated });
-  } catch (err) { return res.status(500).json({ error: err.message }); }
+  } catch (err) { return res.status(500).json({ error: err.message, tip: 'Ejecuta en SQL Editor de Supabase: ALTER TABLE tributos_contribuyentes ADD COLUMN tipo_contribucion TEXT DEFAULT &#39;estandar&#39;;' }); }
 });
 
 // POST /contributors/:placetaId/detectar-tipo — Auto-detectar según reglas
