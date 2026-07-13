@@ -928,6 +928,40 @@ router.post('/reconcile/:placetaId', verificarSesion, verificarRol('administrado
     // Calcular y actualizar la declaración
     const declaration = await sbCalculateDeclarationFromDailyBalances(placetaId, mesPeriodo, Object.values(dailyMap));
 
+    // Recalcular IRM e IGF usando contribuciones.js
+    if (declaration) {
+      try {
+        // Calcular ingresos/pagos del mes
+        let ingresos = 0, pagos = 0;
+        const mes = mesPeriodo;
+        for (const tx of bankTx) {
+          const txDate = (tx.createdAt || '').slice(0, 7);
+          if (txDate === mes) {
+            const amount = Math.abs(Number(tx.amountPz || 0));
+            if (accountIds.has(tx.toAccountId)) ingresos += amount;
+            if (accountIds.has(tx.fromAccountId)) pagos += amount;
+          }
+        }
+        const patrimonio = declaration.patrimonio_medio || bankSaldoTotal || 0;
+        const calc = calcularContribucion(contributor || { nombre, dip, tipo_sujeto: 'Fisico', placeta_id: placetaId }, patrimonio, ingresos, pagos);
+        // Actualizar declaration con cálculos correctos
+        declaration.cuota_irm = calc.irm.importe;
+        declaration.cuota_igf = calc.igf.importe;
+        declaration.indice_acumulacion = calc.irm.ia;
+        declaration.tipo_irm = calc.irm.porcentaje;
+        declaration.exencion_igf = calc.igf.exento || null;
+        // Guardar en Supabase
+        await sbUpdateTributosDeclaration(declaration.id, {
+          cuota_irm: calc.irm.importe,
+          cuota_igf: calc.igf.importe,
+          indice_acumulacion: calc.irm.ia,
+          tipo_irm: calc.irm.porcentaje
+        });
+      } catch (calcErr) {
+        console.warn('[Tributos] Error recalculando IRM/IGF:', calcErr.message);
+      }
+    }
+
     // Enriquecer declaration con datos del contribuyente
     if (declaration) {
       declaration.nombre = nombre;
