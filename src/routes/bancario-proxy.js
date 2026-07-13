@@ -97,12 +97,12 @@ router.get('/resumen', verificarSesion, verificarRol('administrador', 'junta', '
       updatedAt: state.updatedAt
     });
   } catch (err) {
-    // Supabase fallback
+    // Supabase fallback — maneja tablas que pueden no existir
     try {
-      const { count: totalCuentas } = await supabase.from('cuentas_bancarias').select('*', { count: 'exact', head: true });
-      const { count: totalUsuarios } = await supabase.from('solicitantes').select('*', { count: 'exact', head: true });
-      const { count: totalTransacciones } = await supabase.from('transacciones').select('*', { count: 'exact', head: true });
-      res.json({ totalUsuarios: totalUsuarios || 0, totalCuentas: totalCuentas || 0, totalTransacciones: totalTransacciones || 0, masaMonetaria: 0, tesoro: 0 });
+      let totalCuentas = 0, totalUsuarios = 0;
+      try { const r = await supabase.from('cuentas_bancarias').select('*', { count: 'exact', head: true }); totalCuentas = r.count || 0; } catch {}
+      try { const r = await supabase.from('solicitantes').select('*', { count: 'exact', head: true }); totalUsuarios = r.count || 0; } catch {}
+      res.json({ totalUsuarios, totalCuentas, totalTransacciones: 0, masaMonetaria: 0, tesoro: 0 });
     } catch { res.status(502).json({ error: err.message }); }
   }
 });
@@ -206,27 +206,8 @@ router.get('/buscar', verificarSesion, verificarRol('administrador', 'junta', 'f
   }
 });
 
-// ── Resumen de cuentas por tipo ─────────────────────────────────────────────
-router.get('/resumen-cuentas', verificarSesion, verificarRol('administrador', 'junta', 'fiscal'), async (req, res) => {
-  try {
-    const state = await fetchBancoState(req);
-    const cuentas = Array.isArray(state.accounts) ? state.accounts : Object.values(state.accounts || {});
-    const porTipo = {};
-    for (const c of cuentas) {
-      const tipo = c.type || 'Unknown';
-      if (!porTipo[tipo]) porTipo[tipo] = { tipo, count: 0, saldoTotal: 0, saldoMaximo: 0, sumaPromedio: 0 };
-      porTipo[tipo].count++;
-      porTipo[tipo].saldoTotal += c.balancePz || 0;
-      if ((c.balancePz || 0) > porTipo[tipo].saldoMaximo) porTipo[tipo].saldoMaximo = c.balancePz || 0;
-    }
-    for (const t of Object.values(porTipo)) {
-      t.promedio = t.count > 0 ? Math.round(t.saldoTotal / t.count) : 0;
-    }
-    res.json(Object.values(porTipo));
-  } catch (err) {
-    res.status(502).json({ error: err.message });
-  }
-});
+// resumen-cuentas definido arriba (con fallback Supabase)
+
 
 // ── Tarjetas emitidas ───────────────────────────────────────────────────────
 router.get('/tarjetas', verificarSesion, verificarRol('administrador', 'junta', 'fiscal'), async (req, res) => {
