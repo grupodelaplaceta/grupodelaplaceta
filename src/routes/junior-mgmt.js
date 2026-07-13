@@ -347,7 +347,27 @@ router.post('/control-parental', async (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  DIP DIGITAL — Generar DIP para el menor
+//  LOGS PÚBLICOS — Para PlacetaID Móvil (sin sesión admin)
+// ═══════════════════════════════════════════════════════════════════════════
+
+router.get('/logs/:dip', async (req, res) => {
+  try {
+    const junior = await sbFindJuniorByDip(req.params.dip);
+    if (!junior) return res.status(404).json({ error: 'Menor no encontrado' });
+
+    const { data: logs, error } = await supabase
+      .from('junior_logs')
+      .select('*')
+      .eq('junior_id', junior.id)
+      .order('creado_en', { ascending: false })
+      .limit(100);
+
+    if (error) throw new Error(error.message);
+    res.json(logs || []);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 // ═══════════════════════════════════════════════════════════════════════════
 
 router.post('/generar-dip-digital', verificarJunior, async (req, res) => {
