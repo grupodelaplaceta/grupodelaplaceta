@@ -222,7 +222,7 @@ async function cargarJuniors() {
         <td><code>${j.dip || '—'}</code></td>
         <td><strong>${j.nombre || ''} ${j.apellidos || ''}</strong></td>
         <td>${j.edad || '—'}</td>
-        <td><small>${j.tutor?.alias || j.tutor_dip || '—'}</small></td>
+        <td><small>${j.tutor_nombre || j.tutor_dip || '—'}</small></td>
         <td>🌟 ${j.nivel_academia || 1}</td>
         <td>🪙 ${j.placetas_saldo || 0}</td>
         <td><span class="status-dot ${j.estado === 'activo' ? 'green' : j.estado === 'pendiente_firma_tutor' ? 'yellow' : 'red'}"></span> ${j.estado === 'pendiente_firma_tutor' ? 'Pendiente firma' : j.estado || '—'}</td>
@@ -257,7 +257,7 @@ async function cargarControlParental() {
       ? '<p style="color:var(--text-light)">Sin límites configurados</p>'
       : `<table class="data-table"><thead><tr><th>Menor</th><th>DIP</th><th>Diario</th><th>Semanal</th><th>Apr. Tutor</th><th>Tiempo</th><th>Requiere aprob.</th></tr></thead>
       <tbody>${data.map(c => `<tr>
-        <td>${c.junior?.nombre || ''} ${c.junior?.apellidos || ''}</td>
+        <td>${c.nombre_menor || c.junior?.nombre || '—'} ${c.apellidos_menor || c.junior?.apellidos || ''}</td>
         <td><code>${c.dip_menor || c.junior?.dip || '—'}</code></td>
         <td>🔒 ${c.limite_gasto_diario} Pz</td>
         <td>📅 ${c.limite_gasto_semanal} Pz</td>
@@ -276,7 +276,7 @@ async function cargarAutorizaciones() {
       : `<table class="data-table"><thead><tr><th>Fecha</th><th>Menor</th><th>Acción</th><th>Detalle</th></tr></thead>
       <tbody>${data.slice(0,50).map(a => `<tr>
         <td><small>${new Date(a.creado_en).toLocaleString()}</small></td>
-        <td><small>${a.junior?.nombre || ''} ${a.junior?.apellidos || ''}</small></td>
+        <td><small>${a.nombre_menor || a.junior?.nombre || '—'} ${a.apellidos_menor || a.junior?.apellidos || ''}</small></td>
         <td><code>${a.accion}</code></td>
         <td><small>${a.detalle || '—'}</small></td>
       </tr>`).join('')}</tbody></table>`;
@@ -310,7 +310,7 @@ async function cargarDocumentos() {
         <td><code>${d.codigo_modelo}</code></td>
         <td>${d.titulo_documento}</td>
         <td><span class="status-dot ${d.estado === 'firmado' ? 'green' : d.estado === 'pendiente' ? 'yellow' : 'red'}"></span> ${d.estado}</td>
-        <td>${d.firmante?.alias || '—'}</td>
+        <td>${d.firmante?.alias || d.firmado_por || '—'}</td>
         <td><small>${d.fecha_firma ? new Date(d.fecha_firma).toLocaleDateString() : (d.creado_en ? new Date(d.creado_en).toLocaleDateString() : '—')}</small></td>
       </tr>`).join('')}</tbody></table>`;
   } catch (err) { document.getElementById('docsContainer').innerHTML = `<p>Error: ${err.message}</p>`; }
@@ -354,7 +354,7 @@ async function cargarPendientesFirma() {
       <tbody>${pendientes.map(d => `<tr>
         <td><code>${d.codigo_modelo}</code></td>
         <td>${d.titulo_documento}</td>
-        <td><small>${d.usuario?.alias || '—'} (${d.usuario?.dip || '—'})</small></td>
+        <td><small>${d.usuario?.alias || d.firmado_por || '—'}</small></td>
         <td><small>${d.creado_en ? new Date(d.creado_en).toLocaleDateString() : '—'}</small></td>
         <td>
           <span style="font-size:0.8rem;color:var(--color-j);font-weight:600">⏳ Pendiente — Solo firma el tutor desde PlacetaID Móvil</span>
