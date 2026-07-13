@@ -96,14 +96,15 @@ router.get('/cuestionarios', verificarJunior, async (req, res) => {
 
     const maxNivelVisible = Math.min(nivelActual, 35);
 
-    for (const materia of materias) {
-      cuestionarios[materia] = {
-        nombre: nombresMateria[materia],
-        niveles: {}
-      };
-      for (let n = 1; n <= maxNivelVisible; n++) {
-        const preguntas = generarCuestionarios(junior.edad, materia, n);
-        cuestionarios[materia].niveles[n] = preguntas.map((p, idx) => ({
+    // Generar preguntas por nivel (generarCuestionarios devuelve {materia: [preguntas]})
+    for (let n = 1; n <= maxNivelVisible; n++) {
+      const preguntasPorNivel = generarCuestionarios(junior.edad, n);
+      for (const materia of materias) {
+        if (!cuestionarios[materia]) {
+          cuestionarios[materia] = { nombre: nombresMateria[materia], niveles: {} };
+        }
+        const preguntasArr = preguntasPorNivel[materia] || [];
+        cuestionarios[materia].niveles[n] = preguntasArr.map((p, idx) => ({
           id: `${materia}-${n}-${idx}`,
           pregunta: p.pregunta,
           opciones: p.opciones,
@@ -160,8 +161,9 @@ router.post('/evaluar', verificarJunior, async (req, res) => {
       return res.status(403).json({ error: `Nivel ${nivel} no desbloqueado.` });
     }
 
-    // Generar preguntas y evaluar (TODO en servidor)
-    const preguntas = generarCuestionarios(junior.edad, materia, nivel);
+    // Generar preguntas y evaluar
+    const todasPreguntas = generarCuestionarios(junior.edad, nivel);
+    const preguntas = todasPreguntas[materia] || [];
 
     let aciertos = 0;
     let totalPlacetasGanadas = 0;
