@@ -655,6 +655,21 @@ export async function sbListTributosContributors(limit = 50) {
   }
 }
 
+export async function sbListTributosContributorsAll() {
+  const sb = safeSupabase();
+  if (!sb) return [];
+  try {
+    const { data, error } = await sb.from('tributos_contribuyentes')
+      .select('*')
+      .order('fecha_alta_tributos', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    console.error('[Tributos] Supabase query error (contributors all):', err.message || err);
+    return [];
+  }
+}
+
 export async function sbCreateTributosContributor(data) {
   const sb = safeSupabase();
   if (!sb) throw new Error('Supabase no configurado');

@@ -16,11 +16,14 @@
   </div>
 
   <div class="section-header"><div><h2>Listado de Ciudadanos</h2></div>
-    <input type="search" id="searchCiudadanos" oninput="filtrarTabla('searchCiudadanos','ciudadanosBody')" placeholder="🔍 Buscar por DIP, nombre..." style="width:260px;padding:8px 12px;border:2px solid var(--line);border-radius:var(--radius);font-family:var(--font);font-size:13px">
-    <button class="btn btn-sm btn-primary" onclick="cargarCiudadanos()">🔄 Refrescar</button>
-    <button class="btn btn-sm btn-success" onclick="importarDePlacetaID()">📥 Importar de PlacetaID</button>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+      <input type="search" id="searchCiudadanos" oninput="filtrarTabla('searchCiudadanos','ciudadanosBody')" placeholder="🔍 Buscar por DIP, nombre..." style="width:200px;padding:8px 12px;border:2px solid var(--line);border-radius:var(--radius);font-family:var(--font);font-size:13px">
+      <button class="btn btn-sm btn-primary" onclick="cargarCiudadanos()">🔄</button>
+      <button class="btn btn-sm btn-success" onclick="importarDePlacetaID()">📥 Importar</button>
+      <button class="btn btn-sm btn-danger" onclick="borrarSeleccionados()" id="btnBatchDelete" disabled>🗑️ Borrar seleccionados (<span id="batchCount">0</span>)</button>
+    </div>
   </div>
-  <div class="table-container"><table class="data-table"><thead><tr><th>DIP</th><th>Nombre</th><th>Alias</th><th>PlacetaID</th><th>Email</th><th>Rol</th><th>Estado</th><th>PlacetaID</th><th>Acciones</th></tr></thead>
+  <div class="table-container"><table class="data-table"><thead><tr><th style="width:36px"><input type="checkbox" id="selectAll" onchange="toggleAll()"></th><th>DIP</th><th>Nombre</th><th>Alias</th><th>PlacetaID</th><th>Email</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr></thead>
     <tbody id="ciudadanosBody"><tr><td colspan="9" class="loading-cell">Cargando...</td></tr></tbody></table></div>
 </div>
 
@@ -131,6 +134,40 @@ async function importarDePlacetaID() {
 }
 
 async function ejecutarImportacion() {
+  // ... existing import function
+
+  // ══ BATCH DELETE ══════════════════════════════════════════════════════════
+}
+
+function toggleAll() {
+  const checked = document.getElementById('selectAll').checked;
+  document.querySelectorAll('.select-item').forEach(cb => cb.checked = checked);
+  actualizarBatchBtn();
+}
+
+function actualizarBatchBtn() {
+  const count = document.querySelectorAll('.select-item:checked').length;
+  document.getElementById('batchCount').textContent = count;
+  document.getElementById('btnBatchDelete').disabled = count === 0;
+}
+
+async function borrarSeleccionados() {
+  const dips = [...document.querySelectorAll('.select-item:checked')].map(cb => cb.value);
+  if (!dips.length) return;
+  if (!confirm(`¿Eliminar ${dips.length} ciudadanos definitivamente?\n\nDIPs: ${dips.slice(0,5).join(', ')}${dips.length > 5 ? '...' : ''}\n\nEsto borrará también sus cuentas bancarias y registros junior.`)) return;
+  const btn = document.getElementById('btnBatchDelete');
+  btn.disabled = true;
+  btn.textContent = '⏳ Borrando...';
+  let ok = 0, fail = 0;
+  for (const dip of dips) {
+    try {
+      await apiFetch('/api/admin/ciudadanos/' + dip, { method: 'DELETE' });
+      ok++;
+    } catch { fail++; }
+  }
+  alert(`✅ ${ok} borrados${fail ? ', ❌ ' + fail + ' fallaron' : ''}`);
+  cargarCiudadanos();
+}
   const checks = document.querySelectorAll('.importCheck:checked');
   if (!checks.length) return alert('Selecciona al menos un ciudadano.');
   const seleccionados = window._importables.filter(r => Array.from(checks).some(c => c.value === r.dip));
@@ -175,7 +212,7 @@ async function cargarCiudadanos() {
     } catch { placetaidRegistros = []; }
     const dipsPlacetaid = new Set((placetaidRegistros || []).map(r => r.dip));
 
-    if (!d.length) { tbody.innerHTML = '<tr><td colspan="9" class="loading-cell">Sin ciudadanos</td></tr>'; return; }
+    if (!d.length) { tbody.innerHTML = '<tr><td colspan="10" class="loading-cell">Sin ciudadanos</td></tr>'; return; }
     // Filtrar demos y ordenar: adultos primero, juniors después
     const reales = d.filter(u => !u.dip?.toLowerCase().includes('demo') && u.dip !== '11111111D');
     const demos = d.filter(u => u.dip?.toLowerCase().includes('demo') || u.dip === '11111111D');
@@ -190,6 +227,7 @@ async function cargarCiudadanos() {
       else if (esJunior) tipoBadge = '<span class="badge" style="background:#FF6600;color:#fff;font-size:10px">JR</span>';
       
       return '<tr' + (esDemo ? ' style="opacity:.5"' : '') + '>' +
+      '<td><input type="checkbox" class="select-item" value="' + u.dip + '" onchange="actualizarBatchBtn()"></td>' +
       '<td><strong>' + (u.dip || '—') + '</strong> ' + tipoBadge + '</td>' +
       '<td>' + (u.nombre_real || '—') + '</td>' +
       '<td>' + (u.alias || '—') + '</td>' +
@@ -197,7 +235,6 @@ async function cargarCiudadanos() {
       '<td>' + (u.email || '—') + '</td>' +
       '<td><span class="pill pill-purple">' + (u.rol || 'miembro') + '</span></td>' +
       '<td><span class="badge badge-' + (u.estado === 'activo' ? 'activo' : u.estado === 'pendiente' ? 'pendiente' : 'suspendido') + '">' + (u.estado || '—') + '</span></td>' +
-      '<td>' + (enPlacetaid ? '<span class="badge badge-activo">✅ Sí</span>' : '<span class="badge badge-baja">❌ No</span>') + '</td>' +
       '<td style="display:flex;gap:4px">' +
         (enPlacetaid
           ? '<button class="btn btn-sm btn-primary" onclick="generarEnlaceRegistro(\'' + u.dip + '\')">🔗 Enlace</button>'
@@ -206,7 +243,7 @@ async function cargarCiudadanos() {
         '<button class="btn btn-sm btn-danger" onclick="eliminarCiudadano(\'' + u.dip + '\',\'' + (u.nombre_real || u.alias || '').replace(/'/g,"\\'") + '\')">🗑️</button>' +
       '</td></tr>';
     }).join('');
-  } catch(e) { document.getElementById('ciudadanosBody').innerHTML = '<tr><td colspan="9" class="error-cell">' + e.message + '</td></tr>'; }
+  } catch(e) { document.getElementById('ciudadanosBody').innerHTML = '<tr><td colspan="10" class="error-cell">' + e.message + '</td></tr>'; }
 }
 
 async function eliminarCiudadano(dip, nombre) {

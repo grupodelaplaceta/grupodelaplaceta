@@ -187,12 +187,14 @@
               <th>DIP</th>
               <th>Tipo</th>
               <th>Estado fiscal</th>
+              <th>Contribución</th>
               <th>Roles</th>
               <th>Alta</th>
+              <th>Acción</th>
             </tr>
           </thead>
           <tbody>
-            <tr><td colspan="7" class="loading-cell">Cargando contribuyentes...</td></tr>
+            <tr><td colspan="9" class="loading-cell">Cargando contribuyentes...</td></tr>
           </tbody>
         </table>
       </div>
@@ -530,26 +532,105 @@
       const data = await apiFetch('/api/admin/tributos/contributors');
       const tbody = document.querySelector('#contribuyentesTable tbody');
       if (!data.length) {
-        tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">No hay contribuyentes registrados.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="loading-cell">No hay contribuyentes registrados.</td></tr>';
         return;
       }
       tbody.innerHTML = data.map(item => {
         const roles = Array.isArray(item.roles_json) ? item.roles_json.join(', ') : (item.roles_json || '—');
         const estado = item.estado_fiscal || '—';
         const estadoBadge = estado === 'Al Dia' ? 'badge-activo' : estado === 'Moroso' ? 'badge-suspendido' : 'badge-pendiente';
+        const tc = item.tipo_contribucion || '—';
+        const tcLabel = tc === 'estandar' ? '📊 Estándar' : tc === 'empresa' ? '🏢 Empresa' : tc === 'exenta_junior' ? '🌈 Junior' : tc === 'empresa_exenta_igf' ? '📄 Exenta IGF' : '—';
         return `<tr>
           <td><strong>${item.placeta_id}</strong></td>
           <td>${item.nombre}</td>
           <td>${item.dip || '—'}</td>
           <td><span class="pill ${item.tipo_sujeto === 'Empresa' ? 'pill-purple' : 'pill-green'}">${item.tipo_sujeto || '—'}</span></td>
           <td><span class="badge ${estadoBadge}">${estado}</span></td>
+          <td><span class="tag ${tc === 'exenta_junior' ? 'tag-gold' : tc === 'empresa' ? 'tag-purple' : tc === 'empresa_exenta_igf' ? 'tag-blue' : 'tag-green'}">${tcLabel}</span></td>
           <td style="font-size:12px">${roles}</td>
           <td>${item.fecha_alta_tributos ? new Date(item.fecha_alta_tributos).toLocaleDateString('es-ES') : '—'}</td>
+          <td><button class="btn btn-sm btn-glass" onclick="editarContribucion('${item.placeta_id}','${item.nombre}','${item.tipo_contribucion||''}')" title="Tipo contribución">⚙️</button></td>
         </tr>`;
       }).join('');
     } catch (e) {
-      document.querySelector('#contribuyentesTable tbody').innerHTML = '<tr><td colspan="7" class="error-cell">Error al cargar contribuyentes</td></tr>';
+      document.querySelector('#contribuyentesTable tbody').innerHTML = '<tr><td colspan="9" class="error-cell">Error al cargar contribuyentes</td></tr>';
     }
+  }
+
+  // ── CONTRIBUCIÓN ──────────────────────────────────────────────────────────
+  const TIPOS_CONTRI = {
+    estandar: { label: '📊 Estándar Art. 4.10+4.13', desc: 'IRM + IGF individual' },
+    empresa: { label: '🏢 Empresa Art. 4.14', desc: 'IGF empresa tarifas Art. 4.14' },
+    exenta_junior: { label: '🌈 Junior DEMO (paga Capitalia)', desc: 'Estándar pero paga CAPITALIA' },
+    empresa_exenta_igf: { label: '📄 Empresa Exenta IGF Art. 4.15', desc: 'Solo IRM, < 20K + IVA' }
+  };
+
+  async function editarContribucion(placetaId, nombre, tipoActual) {
+    const opts = Object.entries(TIPOS_CONTRI).map(([k, v]) =>
+      `<option value="${k}" ${k === tipoActual ? 'selected' : ''}>${v.label} — ${v.desc}</option>`
+    ).join('');
+    const div = document.createElement('div');
+    div.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center';
+    div.onclick = e => { if (e.target === div) div.remove(); };
+    div.innerHTML = `<div style="background:#fff;border-radius:16px;padding:28px;max-width:500px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+      <h3 style="margin:0 0 4px 0;color:#1c005f">⚙️ Tipo de Contribución</h3>
+      <p style="color:#888;margin-bottom:16px;font-size:13px">${nombre} · ${placetaId}</p>
+      <label style="font-weight:600;font-size:13px;display:block;margin-bottom:6px">Tipo:</label>
+      <select id="tcSelect" style="width:100%;padding:10px 14px;border:2px solid #ddd;border-radius:10px;font-family:inherit;font-size:13px;margin-bottom:12px">${opts}</select>
+      <div style="display:flex;gap:12px">
+        <button class="btn btn-primary" onclick="guardarTipoContribucion('${placetaId}')">💾 Guardar</button>
+        <button class="btn btn-outline" onclick="calcularContribuyente('${placetaId}','${nombre}')">📊 Calcular</button>
+        <button class="btn btn-outline" onclick="detectarTipo('${placetaId}')">🤖 Auto-detectar</button>
+        <button class="btn btn-secondary" onclick="this.closest('div[style]').parentElement.remove()">Cerrar</button>
+      </div>
+      <div id="tcResultado" style="margin-top:12px"></div>
+    </div>`;
+    document.body.appendChild(div);
+  }
+
+  async function guardarTipoContribucion(placetaId) {
+    const tipo = document.getElementById('tcSelect').value;
+    const r = document.getElementById('tcResultado');
+    r.innerHTML = '⏳ Guardando...';
+    try {
+      const d = await apiFetch(`/api/admin/tributos/contributors/${placetaId}/tipo-contribucion`, { method: 'POST', body: JSON.stringify({ tipo_contribucion: tipo }) });
+      r.innerHTML = d.success ? '<div style="color:#166534;background:#f0fdf4;padding:10px;border-radius:8px">✅ Guardado: ' + (TIPOS_CONTRI[tipo]?.label || tipo) + '</div>' : '<div style="color:var(--red)">❌ Error</div>';
+      cargarContribuyentes();
+    } catch(e) { r.innerHTML = '<div style="color:var(--red)">❌ ' + e.message + '</div>'; }
+  }
+
+  async function calcularContribuyente(placetaId, nombre) {
+    const r = document.getElementById('tcResultado');
+    r.innerHTML = '⏳ Calculando...';
+    try {
+      const d = await apiFetch(`/api/admin/tributos/contributors/${placetaId}/calcular`);
+      r.innerHTML = `<div style="background:#f8f7fc;border-radius:10px;padding:14px;font-size:13px">
+        <strong style="font-size:15px;color:#1c005f">${nombre}</strong>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
+          <div><strong>Patrimonio:</strong> ${(d.patrimonio_medio || 0).toLocaleString('es-ES')} Pz</div>
+          <div><strong>Tipo:</strong> ${TIPOS_CONTRI[d.tipo_contribucion]?.label || d.tipo_contribucion}</div>
+          <div><strong>IGF:</strong> ${(d.igf?.importe || 0).toLocaleString('es-ES')} Pz</div>
+          <div><strong>IRM:</strong> ${(d.irm?.importe || 0).toLocaleString('es-ES')} Pz (${d.irm?.porcentaje}%)</div>
+          <div style="grid-column:1/-1;background:#1c005f;color:#fff;padding:10px;border-radius:8px;font-size:16px;font-weight:700;text-align:center">
+            TOTAL: ${(d.total_contribucion || 0).toLocaleString('es-ES')} Pz
+            ${d.paga_capitalia ? '<br><span style="font-size:12px;font-weight:400">💰 Lo paga CAPITALIA a Tributos</span>' : `<br><span style="font-size:12px;font-weight:400">💳 De: ${d.pagador_efectivo} → 🏛️ TGLP</span>`}
+          </div>
+        </div>
+      </div>`;
+    } catch(e) { r.innerHTML = '<div style="color:var(--red)">❌ ' + e.message + '</div>'; }
+  }
+
+  async function detectarTipo(placetaId) {
+    const r = document.getElementById('tcResultado');
+    r.innerHTML = '⏳ Analizando...';
+    try {
+      const d = await apiFetch(`/api/admin/tributos/contributors/${placetaId}/detectar-tipo`, { method: 'POST' });
+      r.innerHTML = d.success
+        ? '<div style="color:#166534;background:#f0fdf4;padding:10px;border-radius:8px">✅ Tipo recomendado: ' + (TIPOS_CONTRI[d.tipo_recomendado]?.label || d.tipo_recomendado) + '</div>'
+        : '<div style="color:var(--red)">❌ Error</div>';
+      if (d.success) { cargarContribuyentes(); }
+    } catch(e) { r.innerHTML = '<div style="color:var(--red)">❌ ' + e.message + '</div>'; }
   }
 
   // ── Load Invoices ─────────────────────────────────────────────────────────

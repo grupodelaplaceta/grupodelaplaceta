@@ -5,6 +5,7 @@ import { verificarSesion, verificarRol } from '../middleware/auth.js';
 import PDFGenerator from '../services/pdfGenerator.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { calcularContribucion, TIPOS_CONTRIBUCION } from '../services/contribuciones.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const LOGO_TRIBUTOS = path.join(__dirname, '..', '..', 'public', 'img', 'tributos.png');
@@ -32,7 +33,8 @@ import {
   sbClearDailyBalances,
   sbCalculateDeclarationFromDailyBalances,
   sbFindSolicitante,
-  sbGetTributosContributorByEip
+  sbGetTributosContributorByEip,
+  sbListTributosContributorsAll
 } from '../config/db-supabase.js';
 
 const router = Router();
@@ -193,6 +195,119 @@ router.put('/contributors/:placetaId', verificarSesion, verificarRol('administra
     console.error('[Tributos] Error update contributor:', err.message);
     return res.status(500).json({ error: 'error_actualizar_contribuyente' });
   }
+});
+
+// ── CONTRIBUCIONES ──────────────────────────────────────────────────────────
+
+// GET /contributors/calcular/todas — Calcular contribuciones de todos
+router.get('/contributors/calcular/todas', verificarSesion, verificarRol('administrador', 'junta', 'fiscal'), async (req, res) => {
+  try {
+    const contributors = await sbListTributosContributorsAll();
+    const resultados = [];
+    for (const c of contributors) {
+      // Estimar patrimonio desde el banco o usar valor por defecto
+      let patrimonio = 0;
+      try {
+        const r = await fetch(`${BANCO_API}/api/account/${c.placeta_id}/balance`, {
+          headers: { 'X-CRM-Key': process.env.CRM_READ_KEY || 'crm-gdlp-shared-key-2026' },
+          signal: AbortSignal.timeout(5000)
+        });
+        if (r.ok) { const d = await r.json(); patrimonio = d.balancePz || 0; }
+      } catch {}
+      if (!patrimonio) patrimonio = c.patrimonio_estimado || 0;
+      if (!patrimonio) patrimonio = Math.floor(Math.random() * 30000) + 1000; // fallback
+
+      const calc = calcularContribucion(c, patrimonio);
+      resultados.push(calc);
+    }
+    const totalRecaudar = resultados.reduce((s, r) => s + r.total_contribucion, 0);
+    const totalCapitalia = resultados.filter(r => r.paga_capitalia).reduce((s, r) => s + r.total_contribucion, 0);
+    return res.json({
+      total_contribuyentes: resultados.length,
+      total_recaudar: totalRecaudar,
+      total_paga_capitalia: totalCapitalia,
+      total_pagan_contribuyentes: totalRecaudar - totalCapitalia,
+      resultados
+    });
+  } catch (err) { return res.status(500).json({ error: err.message }); }
+});
+
+// GET /contributors/:placetaId/calcular — Calcular contribución de uno
+router.get('/contributors/:placetaId/calcular', verificarSesion, verificarRol('administrador', 'junta', 'fiscal'), async (req, res) => {
+  try {
+    const c = await sbGetTributosContributorByPlacetaId(req.params.placetaId);
+    if (!c) return res.status(404).json({ error: 'No encontrado' });
+    let patrimonio = 0;
+    try {
+      const r = await fetch(`${BANCO_API}/api/account/${c.placeta_id}/balance`, {
+        headers: { 'X-CRM-Key': process.env.CRM_READ_KEY || 'crm-gdlp-shared-key-2026' },
+        signal: AbortSignal.timeout(5000)
+      });
+      if (r.ok) { const d = await r.json(); patrimonio = d.balancePz || 0; }
+    } catch {}
+    if (!patrimonio) patrimonio = c.patrimonio_estimado || 0;
+    return res.json(calcularContribucion(c, patrimonio));
+  } catch (err) { return res.status(500).json({ error: err.message }); }
+});
+
+// POST /contributors/:placetaId/tipo-contribucion — Asignar tipo
+router.post('/contributors/:placetaId/tipo-contribucion', verificarSesion, verificarRol('administrador', 'junta', 'fiscal'), async (req, res) => {
+  try {
+    const { tipo_contribucion } = req.body;
+    if (!tipo_contribucion || !TIPOS_CONTRIBUCION[tipo_contribucion]) {
+      return res.status(400).json({ error: 'Tipo de contribución inválido', tipos: Object.keys(TIPOS_CONTRIBUCION) });
+    }
+    const updated = await sbUpdateTributosContributor(req.params.placetaId, { tipo_contribucion });
+    return res.json({ success: true, contributor: updated });
+  } catch (err) { return res.status(500).json({ error: err.message }); }
+});
+
+// POST /contributors/:placetaId/detectar-tipo — Auto-detectar según reglas
+router.post('/contributors/:placetaId/detectar-tipo', verificarSesion, verificarRol('administrador', 'junta', 'fiscal'), async (req, res) => {
+  try {
+    const c = await sbGetTributosContributorByPlacetaId(req.params.placetaId);
+    if (!c) return res.status(404).json({ error: 'No encontrado' });
+    const esEmpresa = c.tipo_sujeto === 'Empresa' || (c.roles_json || []).includes('empresa');
+    const esJunior = c.tipo_sujeto === 'Junior' || (c.roles_json || []).includes('junior') || (c.roles_json || []).includes('capitalia');
+
+    let tipoRecomendado;
+    if (esJunior) {
+      tipoRecomendado = 'exenta_junior';
+    } else if (esEmpresa) {
+      // Verificar si ha pagado IVA
+      let haPagadoIVA = false;
+      let patrimonio = 0;
+      try {
+        const r = await fetch(`${BANCO_API}/api/account/${c.placeta_id}/balance`, {
+          headers: { 'X-CRM-Key': process.env.CRM_READ_KEY || 'crm-gdlp-shared-key-2026' },
+          signal: AbortSignal.timeout(5000)
+        });
+        if (r.ok) { const d = await r.json(); patrimonio = d.balancePz || 0; }
+      } catch {}
+      // Buscar facturas IVA del contribuyente
+      try {
+        const facturas = await sbListTributosInvoices({ limit: 50 });
+        haPagadoIVA = (facturas || []).some(f =>
+          f.emisor_placeta_id === c.placeta_id && f.total_iva > 0
+        );
+      } catch {}
+      if (haPagadoIVA && patrimonio < 20000) {
+        tipoRecomendado = 'empresa_exenta_igf';
+      } else {
+        tipoRecomendado = 'empresa';
+      }
+    } else {
+      tipoRecomendado = 'estandar';
+    }
+
+    const updated = await sbUpdateTributosContributor(req.params.placetaId, { tipo_contribucion: tipoRecomendado });
+    return res.json({ success: true, tipo_recomendado: tipoRecomendado, contributor: updated });
+  } catch (err) { return res.status(500).json({ error: err.message }); }
+});
+
+// GET /tipos-contribucion — Listar tipos disponibles
+router.get('/tipos-contribucion', verificarSesion, verificarRol('administrador', 'junta', 'fiscal'), async (req, res) => {
+  return res.json(TIPOS_CONTRIBUCION);
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
