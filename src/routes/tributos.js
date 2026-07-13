@@ -1095,6 +1095,19 @@ router.post('/pdf/:tipo', verificarSesion, verificarRol('administrador', 'junta'
         if (!datos.dip) datos.dip = '—';
         if (!datos.tipo_sujeto) datos.tipo_sujeto = '—';
         if (!datos.cuenta_id_blp) datos.cuenta_id_blp = datos.placeta_id || '—';
+        // Recalcular IRM/IGF sobre la marcha (aunque la declaración sea antigua)
+        try {
+          const pm = Number(datos.patrimonio_medio || 0);
+          if (pm > 0) {
+            const cContrib = await sbGetTributosContributorByPlacetaId(datos.placeta_id || datos.cuenta_id_blp).catch(() => null);
+            const calc = calcularContribucion(cContrib || { nombre: datos.nombre, dip: datos.dip, tipo_sujeto: datos.tipo_sujeto, placeta_id: datos.placeta_id }, pm);
+            datos.cuota_irm = calc.irm.importe;
+            datos.cuota_igf = calc.igf.importe;
+            datos.indice_acumulacion = calc.irm.ia;
+            datos.tipo_irm = calc.irm.porcentaje;
+            datos.exencion_igf = calc.igf.exento || '';
+          }
+        } catch (_) {}
         doc = generator.generarDeclaracionTributaria(datos);
         break;
       case 'factura':
