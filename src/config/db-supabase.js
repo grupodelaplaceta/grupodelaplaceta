@@ -1244,33 +1244,44 @@ export async function sbCalculateDeclarationFromDailyBalances(placetaId, mesPeri
 
     const declarationData = {
       patrimonio_medio: patrimonioMedio,
-      indice_acumulacion: totalDias > 0 ? Number((transactionCount / totalDias).toFixed(4)) : 0,
+      indice_acumulacion: transactionCount === 0 && patrimonioMedio > 0 ? 1 : (totalDias > 0 ? Number((transactionCount / totalDias).toFixed(4)) : 0),
       dias_declarados_banco: totalDias,
       dias_reconstruidos_crm: Math.max(0, diasActivosMes - totalDias),
       dias_activos_mes: diasActivosMes,
       updated_at: new Date().toISOString()
     };
 
-    // Calcular IRM (Impuesto sobre la Renta de La Placeta)
-    // Tasa progresiva sobre el exceso de patrimonio sobre 500.000 Pz
-    let cuotaIRM = 0;
+    // Calcular IGF (Impuesto de Grandes Fortunas) - Art. 4.13/4.14
     let cuotaIGF = 0;
-    const SALDO_MAXIMO = 500000;
-    if (patrimonioMedio > SALDO_MAXIMO) {
-      const exceso = patrimonioMedio - SALDO_MAXIMO;
-      const ratio = exceso / SALDO_MAXIMO;
-      let tasa = 0;
-      if (ratio <= 0.5) tasa = 0.05;
-      else if (ratio <= 1.0) tasa = 0.10;
-      else if (ratio <= 2.0) tasa = 0.20;
-      else tasa = 0.35;
-      cuotaIRM = Math.round(exceso * tasa * 100) / 100;
+    if (patrimonioMedio > 5000) {
+      const base = patrimonioMedio - 5000; // Primeros 5.000 exentos
+      const tramo1 = Math.min(base, 15000); // 5.001 a 20.000
+      cuotaIGF += tramo1 * 0.10; // 10% individual
+      const tramo2 = Math.max(0, base - 15000); // 20.001 a 500.000
+      cuotaIGF += Math.min(tramo2, 480000) * 0.30; // 30%
     }
-    // Calcular IGF (Impuesto General sobre el Patrimonio)
-    // Tasa fija del 1.5% sobre el patrimonio medio total
-    cuotaIGF = Math.round(patrimonioMedio * 0.015 * 100) / 100;
+    cuotaIGF = Math.round(cuotaIGF * 100) / 100;
+
+    // Calcular IRM (Impuesto de Regulación Monetaria) - Art. 4.10
+    // IA estimado: si no hay transacciones, IA=1 (acumulación máxima)
+    let cuotaIRM = 0;
+    let tipoIRM = 0;
+    if (transactionCount === 0 && patrimonioMedio > 0) {
+      // Sin movimientos = acumulación máxima
+      tipoIRM = 5; // 5% para individual
+      cuotaIRM = Math.round(patrimonioMedio * 0.05 * 100) / 100;
+    } else if (transactionCount > 0 && patrimonioMedio > 0) {
+      // Con movimientos, estimar IA basado en transactionCount
+      const iaEstimado = Math.min(transactionCount / totalDias, 0.5);
+      if (iaEstimado > 0.30) tipoIRM = 5;
+      else if (iaEstimado > 0.15) tipoIRM = 3;
+      else if (iaEstimado > 0.05) tipoIRM = 1.5;
+      else if (iaEstimado > 0) tipoIRM = 0.5;
+      cuotaIRM = Math.round(patrimonioMedio * tipoIRM / 100 * 100) / 100;
+    }
     declarationData.cuota_irm = cuotaIRM;
     declarationData.cuota_igf = cuotaIGF;
+    declarationData.tipo_irm = tipoIRM;
 
     if (existingDeclarations && existingDeclarations.length > 0) {
       const { data, error } = await sb.from('tributos_declaraciones')
@@ -1289,9 +1300,10 @@ export async function sbCalculateDeclarationFromDailyBalances(placetaId, mesPeri
         mes_periodo: mesPeriodo,
         cuenta_id_blp: placetaId,
         patrimonio_medio: patrimonioMedio,
-        indice_acumulacion: totalDias > 0 ? Number((transactionCount / totalDias).toFixed(4)) : 0,
+        indice_acumulacion: declarationData.indice_acumulacion,
         cuota_irm: cuotaIRM,
         cuota_igf: cuotaIGF,
+        tipo_irm: tipoIRM,
         exencion_aplicada: false,
         dias_declarados_banco: totalDias,
         dias_reconstruidos_crm: Math.max(0, diasActivosMes - totalDias),
