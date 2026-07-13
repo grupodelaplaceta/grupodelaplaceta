@@ -12,6 +12,23 @@
 </div>
 
 <script>
+  // Fallback si crm.js aún no ha cargado
+  if (typeof apiFetch === 'undefined') {
+    window.apiFetch = async (url, opts) => {
+      const r = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...opts });
+      if (!r.ok) { let m = 'HTTP ' + r.status; try { const e = await r.json(); if (e.error) m += ': ' + e.error; } catch {} throw new Error(m); }
+      return r.json();
+    };
+    window.mostrarMensaje = (tipo, msg) => {
+      const d = document.getElementById('mensajes');
+      if (!d) return alert(msg);
+      d.innerHTML += '<div class="toast toast-' + tipo + '">' + msg + '</div>';
+      setTimeout(() => { const t = d.querySelector('.toast'); if (t) t.remove(); }, 4000);
+    };
+    window.formatPz = (n) => (n||0).toLocaleString('es-ES') + ' Pz';
+    window.formatFecha = (d) => d ? new Date(d).toLocaleDateString('es-ES') : '—';
+  }
+
   async function cargarDocumentos() {
     try {
       const docs = await apiFetch('/api/firma/documentos');
