@@ -165,23 +165,27 @@ router.post('/firmar-documento', async (req, res) => {
 
     // If all signed, activate the junior account
     if (todosFirmados && junior.estado === 'pendiente_firma_tutor') {
-      await supabase.from('junior_menores')
-        .update({ estado: 'activo', activado_en: ahora })
+      const { error: updErr } = await supabase.from('junior_menores')
+        .update({ estado: 'activo' })
         .eq('id', junior.id);
 
-      // Activate solicitante too
-      await supabase.from('solicitantes')
-        .update({ estado: 'activo' })
-        .eq('dip', junior.dip);
+      if (!updErr) {
+        // Activate solicitante too
+        await supabase.from('solicitantes')
+          .update({ estado: 'activo' })
+          .eq('dip', junior.dip);
 
-      await supabase.from('junior_logs').insert({
-        junior_id: junior.id,
-        accion: 'cuenta_activada',
-        detalle: 'Todos los documentos firmados. Cuenta junior activada.',
-        ip: clientIp
-      });
+        await supabase.from('junior_logs').insert({
+          junior_id: junior.id,
+          accion: 'cuenta_activada',
+          detalle: 'Todos los documentos firmados. Cuenta junior activada.',
+          ip: clientIp
+        });
 
-      console.log(`[Legal] ✅ Cuenta junior ${junior.dip} ACTIVADA - todos los documentos firmados`);
+        console.log(`[Legal] ✅ Cuenta junior ${junior.dip} ACTIVADA - todos los documentos firmados`);
+      } else {
+        console.error('[Legal] Error activando cuenta:', updErr);
+      }
     }
 
     res.json({
