@@ -238,10 +238,6 @@ class PDFGenerator {
     doc.text(`Código Seguro de Verificación: ${hash.substring(0, 20)}...`, 40, doc.y, { width: 520, align: 'center' });
     doc.text('Puede verificar este documento en https://grupodelaplaceta.vercel.app/admin/firmas', 40, doc.y, { width: 520, align: 'center' });
   }
-    doc.text('Documento generado electr\u00F3nicamente', 50, doc.y, { width: 500, align: 'center' });
-    doc.font(this._f(false, true)).fontSize(6).fillColor('#9c7ee6');
-    doc.text(`SHA-256: ${hash.substring(0, 20)}...`, 50, doc.y + 10, { width: 500, align: 'center' });
-  }
 
   _footerDoc(leyenda) {
     this._linea();
