@@ -263,8 +263,8 @@ router.get('/monedero', verificarJunior, async (req, res) => {
     res.json({
       saldo_actual: junior.placetas_saldo || 0,
       ingresos_totales: ingresos,
-      gasto_hoy,
-      gasto_semana,
+      gasto_hoy: gastoHoy,
+      gasto_semana: gastoSemana,
       limites: limitesEfectivos,
         saldo_disponible_hoy: Math.max(0, limitesEfectivos.gasto_diario - gastoHoy),
       saldo_disponible_semana: Math.max(0, limitesEfectivos.gasto_semanal - gastoSemana),
