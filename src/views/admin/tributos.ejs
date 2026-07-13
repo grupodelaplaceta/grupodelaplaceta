@@ -659,20 +659,16 @@
     try {
       const d = await apiFetch(`/api/admin/tributos/contributors/${placetaId}/calcular`);
       const ia = d.irm?.ia || 0;
-      const iaLabel = ia <= 0 ? '🟢 Sin acumulación (consumo neto/equilibrio)' : ia <= 0.05 ? '🟡 Baja' : ia <= 0.15 ? '🟠 Media' : ia <= 0.30 ? '🔴 Alta' : '🔴🔴 Muy alta';
       const mov = d.movimientos_mes || {};
       r.innerHTML = `<div style="background:#f8f7fc;border-radius:10px;padding:14px;font-size:13px">
         <strong style="font-size:15px;color:#1c005f">${nombre}</strong>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
           <div><strong>💰 Patrimonio:</strong> ${(d.patrimonio_medio || 0).toLocaleString('es-ES')} Pz</div>
           <div><strong>📋 Tipo:</strong> ${d.config?.label || d.tipo_contribucion}</div>
-          <div><strong>📊 IA:</strong> ${ia} — ${iaLabel}</div>
+          <div><strong>📊 IA:</strong> ${ia}${d.irm?.nota ? '<br><small style="color:#856404">' + d.irm.nota + '</small>' : ''}</div>
           <div><strong>💳 IRM:</strong> ${(d.irm?.importe || 0).toLocaleString('es-ES')} Pz (${d.irm?.porcentaje}%)</div>
           <div><strong>🏛️ IGF:</strong> ${(d.igf?.importe || 0).toLocaleString('es-ES')} Pz${d.igf?.exento ? '<br><small>' + d.igf.exento + '</small>' : ''}</div>
           <div><strong>🔄 Movimientos:</strong> ${mov.total_tx || 'sin datos'}</div>
-          ${ia === 0 && d.irm?.importe === 0 ? `<div style="grid-column:1/-1;background:#fff3cd;padding:8px 12px;border-radius:8px;font-size:12px;color:#856404">
-            ℹ️ IRM = 0 Pz porque IA = 0 (no hay acumulación neta en el periodo). El IGF se calcula sobre el patrimonio total.
-          </div>` : ''}
           <div style="grid-column:1/-1;background:#1c005f;color:#fff;padding:10px;border-radius:8px;font-size:16px;font-weight:700;text-align:center">
             TOTAL CONTRIBUCIÓN: ${(d.total_contribucion || 0).toLocaleString('es-ES')} Pz
             ${d.paga_capitalia ? '<br><span style="font-size:12px;font-weight:400">💰 Lo paga CAPITALIA a Tributos</span>' : `<br><span style="font-size:12px;font-weight:400">💳 De: ${d.pagador_efectivo} → 🏛️ TGLP</span>`}

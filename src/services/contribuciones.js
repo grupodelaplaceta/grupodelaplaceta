@@ -103,6 +103,19 @@ function calcularIGFEmpresa(patrimonioMedio) {
 
 // ── CÁLCULO IRM - Art. 4.10 ────────────────────────────────────────────────
 function calcularIRM(patrimonioMedio, ingresos, pagos, tipoCuenta = 'Personal') {
+  // Si no hay movimientos pero hay patrimonio: el dinero no se gasta = acumulación
+  if (ingresos === 0 && pagos === 0 && patrimonioMedio > 0) {
+    // Sin gastar nada → acumulación máxima del patrimonio total
+    const ia = patrimonioMedio > 0 ? 1 : 0; // IA = 1 = 100% acumulado
+    const porcentaje = tipoCuenta === 'Empresa' ? 9 : tipoCuenta === 'Compartida' ? 6 : 5;
+    return {
+      ia,
+      porcentaje,
+      importe: Math.round(patrimonioMedio * porcentaje / 100),
+      tipoCuenta,
+      nota: 'Sin movimientos: el patrimonio completo se considera acumulado'
+    };
+  }
   // IA = (Media ingresos - Media pagos) / Patrimonio medio
   const ia = patrimonioMedio > 0 ? (ingresos - pagos) / patrimonioMedio : 0;
 
