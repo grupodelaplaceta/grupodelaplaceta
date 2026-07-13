@@ -35,7 +35,7 @@ const router = Router();
 
 router.get('/perfil', verificarJunior, async (req, res) => {
   try {
-    const junior = await sbFindJuniorByDip(req.session.junior.dip);
+    const junior = req.juniorData;
     if (!junior) return res.status(404).json({ error: 'Perfil no encontrado' });
 
     const limites = await sbGetParentalLimits(junior.id);
@@ -210,7 +210,7 @@ router.post('/vincular', async (req, res) => {
 
 router.get('/monedero', verificarJunior, async (req, res) => {
   try {
-    const junior = await sbFindJuniorByDip(req.session.junior.dip);
+    const junior = req.juniorData;
     if (!junior) return res.status(404).json({ error: 'Perfil no encontrado' });
 
     // Límites del tutor (o valores por defecto)
@@ -352,7 +352,7 @@ router.post('/control-parental', async (req, res) => {
 
 router.post('/generar-dip-digital', verificarJunior, async (req, res) => {
   try {
-    const junior = await sbFindJuniorByDip(req.session.junior.dip);
+    const junior = req.juniorData;
     if (!junior) return res.status(404).json({ error: 'Perfil no encontrado' });
 
     if (junior.estado !== 'activo') {
@@ -405,7 +405,7 @@ router.get('/menores/:dipTutor', async (req, res) => {
 
 router.post('/solicitar-acceso', verificarJunior, async (req, res) => {
   try {
-    const junior = await sbFindJuniorByDip(req.session.junior.dip);
+    const junior = req.juniorData;
     if (!junior) return res.status(404).json({ error: 'Perfil no encontrado' });
 
     const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
@@ -465,9 +465,21 @@ router.post('/aprobar-acceso', async (req, res) => {
 //  MIDDLEWARE
 // ═══════════════════════════════════════════════════════════════════════════
 
-function verificarJunior(req, res, next) {
-  if (!req.session.junior) return res.status(401).json({ error: 'No autorizado. Debes iniciar sesión.' });
-  next();
+import { sbFindJuniorByDip } from '../config/db-supabase.js';
+
+async function verificarJunior(req, res, next) {
+  const dip = req.session?.junior?.dip || req.query.dip || req.body?.dip || req.headers['x-junior-dip'];
+  if (!dip) return res.status(401).json({ error: 'No autorizado. Debes iniciar sesión.' });
+  try {
+    const junior = await sbFindJuniorByDip(dip);
+    if (!junior) return res.status(401).json({ error: 'Perfil no encontrado.' });
+    req.juniorDip = dip;
+    req.juniorId = junior.id;
+    req.juniorData = junior;
+    next();
+  } catch (e) {
+    res.status(500).json({ error: 'Error verificando identidad.' });
+  }
 }
 
 export default router;

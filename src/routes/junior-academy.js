@@ -62,7 +62,7 @@ const router = Router();
 
 router.get('/cuestionarios', verificarJunior, async (req, res) => {
   try {
-    const junior = await sbFindJuniorByDip(req.session.junior.dip);
+    const junior = req.juniorData;
     if (!junior) return res.status(404).json({ error: 'Perfil no encontrado' });
 
     const rangoEdad = getRangoEdad(junior.edad);
@@ -137,7 +137,7 @@ router.post('/evaluar', verificarJunior, async (req, res) => {
       return res.status(400).json({ error: 'Faltan datos: materia, nivel y respuestas.' });
     }
 
-    const junior = await sbFindJuniorByDip(req.session.junior.dip);
+    const junior = req.juniorData;
     if (!junior) return res.status(404).json({ error: 'Perfil no encontrado' });
 
     // Verificar nivel desbloqueado
@@ -208,7 +208,7 @@ router.post('/evaluar', verificarJunior, async (req, res) => {
       detalle: `Materia: ${materia}, Nivel: ${nivel}, Aciertos: ${aciertos}/${totalPreguntas} (${porcentaje}%), Placetas: +${totalPlacetasGanadas}`, ip
     });
 
-    req.session.junior.placetas_saldo = nuevoSaldo;
+    if (req.session?.junior) req.session.junior.placetas_saldo = nuevoSaldo;
 
     res.json({
       success: true, aciertos, total: totalPreguntas, porcentaje,
@@ -227,7 +227,7 @@ router.post('/evaluar', verificarJunior, async (req, res) => {
 
 router.post('/desbloquear-nivel', verificarJunior, async (req, res) => {
   try {
-    const junior = await sbFindJuniorByDip(req.session.junior.dip);
+    const junior = req.juniorData;
     if (!junior) return res.status(404).json({ error: 'Perfil no encontrado' });
 
     const nivelActual = junior.nivel_academia || 1;
@@ -329,8 +329,10 @@ router.post('/desbloquear-nivel', verificarJunior, async (req, res) => {
       detalle: `Nivel ${siguienteNivel} desbloqueado por ${costo} Pz${pagoBancario ? '. Pago bancario OK + IVA Capitalia→TGLP' : ''}`, ip
     });
 
-    req.session.junior.placetas_saldo = nuevoSaldo;
-    req.session.junior.nivel_academia = siguienteNivel;
+    if (req.session?.junior) {
+      req.session.junior.placetas_saldo = nuevoSaldo;
+      req.session.junior.nivel_academia = siguienteNivel;
+    }
 
     res.json({
       success: true,
@@ -354,7 +356,7 @@ router.post('/desbloquear-nivel', verificarJunior, async (req, res) => {
 
 router.get('/historial', verificarJunior, async (req, res) => {
   try {
-    const junior = await sbFindJuniorByDip(req.session.junior.dip);
+    const junior = req.juniorData;
     if (!junior) return res.status(404).json({ error: 'Perfil no encontrado' });
 
     const { data, error } = await supabase
@@ -375,9 +377,20 @@ router.get('/historial', verificarJunior, async (req, res) => {
 //  MIDDLEWARE
 // ═══════════════════════════════════════════════════════════════════════════
 
-function verificarJunior(req, res, next) {
-  if (!req.session.junior) return res.status(401).json({ error: 'No autorizado. Debes iniciar sesión.' });
-  next();
+async function verificarJunior(req, res, next) {
+  // From session (web) or from query/header (mobile app)
+  const dip = req.session?.junior?.dip || req.query.dip || req.body?.dip || req.headers['x-junior-dip'];
+  if (!dip) return res.status(401).json({ error: 'No autorizado. Debes iniciar sesión.' });
+  try {
+    const junior = await sbFindJuniorByDip(dip);
+    if (!junior) return res.status(401).json({ error: 'Perfil no encontrado.' });
+    req.juniorDip = dip;
+    req.juniorId = junior.id;
+    req.juniorData = junior;
+    next();
+  } catch (e) {
+    res.status(500).json({ error: 'Error verificando identidad.' });
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -389,7 +402,7 @@ const RBU_FUNDACION = 'FUNDACION_BP';
 
 router.get('/rbu', verificarJunior, async (req, res) => {
   try {
-    const junior = await sbFindJuniorByDip(req.session.junior.dip);
+    const junior = req.juniorData;
     if (!junior) return res.status(404).json({ error: 'Perfil no encontrado' });
     const esDemo = junior.tutor_dip === '11111111D';
 
@@ -454,7 +467,7 @@ router.get('/rbu', verificarJunior, async (req, res) => {
 router.post('/confirmar-pago', verificarJunior, async (req, res) => {
   try {
     const { cantidad, concepto, nivel } = req.body;
-    const junior = await sbFindJuniorByDip(req.session.junior.dip);
+    const junior = req.juniorData;
     if (!junior) return res.status(404).json({ error: 'Perfil no encontrado' });
     const esDemo = junior.tutor_dip === '11111111D';
 
