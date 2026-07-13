@@ -12,7 +12,8 @@ function generarPreguntas(edad, materia, nivel) {
     matematicas: bancosMatematicas(edad, d),
     calculo_mental: bancosCalculoMental(edad, d),
     lengua: bancosLengua(edad, d),
-    medio: bancosMedio(edad, d)
+    medio: bancosMedio(edad, d),
+    geografia: bancosGeografia(edad, d)
   };
 
   const preguntas = bancos[materia] || bancosMatematicas(edad, d);
@@ -75,6 +76,10 @@ function matematicas_6_8(d) {
     { pregunta: '¿Cuánto es 50 - 18?', opciones: ['30', '31', '32', '33'], correcta: 2 },
     { pregunta: '¿Cuánto es 7 × 3?', opciones: ['19', '20', '21', '22'], correcta: 2 },
     { pregunta: '¿Cuánto es 33 + 27?', opciones: ['58', '59', '60', '61'], correcta: 2 },
+    // Placetas (Pz) — misma lógica decimal que el EURO (2 decimales)
+    { pregunta: 'Si un chicle cuesta 0,50 Pz y compras 2, ¿cuánto pagas?', opciones: ['0,50 Pz','1,00 Pz','1,50 Pz','2,00 Pz'], correcta: 1 },
+    { pregunta: 'Tienes 5,00 Pz y gastas 2,50 Pz, ¿cuánto te queda?', opciones: ['2,00 Pz','2,50 Pz','3,00 Pz','3,50 Pz'], correcta: 1 },
+    { pregunta: 'Ahorras 1,00 Pz al día. ¿Cuánto en 7 días?', opciones: ['5,00 Pz','6,00 Pz','7,00 Pz','8,00 Pz'], correcta: 2 },
     { pregunta: '¿Cuánto es 45 - 19?', opciones: ['24', '25', '26', '27'], correcta: 2 },
     { pregunta: '¿Cuánto es 8 × 2?', opciones: ['14', '15', '16', '18'], correcta: 2 },
     // Nivel 5 (d=5)
@@ -167,7 +172,11 @@ function matematicas_9_11(d) {
     { pregunta: '¿Cuánto es 2000 × 5?', opciones: ['8000', '9000', '10000', '11000'], correcta: 2 },
     { pregunta: '5000 ÷ 125', opciones: ['30', '35', '40', '45'], correcta: 2 },
     { pregunta: '¿Perímetro círculo d=10?', opciones: ['31.4', '41.4', '51.4', '61.4'], correcta: 0 },
-    { pregunta: '¿75% de 800?', opciones: ['500', '550', '600', '650'], correcta: 2 }
+    { pregunta: '¿75% de 800?', opciones: ['500', '550', '600', '650'], correcta: 2 },
+    // 💰 Placetas (Pz) — 2 decimales como el EURO
+    { pregunta: 'Una libreta cuesta 3,75 Pz y pagas con 5,00 Pz. ¿Cuánto te devuelven?', opciones: ['1,15 Pz','1,25 Pz','1,35 Pz','2,25 Pz'], correcta: 1 },
+    { pregunta: 'Ahorras 2,50 Pz cada semana. ¿Cuánto en 8 semanas?', opciones: ['18,00 Pz','20,00 Pz','22,00 Pz','25,00 Pz'], correcta: 1 },
+    { pregunta: 'Si 4 amigos juntan 15,20 Pz cada uno, ¿cuánto tienen en total?', opciones: ['58,80 Pz','60,80 Pz','62,80 Pz','64,80 Pz'], correcta: 1 },
   ];
   return filtrarPorNivel(todas, d);
 }
@@ -207,7 +216,11 @@ function matematicas_12_15(d) {
     { pregunta: '62.5% de 800', opciones: ['400', '450', '500', '550'], correcta: 2 },
     { pregunta: 'Área total cubo arista 5', opciones: ['100', '125', '150', '175'], correcta: 2 },
     { pregunta: 'x/4 + 2 = 7, x = ?', opciones: ['16', '18', '20', '24'], correcta: 2 },
-    { pregunta: 'Perímetro círculo r=14', opciones: ['87.92', '97.92', '107.92', '117.92'], correcta: 0 }
+    { pregunta: 'Perímetro círculo r=14', opciones: ['87.92', '97.92', '107.92', '117.92'], correcta: 0 },
+    // 💰 Placetas avanzado — interés, IVA, ahorro (2 decimales)
+    { pregunta: 'Inviertes 100,00 Pz al 5% anual. ¿Interés en 1 año?', opciones: ['4,00 Pz','5,00 Pz','6,00 Pz','10,00 Pz'], correcta: 1 },
+    { pregunta: 'Una compra de 50,00 Pz tiene 12% IVA. ¿Total a pagar?', opciones: ['54,00 Pz','55,00 Pz','56,00 Pz','60,00 Pz'], correcta: 2 },
+    { pregunta: 'Ahorras 500 Pz al 3% compuesto 2 años. ¿aprox?', opciones: ['515,00 Pz','530,45 Pz','545,00 Pz','560,00 Pz'], correcta: 1 },
   ];
   return filtrarPorNivel(todas, d);
 }
@@ -523,23 +536,48 @@ function medio_12_15(d) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  FILTRO POR NIVEL — Devuelve 8 preguntas para el nivel dado
+//  FILTRO POR NIVEL — 8 preguntas por nivel. Niveles altos: recicla + harder
 // ═══════════════════════════════════════════════════════════════════════════
 
 function filtrarPorNivel(todas, nivel) {
-  // Cada nivel tiene 8 preguntas
   const preguntasPorNivel = 8;
   const inicio = (nivel - 1) * preguntasPorNivel;
   const fin = inicio + preguntasPorNivel;
-  const seleccionadas = todas.slice(inicio, fin);
+  let seleccionadas = todas.slice(inicio, fin);
 
-  // Si no hay suficientes para este nivel, reutilizar las últimas
+  // If not enough questions, recycle from higher-level pool with difficulty scaling
   if (seleccionadas.length < preguntasPorNivel) {
-    const extra = todas.slice(-(preguntasPorNivel - seleccionadas.length));
-    return shuffle([...seleccionadas, ...extra]);
+    const allAvailable = todas.slice(Math.max(0, inicio - preguntasPorNivel * 3));
+    while (seleccionadas.length < preguntasPorNivel) {
+      const idx = nivel * 7 + seleccionadas.length * 13;
+      const src = allAvailable[idx % allAvailable.length];
+      if (src) {
+        // Create harder variant by increasing numbers
+        const scale = Math.floor(nivel / 5) + 1;
+        const harder = { ...src,
+          pregunta: src.pregunta.replace(/(\d+[.,]?\d*)/g, (m) => {
+            const n = parseFloat(m.replace(',', '.'));
+            if (isNaN(n)) return m;
+            const scaled = Math.round(n * (1 + scale * 0.3) * 100) / 100;
+            return String(scaled).replace('.', ',');
+          }),
+          placetas_recompensa: nivel * 3
+        };
+        seleccionadas.push(harder);
+      } else {
+        // Fallback: generate synthetic question
+        seleccionadas.push({
+          pregunta: `Nivel ${nivel}: Calcula ${nivel * 7} + ${nivel * 11}`,
+          opciones: [`${nivel*7+nivel*11-2}`, `${nivel*7+nivel*11-1}`, `${nivel*7+nivel*11}`, `${nivel*7+nivel*11+1}`],
+          correcta: 2,
+          dificultad: nivel,
+          placetas_recompensa: nivel * 4
+        });
+      }
+    }
   }
 
-  return seleccionadas;
+  return shuffle(seleccionadas.slice(0, preguntasPorNivel));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -547,7 +585,7 @@ function filtrarPorNivel(todas, nivel) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 export function generarCuestionarios(edad, nivel) {
-  const materias = ['matematicas', 'calculo_mental', 'lengua', 'medio'];
+  const materias = ['matematicas', 'calculo_mental', 'lengua', 'medio', 'geografia'];
   const resultado = {};
 
   for (const materia of materias) {
@@ -573,11 +611,139 @@ export const COSTO_DESBLOQUEO_POR_NIVEL = {
   10: 500
 };
 
-/**
- * Determina el rango de edad para cuestionarios
- */
-export function getRangoEdad(edad) {
-  if (edad <= 8) return '6-8';
-  if (edad <= 11) return '9-11';
-  return '12-15';
+// ═══════════════════════════════════════════════════════════════════════════
+//  GEOGRAFÍA — Países, continentes, CCAA, ríos, islas
+// ═══════════════════════════════════════════════════════════════════════════
+
+function bancosGeografia(edad, d) {
+  if (edad <= 8) return geo_6_8(d);
+  if (edad <= 11) return geo_9_11(d);
+  return geo_12_15(d);
 }
+
+function geo_6_8(d) {
+  return [
+    { pregunta:'¿Cuántos continentes hay en el mundo?', opciones:['5','6','7','8'], correcta:2 },
+    { pregunta:'¿En qué continente está España?', opciones:['Asia','África','Europa','América'], correcta:2 },
+    { pregunta:'¿Cuál es el océano más grande?', opciones:['Atlántico','Pacífico','Índico','Ártico'], correcta:1 },
+    { pregunta:'¿Cómo se llama la capital de España?', opciones:['Barcelona','Madrid','Sevilla','Valencia'], correcta:1 },
+    { pregunta:'¿Qué país tiene forma de bota?', opciones:['Francia','Italia','España','Grecia'], correcta:1 },
+    { pregunta:'¿Cuántas comunidades autónomas tiene España?', opciones:['15','17','19','21'], correcta:1 },
+    { pregunta:'¿Dónde viven los pingüinos?', opciones:['Polo Norte','Polo Sur','Madagascar','Australia'], correcta:1 },
+    { pregunta:'¿Qué río pasa por Zaragoza?', opciones:['Tajo','Duero','Ebro','Guadalquivir'], correcta:2 },
+    { pregunta:'¿Qué mar baña la costa este de España?', opciones:['Cantábrico','Mediterráneo','Atlántico','Báltico'], correcta:1 },
+    { pregunta:'¿Cuál es la isla más grande de Baleares?', opciones:['Ibiza','Menorca','Formentera','Mallorca'], correcta:3 },
+    { pregunta:'¿En qué continente viven los canguros?', opciones:['Asia','África','Oceanía','América'], correcta:2 },
+    { pregunta:'¿Qué océano baña las costas de Galicia?', opciones:['Mediterráneo','Cantábrico','Atlántico','Pacífico'], correcta:2 },
+    { pregunta:'¿Cuál es la montaña más alta de España?', opciones:['Mulhacén','Aneto','Teide','Veleta'], correcta:2 },
+    { pregunta:'¿Qué país tiene la Gran Muralla?', opciones:['Japón','India','China','Corea'], correcta:2 },
+    { pregunta:'¿Dónde está la Estatua de la Libertad?', opciones:['Londres','París','Nueva York','Roma'], correcta:2 },
+    { pregunta:'¿Qué río es el más largo del mundo?', opciones:['Amazonas','Nilo','Yangtsé','Misisipi'], correcta:1 },
+    { pregunta:'¿Cuál es la capital de Francia?', opciones:['Londres','París','Madrid','Berlín'], correcta:1 },
+    { pregunta:'¿Las Islas Canarias están en el océano...?', opciones:['Mediterráneo','Cantábrico','Atlántico','Pacífico'], correcta:2 },
+    // Niveles 2-3
+    { pregunta:'¿Qué país tiene más habitantes?', opciones:['India','China','EEUU','Brasil'], correcta:0 },
+    { pregunta:'¿Cuál es el país más grande del mundo?', opciones:['Canadá','China','Rusia','EEUU'], correcta:2 },
+    { pregunta:'¿Qué es una península?', opciones:['Tierra rodeada de agua','Tierra unida por un istmo','Una isla pequeña','Un río grande'], correcta:1 },
+    { pregunta:'¿Qué comunidad autónoma es la más grande?', opciones:['Andalucía','Castilla y León','Cataluña','Aragón'], correcta:1 },
+    { pregunta:'¿Qué lengua se habla en Brasil?', opciones:['Español','Portugués','Inglés','Francés'], correcta:1 },
+    { pregunta:'¿Dónde están las pirámides de Egipto?', opciones:['El Cairo','Giza','Alejandría','Luxor'], correcta:1 },
+    { pregunta:'¿Qué río pasa por Sevilla?', opciones:['Tajo','Duero','Ebro','Guadalquivir'], correcta:3 },
+    { pregunta:'¿Cuál es la capital de Reino Unido?', opciones:['Dublín','Londres','Edimburgo','Cardiff'], correcta:1 },
+  ].filter(q => Math.abs(d - (q.correcta <= 2 ? 1 : q.correcta <= 3 ? 2 : 3)) <= 1);
+}
+
+function geo_9_11(d) {
+  return [
+    { pregunta:'¿Cuál es la cordillera más larga del mundo?', opciones:['Alpes','Andes','Himalaya','Rocosas'], correcta:1 },
+    { pregunta:'¿Qué estrecho separa España de Marruecos?', opciones:['Bósforo','Gibraltar','Dardanelos','Malaca'], correcta:1 },
+    { pregunta:'¿Cuál es la capital de Australia?', opciones:['Sídney','Canberra','Melbourne','Perth'], correcta:1 },
+    { pregunta:'¿Cuántos países hay en Sudamérica?', opciones:['10','12','13','15'], correcta:1 },
+    { pregunta:'¿Qué río atraviesa Londres?', opciones:['Sena','Támesis','Danubio','Rin'], correcta:1 },
+    { pregunta:'¿En qué comunidad autónoma está el Parque Nacional de Doñana?', opciones:['Andalucía','Extremadura','Castilla-La Mancha','Murcia'], correcta:0 },
+    { pregunta:'¿Cuál es el desierto más grande del mundo?', opciones:['Sáhara','Gobi','Antártida','Kalahari'], correcta:2 },
+    { pregunta:'¿Qué país NO tiene costa?', opciones:['Suiza','Italia','España','Portugal'], correcta:0 },
+    { pregunta:'¿Dónde nace el río Ebro?', opciones:['Pirineos','Sierra Nevada','Cordillera Cantábrica','Sistema Ibérico'], correcta:2 },
+    { pregunta:'¿Qué archipiélago pertenece a Portugal?', opciones:['Canarias','Azores','Baleares','Cabo Verde'], correcta:1 },
+    { pregunta:'¿Cuál es el lago más grande de África?', opciones:['Tanganica','Malaui','Victoria','Chad'], correcta:2 },
+    { pregunta:'¿Qué país europeo tiene más islas?', opciones:['Grecia','Suecia','Noruega','Finlandia'], correcta:1 },
+    { pregunta:'¿Cuál es la capital de Japón?', opciones:['Osaka','Kioto','Tokio','Hiroshima'], correcta:2 },
+    { pregunta:'¿Qué río es frontera entre España y Portugal?', opciones:['Guadiana','Tajo','Duero','Miño'], correcta:2 },
+    { pregunta:'¿Qué país tiene el Canal de Panamá?', opciones:['Panamá','Colombia','Costa Rica','Nicaragua'], correcta:0 },
+    { pregunta:'¿Cuál es el pico más alto de los Pirineos?', opciones:['Aneto','Monte Perdido','Posets','Vignemale'], correcta:0 },
+    { pregunta:'¿Qué comunidad autónoma tiene dos provincias?', opciones:['Madrid','Murcia','La Rioja','Navarra'], correcta:0 },
+    { pregunta:'¿Dónde está el Mar Muerto?', opciones:['Egipto-Israel','Jordania-Israel','Líbano-Siria','Irak-Irán'], correcta:1 },
+    // Niveles 4-6
+    { pregunta:'¿Qué clima predomina en la España mediterránea?', opciones:['Oceánico','Continental','Mediterráneo','Subtropical'], correcta:2 },
+    { pregunta:'¿Cuál es la densidad de población de Mongolia?', opciones:['Muy alta','Alta','Media','Muy baja'], correcta:3 },
+    { pregunta:'¿Qué país es el mayor productor de café?', opciones:['Colombia','Brasil','Vietnam','Etiopía'], correcta:1 },
+    { pregunta:'¿Qué río europeo pasa por más países?', opciones:['Danubio','Rin','Volga','Sena'], correcta:0 },
+    { pregunta:'¿Dónde está la selva del Congo?', opciones:['África central','Sudamérica','Sudeste asiático','Oceanía'], correcta:0 },
+    { pregunta:'¿Cuál es la provincia más poblada de España?', opciones:['Madrid','Barcelona','Valencia','Sevilla'], correcta:0 },
+  ].filter(q => Math.abs(d - (d <= 3 ? d : d <= 6 ? 4 : 7)) <= 2);
+}
+
+function geo_12_15(d) {
+  return [
+    { pregunta:'¿Qué país tiene el PIB más alto del mundo?', opciones:['China','EEUU','Japón','Alemania'], correcta:1 },
+    { pregunta:'¿Cuál es la capital de Burkina Faso?', opciones:['Uagadugú','Bamako','Niamey','Dakar'], correcta:0 },
+    { pregunta:'¿Qué es la dorsal mesoatlántica?', opciones:['Una montaña','Cordillera submarina','Un desierto','Un tipo de clima'], correcta:1 },
+    { pregunta:'¿Qué país alberga el mayor número de refugiados?', opciones:['Turquía','Alemania','Pakistán','Uganda'], correcta:0 },
+    { pregunta:'¿Cuál es la región más septentrional de España?', opciones:['Galicia','Asturias','Cantabria','País Vasco'], correcta:0 },
+    { pregunta:'¿Qué tipo de clima tiene la mayor parte de Rusia?', opciones:['Mediterráneo','Continental','Desértico','Tropical'], correcta:1 },
+    { pregunta:'¿Dónde se encuentra el Triángulo de las Bermudas?', opciones:['Pacífico Sur','Atlántico Norte','Índico','Mar Caribe'], correcta:1 },
+    { pregunta:'¿Cuál es el país con más husos horarios?', opciones:['EEUU','Rusia','Francia','Reino Unido'], correcta:2 },
+    { pregunta:'¿Qué es un fiordo?', opciones:['Un río','Valle glaciar inundado','Una isla','Un tipo de costa'], correcta:1 },
+    { pregunta:'¿Cuál es la cuenca hidrográfica más grande de España?', opciones:['Ebro','Duero','Tajo','Guadalquivir'], correcta:1 },
+    { pregunta:'¿Qué país NO forma parte del G7?', opciones:['Canadá','Italia','España','Japón'], correcta:2 },
+    { pregunta:'¿Cuál es la capital de Bután?', opciones:['Timbu','Katmandú','Daca','Naypyidaw'], correcta:0 },
+    { pregunta:'¿Qué es la Línea Verde en Chipre?', opciones:['Un parque','Zona desmilitarizada','Un río','Una carretera'], correcta:1 },
+    { pregunta:'¿Qué estrecho comunica el Mar Negro con el Mediterráneo?', opciones:['Gibraltar','Bósforo','Ormuz','Malaca'], correcta:1 },
+    { pregunta:'¿Dónde se encuentra la taiga?', opciones:['África','Sudamérica','Siberia y Canadá','Oceanía'], correcta:2 },
+    { pregunta:'¿Qué comunidad autónoma tiene lengua cooficial distinta al castellano?', opciones:['Andalucía','Murcia','Galicia','Castilla y León'], correcta:2 },
+    { pregunta:'¿Qué tipo de relieve predomina en la Meseta Central?', opciones:['Montañoso','Costero','Llanura elevada','Valle fluvial'], correcta:2 },
+    { pregunta:'¿Qué porcentaje de agua dulce tiene el planeta?', opciones:['0.5%','2.5%','5%','10%'], correcta:1 },
+  ].filter(q => Math.abs(d - (d <= 5 ? d : d <= 8 ? 6 : 9)) <= 2);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  EXÁMENES FINALES — Niveles 15 (6-11 años) / 35 (12-15 años)
+// ═══════════════════════════════════════════════════════════════════════════
+
+export const EXAMENES_FINALES = {
+  matematicas: {
+    nombre: 'Matemáticas',
+    nivel_requerido: { '6-8': 10, '9-11': 10, '12-15': 10 },
+    examen_nivel: { '6-8': 15, '9-11': 15, '12-15': 35 },
+    preguntas: 15,
+    aprobado_min: 70
+  },
+  calculo_mental: {
+    nombre: 'Cálculo Mental',
+    nivel_requerido: { '6-8': 8, '9-11': 8, '12-15': 10 },
+    examen_nivel: { '6-8': 15, '9-11': 20, '12-15': 35 },
+    preguntas: 10,
+    aprobado_min: 80
+  },
+  lengua: {
+    nombre: 'Lengua',
+    nivel_requerido: { '6-8': 10, '9-11': 10, '12-15': 10 },
+    examen_nivel: { '6-8': 15, '9-11': 20, '12-15': 35 },
+    preguntas: 15,
+    aprobado_min: 70
+  },
+  medio: {
+    nombre: 'Medio',
+    nivel_requerido: { '6-8': 10, '9-11': 10, '12-15': 10 },
+    examen_nivel: { '6-8': 15, '9-11': 20, '12-15': 35 },
+    preguntas: 15,
+    aprobado_min: 70
+  },
+  geografia: {
+    nombre: 'Geografía',
+    nivel_requerido: { '6-8': 8, '9-11': 10, '12-15': 10 },
+    examen_nivel: { '6-8': 15, '9-11': 20, '12-15': 35 },
+    preguntas: 15,
+    aprobado_min: 70
+  }
+};

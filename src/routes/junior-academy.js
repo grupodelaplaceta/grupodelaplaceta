@@ -53,20 +53,23 @@ router.get('/cuestionarios', verificarJunior, async (req, res) => {
 
     // Generar cuestionarios solo para niveles desbloqueados (1 al nivel actual)
     const cuestionarios = {};
-    const materias = ['matematicas', 'calculo_mental', 'lengua', 'medio'];
+    const materias = ['matematicas', 'calculo_mental', 'lengua', 'medio', 'geografia'];
     const nombresMateria = {
       matematicas: 'Matemáticas',
       calculo_mental: 'Cálculo Mental',
       lengua: 'Lengua',
-      medio: 'Medio'
+      medio: 'Medio',
+      geografia: '🌍 Geografía'
     };
+
+    const maxNivelVisible = Math.min(nivelActual, 35);
 
     for (const materia of materias) {
       cuestionarios[materia] = {
         nombre: nombresMateria[materia],
         niveles: {}
       };
-      for (let n = 1; n <= Math.min(nivelActual, 10); n++) {
+      for (let n = 1; n <= maxNivelVisible; n++) {
         const preguntas = generarCuestionarios(junior.edad, materia, n);
         cuestionarios[materia].niveles[n] = preguntas.map((p, idx) => ({
           id: `${materia}-${n}-${idx}`,
@@ -80,7 +83,7 @@ router.get('/cuestionarios', verificarJunior, async (req, res) => {
 
     // Costos de desbloqueo (niveles 2-10)
     const costos = {};
-    for (let n = 2; n <= 10; n++) {
+    for (let n = 2; n <= 35; n++) {
       costos[n] = COSTO_DESBLOQUEO_POR_NIVEL[n] || 999;
     }
 
