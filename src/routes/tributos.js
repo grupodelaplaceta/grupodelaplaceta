@@ -823,18 +823,17 @@ router.post('/reconcile/:placetaId', verificarSesion, verificarRol('administrado
         }
       }
     } else if (bankSaldoTotal > 0) {
-      // Sin transacciones pero con saldo: distribución proporcional
+      // Sin transacciones: el saldo es el mismo todos los días (no inventar dinero)
+      const saldoPlano = bankSaldoTotal;
       for (let d = 1; d <= diasEnMes; d++) {
         const fechaStr = `${mesPeriodo}-${String(d).padStart(2, '0')}`;
         dailyMap[fechaStr] = {
           fecha: fechaStr,
-          saldo: Math.round((bankSaldoTotal * d / diasEnMes) * 100) / 100,
+          saldo: saldoPlano,
           transactions_count: 0,
-          origen: 'reconstruido'
+          origen: 'banco'
         };
       }
-      const ultimoDia = `${mesPeriodo}-${String(diasEnMes).padStart(2, '0')}`;
-      if (dailyMap[ultimoDia]) { dailyMap[ultimoDia].saldo = bankSaldoTotal; dailyMap[ultimoDia].origen = 'banco'; }
     }
     // Si no hay nada, todo queda a 0
 
@@ -842,7 +841,7 @@ router.post('/reconcile/:placetaId', verificarSesion, verificarRol('administrado
     await sbClearDailyBalances(placetaId, mesPeriodo);
     const balancesGuardados = [];
     for (const entry of Object.values(dailyMap)) {
-      const saved = await sbUpsertDailyBalance(placetaId, mesPeriodo, entry.fecha, entry.saldo, entry.transactions_count);
+      const saved = await sbUpsertDailyBalance(placetaId, mesPeriodo, entry.fecha, entry.saldo, entry.transactions_count, entry.origen);
       if (saved) balancesGuardados.push(saved);
     }
 

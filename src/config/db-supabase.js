@@ -1156,7 +1156,7 @@ export async function sbGetDailyBalances(placetaId, mesPeriodo) {
 /**
  * Guarda o actualiza un saldo diario para un contribuyente.
  */
-export async function sbUpsertDailyBalance(placetaId, mesPeriodo, fecha, saldo, transactionsCount) {
+export async function sbUpsertDailyBalance(placetaId, mesPeriodo, fecha, saldo, transactionsCount, origen) {
   const sb = safeSupabase();
   if (!sb) return null;
   try {
@@ -1172,6 +1172,7 @@ export async function sbUpsertDailyBalance(placetaId, mesPeriodo, fecha, saldo, 
         .update({
           saldo: Number(saldo),
           transactions_count: Number(transactionsCount || 0),
+          origen: origen || 'banco',
           updated_at: new Date().toISOString()
         })
         .eq('id', existing.id)
@@ -1189,7 +1190,7 @@ export async function sbUpsertDailyBalance(placetaId, mesPeriodo, fecha, saldo, 
         fecha,
         saldo: Number(saldo),
         transactions_count: Number(transactionsCount || 0),
-        origen: 'banco',
+        origen: origen || 'banco',
         created_at: new Date().toISOString()
       })
       .select()
