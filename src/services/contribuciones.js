@@ -139,13 +139,12 @@ function calcularContribucion(contribuyente, patrimonioMedio, ingresos = 0, pago
     igf = esEmpresa ? calcularIGFEmpresa(patrimonioMedio) : calcularIGFIndividual(patrimonioMedio);
   }
 
-  // Calcular IRM
+  // Calcular IRM (siempre, aunque esté exento, para mostrar IA)
   const tipoCuenta = esEmpresa ? 'Empresa' : 'Personal';
-  const irmResult = config.incluye_IRM
-    ? calcularIRM(patrimonioMedio, ingresos, pagos, tipoCuenta)
-    : { ia: 0, porcentaje: 0, importe: 0, tipoCuenta };
+  const irmResult = calcularIRM(patrimonioMedio, ingresos, pagos, tipoCuenta);
+  const importeIRM = config.incluye_IRM ? irmResult.importe : 0;
 
-  const total = igf + irmResult.importe;
+  const total = igf + importeIRM;
 
   return {
     contribuyente: contribuyente.nombre,

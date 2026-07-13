@@ -572,20 +572,58 @@
   };
 
   async function editarContribucion(placetaId, nombre, tipoActual) {
+    // Obtener datos completos del contribuyente
+    let contrib = null;
+    try { contrib = await apiFetch('/api/admin/tributos/contributors/' + placetaId); } catch {}
+    if (!contrib) { mostrarToast('Error al cargar contribuyente', 'error'); return; }
+    // Obtener cuentas bancarias
+    let cuentas = [];
+    try { cuentas = await apiFetch('/api/admin/tributos/contributors/' + placetaId + '/cuentas'); } catch {}
+
     const opts = Object.entries(TIPOS_CONTRI).map(([k, v]) =>
-      `<option value="${k}" ${k === tipoActual ? 'selected' : ''}>${v.label} — ${v.desc}</option>`
+      `<option value="${k}" ${k === (contrib.tipo_contribucion || tipoActual || 'estandar') ? 'selected' : ''}>${v.label}</option>`
     ).join('');
+    const ibanOpts = '<option value="">— Sin IBAN —</option>' +
+      cuentas.map(c => `<option value="${c.iban || ''}" ${c.iban === contrib.iban ? 'selected' : ''}>${c.iban || 'Sin IBAN'} · ${c.displayName || c.type || 'Cuenta'} (${(c.balancePz||0).toLocaleString('es-ES')} Pz)</option>`).join('');
+
     const div = document.createElement('div');
     div.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center';
     div.onclick = e => { if (e.target === div) div.remove(); };
-    div.innerHTML = `<div style="background:#fff;border-radius:16px;padding:28px;max-width:500px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.3)">
-      <h3 style="margin:0 0 4px 0;color:#1c005f">⚙️ Tipo de Contribución</h3>
-      <p style="color:#888;margin-bottom:16px;font-size:13px">${nombre} · ${placetaId}</p>
-      <label style="font-weight:600;font-size:13px;display:block;margin-bottom:6px">Tipo:</label>
-      <select id="tcSelect" style="width:100%;padding:10px 14px;border:2px solid #ddd;border-radius:10px;font-family:inherit;font-size:13px;margin-bottom:12px">${opts}</select>
-      <div style="display:flex;gap:12px">
-        <button class="btn btn-primary" onclick="guardarTipoContribucion('${placetaId}')">💾 Guardar</button>
-        <button class="btn btn-outline" onclick="calcularContribuyente('${placetaId}','${nombre}')">📊 Calcular</button>
+    div.innerHTML = `<div style="background:#fff;border-radius:16px;padding:28px;max-width:600px;width:90%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+      <h3 style="margin:0 0 4px 0;color:#1c005f">✏️ Editar Contribuyente</h3>
+      <p style="color:#888;margin-bottom:16px;font-size:13px">${contrib.nombre} · ${contrib.placeta_id}</p>
+      <div style="display:grid;gap:12px">
+        <label style="font-weight:600;font-size:13px">Nombre <input type="text" id="ecNombre" class="form-input" value="${contrib.nombre || ''}"></label>
+        <label style="font-weight:600;font-size:13px">DIP <input type="text" id="ecDip" class="form-input" value="${contrib.dip || ''}"></label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <label style="font-weight:600;font-size:13px">Tipo Sujeto
+            <select id="ecTipo" class="form-input">
+              <option value="Fisico" ${contrib.tipo_sujeto === 'Fisico' ? 'selected' : ''}>Físico</option>
+              <option value="Empresa" ${contrib.tipo_sujeto === 'Empresa' ? 'selected' : ''}>Empresa</option>
+              <option value="Junior" ${contrib.tipo_sujeto === 'Junior' ? 'selected' : ''}>Junior</option>
+            </select>
+          </label>
+          <label style="font-weight:600;font-size:13px">Estado Fiscal
+            <select id="ecEstado" class="form-input">
+              <option value="Al Dia" ${contrib.estado_fiscal === 'Al Dia' ? 'selected' : ''}>Al Día</option>
+              <option value="Capitalia" ${contrib.estado_fiscal === 'Capitalia' ? 'selected' : ''}>Capitalia</option>
+              <option value="Moroso" ${contrib.estado_fiscal === 'Moroso' ? 'selected' : ''}>Moroso</option>
+              <option value="Exento" ${contrib.estado_fiscal === 'Exento' ? 'selected' : ''}>Exento</option>
+            </select>
+          </label>
+        </div>
+        <label style="font-weight:600;font-size:13px">Tipo Contribución
+          <select id="ecTipoContri" class="form-input">${opts}</select>
+        </label>
+        <label style="font-weight:600;font-size:13px">IBAN (cuentas disponibles)
+          <select id="ecIban" class="form-input">${ibanOpts}</select>
+        </label>
+        <label style="font-weight:600;font-size:13px">EIP (solo empresas) <input type="text" id="ecEip" class="form-input" value="${contrib.eip || ''}"></label>
+        <label style="font-weight:600;font-size:13px">Roles (JSON array) <input type="text" id="ecRoles" class="form-input" value='${JSON.stringify(contrib.roles_json || ['ciudadano'])}'></label>
+      </div>
+      <div style="display:flex;gap:12px;margin-top:16px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="guardarContribuyente('${placetaId}')">💾 Guardar</button>
+        <button class="btn btn-outline" onclick="calcularContribuyente('${placetaId}','${contrib.nombre}')">📊 Calcular</button>
         <button class="btn btn-outline" onclick="detectarTipo('${placetaId}')">🤖 Auto-detectar</button>
         <button class="btn btn-secondary" onclick="this.closest('div[style]').parentElement.remove()">Cerrar</button>
       </div>
@@ -594,13 +632,23 @@
     document.body.appendChild(div);
   }
 
-  async function guardarTipoContribucion(placetaId) {
-    const tipo = document.getElementById('tcSelect').value;
+  async function guardarContribuyente(placetaId) {
+    const data = {
+      nombre: document.getElementById('ecNombre').value,
+      dip: document.getElementById('ecDip').value,
+      tipo_sujeto: document.getElementById('ecTipo').value,
+      estado_fiscal: document.getElementById('ecEstado').value,
+      tipo_contribucion: document.getElementById('ecTipoContri').value,
+      iban: document.getElementById('ecIban').value,
+      eip: document.getElementById('ecEip').value
+    };
+    const rolesStr = document.getElementById('ecRoles').value;
+    try { data.roles_json = JSON.parse(rolesStr); } catch { data.roles_json = rolesStr.split(',').map(s => s.trim()); }
     const r = document.getElementById('tcResultado');
     r.innerHTML = '⏳ Guardando...';
     try {
-      const d = await apiFetch(`/api/admin/tributos/contributors/${placetaId}/tipo-contribucion`, { method: 'POST', body: JSON.stringify({ tipo_contribucion: tipo }) });
-      r.innerHTML = d.success ? '<div style="color:#166534;background:#f0fdf4;padding:10px;border-radius:8px">✅ Guardado: ' + (TIPOS_CONTRI[tipo]?.label || tipo) + '</div>' : '<div style="color:var(--red)">❌ Error</div>';
+      const d = await apiFetch(`/api/admin/tributos/contributors/${placetaId}`, { method: 'PUT', body: JSON.stringify(data) });
+      r.innerHTML = d.success ? '<div style="color:#166534;background:#f0fdf4;padding:10px;border-radius:8px">✅ Guardado</div>' : '<div style="color:var(--red)">❌ Error</div>';
       cargarContribuyentes();
     } catch(e) { r.innerHTML = '<div style="color:var(--red)">❌ ' + e.message + '</div>'; }
   }
@@ -610,13 +658,16 @@
     r.innerHTML = '⏳ Calculando...';
     try {
       const d = await apiFetch(`/api/admin/tributos/contributors/${placetaId}/calcular`);
+      const ia = d.irm?.ia || 0;
+      const iaLabel = ia <= 0 ? '🟢 Consumo neto' : ia <= 0.05 ? '🟡 Baja' : ia <= 0.15 ? '🟠 Media' : ia <= 0.30 ? '🔴 Alta' : '🔴🔴 Muy alta';
       r.innerHTML = `<div style="background:#f8f7fc;border-radius:10px;padding:14px;font-size:13px">
         <strong style="font-size:15px;color:#1c005f">${nombre}</strong>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
           <div><strong>Patrimonio:</strong> ${(d.patrimonio_medio || 0).toLocaleString('es-ES')} Pz</div>
-          <div><strong>Tipo:</strong> ${TIPOS_CONTRI[d.tipo_contribucion]?.label || d.tipo_contribucion}</div>
-          <div><strong>IGF:</strong> ${(d.igf?.importe || 0).toLocaleString('es-ES')} Pz</div>
+          <div><strong>Tipo:</strong> ${d.config?.label || d.tipo_contribucion}</div>
+          <div><strong>IA (Índice Acum.):</strong> ${ia} ${iaLabel}</div>
           <div><strong>IRM:</strong> ${(d.irm?.importe || 0).toLocaleString('es-ES')} Pz (${d.irm?.porcentaje}%)</div>
+          <div><strong>IGF:</strong> ${(d.igf?.importe || 0).toLocaleString('es-ES')} Pz${d.igf?.exento ? ' (' + d.igf.exento + ')' : ''}</div>
           <div style="grid-column:1/-1;background:#1c005f;color:#fff;padding:10px;border-radius:8px;font-size:16px;font-weight:700;text-align:center">
             TOTAL: ${(d.total_contribucion || 0).toLocaleString('es-ES')} Pz
             ${d.paga_capitalia ? '<br><span style="font-size:12px;font-weight:400">💰 Lo paga CAPITALIA a Tributos</span>' : `<br><span style="font-size:12px;font-weight:400">💳 De: ${d.pagador_efectivo} → 🏛️ TGLP</span>`}

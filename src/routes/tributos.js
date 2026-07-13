@@ -319,6 +319,33 @@ router.get('/tipos-contribucion', verificarSesion, verificarRol('administrador',
   return res.json(TIPOS_CONTRIBUCION);
 });
 
+// GET /contributors/:placetaId/cuentas — Cuentas bancarias del contribuyente (para asignar IBAN)
+router.get('/contributors/:placetaId/cuentas', verificarSesion, verificarRol('administrador', 'junta', 'fiscal'), async (req, res) => {
+  try {
+    const c = await sbGetTributosContributorByPlacetaId(req.params.placetaId);
+    if (!c) return res.json([]);
+    const dip = c.dip || req.params.placetaId.replace('PLID-', '');
+    // Buscar en bancario-proxy
+    const cuentas = [];
+    try {
+      const r = await fetch(`${BANCO_API}/api/account/search?dip=${dip}`, {
+        headers: { 'X-CRM-Key': process.env.CRM_READ_KEY || 'crm-gdlp-shared-key-2026' },
+        signal: AbortSignal.timeout(5000)
+      });
+      if (r.ok) { const d = await r.json(); if (Array.isArray(d)) cuentas.push(...d); }
+    } catch {}
+    // Fallback SQLite
+    if (!cuentas.length) {
+      try {
+        const db = getDb();
+        const rows = db.prepare("SELECT id, saldo, iban, tipo_cuenta, display_name FROM cuentas_bancarias WHERE placeta_id = ? OR dip = ?").all(req.params.placetaId, dip);
+        cuentas.push(...rows.map(r => ({ id: r.id, balancePz: r.saldo, iban: r.iban, type: r.tipo_cuenta, displayName: r.display_name })));
+      } catch {}
+    }
+    return res.json(cuentas);
+  } catch { return res.json([]); }
+});
+
 // POST /migrar-esquema — Añadir columnas faltantes a Supabase
 router.post('/migrar-esquema', verificarSesion, verificarRol('administrador'), async (req, res) => {
   try {
