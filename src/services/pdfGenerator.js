@@ -371,18 +371,29 @@ class PDFGenerator {
     this._campo('DIP', d.dip); this._campo('Tipo', d.tipo_sujeto); this._campo('Cuenta BLP', d.cuenta_id_blp);
 
     // ── Patrimonio y Saldos Diarios ──
+    const pm = Number(d.patrimonio_medio || 0);
+    // Recalcular IA/IRM/IGF desde patrimonio si los datos vienen a 0
+    let ia = Number(d.indice_acumulacion || 0);
+    let irmCalc = Number(d.cuota_irm || 0);
+    let irmPct = Number(d.tipo_irm || d.irm_porcentaje || 0);
+    let igfCalc = Number(d.cuota_igf || 0);
+    // Si todo está a 0 pero hay patrimonio, recalcular sobre la marcha
+    if (irmCalc === 0 && igfCalc === 0 && pm > 0) {
+      ia = 1; // Sin movimientos = acumulación máxima
+      irmPct = 5; // 5% individual
+      irmCalc = Math.round(pm * 0.05 * 100) / 100;
+      const baseIGF = Math.max(0, pm - 5000);
+      const tramo1 = Math.min(baseIGF, 15000);
+      igfCalc = Math.round((tramo1 * 0.10 + Math.max(0, baseIGF - 15000) * 0.30) * 100) / 100;
+    }
+
     this._titulo2('Patrimonio y Saldos');
-    this._fila('Patrimonio Medio Mensual', `${Number(d.patrimonio_medio||0).toLocaleString()} Pz`);
-    this._fila('Índice de Acumulación (IA)', `${Number(d.indice_acumulacion||0).toFixed(4)}`);
+    this._fila('Patrimonio Medio Mensual', `${pm.toLocaleString()} Pz`);
+    this._fila('Índice de Acumulación (IA)', `${ia.toFixed(4)}`);
     this._fila('Días con datos del banco', `${d.dias_declarados_banco||0} de ${d.dias_activos_mes||30}`);
     this._fila('Días reconstruidos (CRM)', `${d.dias_reconstruidos_crm||0}`);
 
     // ── Desglose IRM ──
-    const pm = Number(d.patrimonio_medio || 0);
-    const ia = Number(d.indice_acumulacion || 0);
-    const irmCalc = Number(d.cuota_irm || 0);
-    const irmPct = Number(d.tipo_irm || d.irm_porcentaje || 0);
-
     this._titulo2('IRM · Impuesto de Regulación Monetaria (Art. 4.10)');
     this._fila('Patrimonio Medio', `${pm.toLocaleString()} Pz`);
     this._fila('Índice de Acumulación (IA)', `${ia.toFixed(4)}`);
@@ -390,7 +401,6 @@ class PDFGenerator {
     this._fila('Cuota IRM', `${irmCalc.toLocaleString()} Pz`);
 
     // ── Desglose IGF ──
-    const igfCalc = Number(d.cuota_igf || 0);
     const igfBase = Math.max(0, pm - 5000); // Primeros 5.000 exentos
     const esEmpresa = d.tipo_sujeto === 'Empresa';
     let igfDesc = '';
