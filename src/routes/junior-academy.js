@@ -363,4 +363,123 @@ function verificarJunior(req, res, next) {
   next();
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+//  RBU — Renta Básica Universal Junior (racha diaria)
+// ═══════════════════════════════════════════════════════════════════════════
+
+const RBU_SEMANAL = [5, 4, 3, 3, 3, 3, 3]; // L-V: 5,4,3,3,3,3,3 Pz
+const RBU_FUNDACION = 'FUNDACION_BP'; // Cuenta origen
+
+router.get('/rbu', verificarJunior, async (req, res) => {
+  try {
+    const junior = await sbFindJuniorByDip(req.session.junior.dip);
+    if (!junior) return res.status(404).json({ error: 'Perfil no encontrado' });
+    const esDemo = junior.tutor_dip === '11111111D';
+
+    // Check if already claimed today
+    const hoy = new Date().toISOString().slice(0, 10);
+    const { data: yaReclamado } = await supabase.from('junior_transacciones')
+      .select('id').eq('junior_id', junior.id).eq('tipo', 'rbu')
+      .gte('creado_en', hoy).limit(1);
+
+    if (yaReclamado && yaReclamado.length > 0) {
+      return res.json({ success: false, message: 'Ya has reclamado tu RBU hoy. ¡Vuelve mañana! 🌅' });
+    }
+
+    // Calculate streak: count consecutive days claimed this week
+    let streak = 1;
+    for (let d = 1; d < 7; d++) {
+      const fecha = new Date(Date.now() - d * 86400000).toISOString().slice(0, 10);
+      const { data: dia } = await supabase.from('junior_transacciones')
+        .select('id').eq('junior_id', junior.id).eq('tipo', 'rbu')
+        .gte('creado_en', fecha).lt('creado_en', fecha + 'T23:59:59').limit(1);
+      if (dia && dia.length > 0) streak++;
+      else break;
+    }
+    const cantidad = RBU_SEMANAL[Math.min(streak - 1, 6)] || 3;
+    const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
+
+    // Process bank transaction (demo = simulated)
+    if (!esDemo) {
+      try {
+        await apiBanco('transferir', {
+          from: RBU_FUNDACION, to: junior.cuenta_banco || junior.dip,
+          cantidad, concepto: `RBU día ${streak} — Placeta Junior`, ip, iva: 0
+        });
+      } catch (e) { console.warn('[RBU] Banco:', e.message); }
+    }
+
+    const nuevoSaldo = (junior.placetas_saldo || 0) + cantidad;
+    await sbUpdatePlacetaBalance(junior.id, nuevoSaldo);
+    await sbCreatePlacetaTransaction({
+      junior_id: junior.id, tipo: 'rbu',
+      concepto: `RBU día ${streak}${esDemo ? ' (Demo)' : ''}`,
+      cantidad, saldo_resultante: nuevoSaldo, ip
+    });
+    await sbCreateJuniorLog({
+      junior_id: junior.id, accion: 'rbu_reclamado',
+      detalle: `RBU día ${streak}: +${cantidad} Pz. Saldo: ${nuevoSaldo} Pz${esDemo ? ' (Demo)' : ''}. Fuente: Fundación Banco de La Placeta`, ip
+    });
+
+    res.json({
+      success: true, cantidad, streak, nuevo_saldo: nuevoSaldo,
+      message: `¡RBU reclamada! +${cantidad} Pz. Día ${streak} de tu racha semanal.`,
+      es_demo: esDemo
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  CONFIRMAR PAGO UPGRADE — Slideup de confirmación
+// ═══════════════════════════════════════════════════════════════════════════
+
+router.post('/confirmar-pago', verificarJunior, async (req, res) => {
+  try {
+    const { cantidad, concepto, nivel } = req.body;
+    const junior = await sbFindJuniorByDip(req.session.junior.dip);
+    if (!junior) return res.status(404).json({ error: 'Perfil no encontrado' });
+    const esDemo = junior.tutor_dip === '11111111D';
+
+    if (!esDemo && (junior.placetas_saldo || 0) < cantidad) {
+      return res.status(400).json({ error: 'Saldo insuficiente', saldo_actual: junior.placetas_saldo, costo: cantidad });
+    }
+
+    const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
+    const nuevoSaldo = (junior.placetas_saldo || 0) - cantidad;
+
+    // Real bank operation → Capitalia
+    if (!esDemo) {
+      try {
+        await apiBanco('transferir', {
+          from: junior.cuenta_banco || junior.dip,
+          to: 'CAPITALIA_BANK', cantidad,
+          concepto: concepto || 'Upgrade academia', ip,
+          iva: Math.ceil(cantidad * 12 / 100)
+        });
+      } catch (e) { console.warn('[Pago] Banco:', e.message); }
+    }
+
+    await sbUpdatePlacetaBalance(junior.id, nuevoSaldo);
+    await sbCreatePlacetaTransaction({
+      junior_id: junior.id, tipo: 'gastar',
+      concepto: concepto || `Desbloquear nivel ${nivel || '?'}`,
+      cantidad, saldo_resultante: nuevoSaldo, ip
+    });
+    await sbCreateJuniorLog({
+      junior_id: junior.id, accion: 'pago_upgrade',
+      detalle: `Pago ${cantidad} Pz → Capitalia. ${concepto || ''}. Saldo: ${nuevoSaldo} Pz${esDemo ? ' (Demo)' : ''}`, ip
+    });
+
+    res.json({
+      success: true, pagado: cantidad, saldo_anterior: junior.placetas_saldo,
+      nuevo_saldo: nuevoSaldo, es_demo: esDemo,
+      message: `✅ Pago confirmado: -${cantidad} Pz. Te quedan ${nuevoSaldo} Pz.`
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;
