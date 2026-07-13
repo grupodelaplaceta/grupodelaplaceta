@@ -1,5 +1,7 @@
 import { Router } from 'express';
+import crypto from 'crypto';
 import { supabase } from '../config/supabase.js';
+import { sbFindSolicitanteByDip } from '../config/db-supabase.js';
 
 const router = Router();
 
@@ -27,14 +29,18 @@ router.get('/documentos-pendientes/:juniorId', async (req, res) => {
 
     if (jErr || !junior) return res.status(404).json({ error: 'Junior no encontrado' });
 
-    // Get already signed documents
+    // Get already signed documents (look up by tutor's solicitante ID)
+    const tutorSol = await sbFindSolicitanteByDip(junior.tutor_dip);
+    const tutorId = tutorSol?.id || null;
+
     const { data: firmados, error: fErr } = await supabase
       .from('documentos_firmados')
       .select('codigo_modelo')
-      .eq('firmado_por', junior.tutor_dip)
-      .in('codigo_modelo', DOCUMENTOS_REQUERIDOS.map(d => d.codigo));
+      .eq('firmado_por', tutorId)
+      .eq('estado', 'firmado')
+      .ilike('codigo_modelo', `%::junior::${juniorId}`);
 
-    const firmadosSet = new Set((firmados || []).map(f => f.codigo_modelo));
+    const firmadosSet = new Set((firmados || []).map(f => f.codigo_modelo.split('::')[0]));
 
     // Build pending list
     const pendientes = DOCUMENTOS_REQUERIDOS
@@ -104,22 +110,24 @@ router.post('/firmar-documento', async (req, res) => {
       return res.status(403).json({ error: 'Solo el tutor legal puede firmar estos documentos' });
     }
 
+    // Find the tutor's solicitante record for FK
+    const tutorSol = await sbFindSolicitanteByDip(firmante_dip);
+    const tutorId = tutorSol?.id || null;
     const clientIp = ip || req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
     const ahora = new Date().toISOString();
+    const firmaHash = crypto.createHash('sha256').update(firma_base64 + ahora).digest('hex');
 
-    // Insert signed document
+    // Insert signed document using existing Supabase table columns
     const { data: doc, error: insErr } = await supabase
       .from('documentos_firmados')
       .insert({
-        codigo_modelo: codigo_documento,
-        nombre_documento: docDef.nombre,
-        firmado_por: firmante_dip,
-        firmante_nombre: firmante_nombre || junior.tutor_nombre || 'Tutor',
-        firma_base64: firma_base64,
-        junior_id: junior.id,
-        junior_dip: junior.dip,
-        ip_firma: clientIp,
-        creado_en: ahora
+        usuario_id: tutorId,
+        codigo_modelo: `${codigo_documento}::junior::${junior.id}`,
+        titulo_documento: docDef.nombre,
+        url_firma: firma_base64,
+        hash_documento: firmaHash,
+        firmado_por: tutorId,
+        estado: 'firmado'
       })
       .select()
       .single();
@@ -129,8 +137,8 @@ router.post('/firmar-documento', async (req, res) => {
       if (insErr.code === '23505') {
         return res.json({ success: true, ya_firmado: true, message: 'Documento ya firmado anteriormente' });
       }
-      console.error('[Legal] Error insertando firma:', insErr);
-      return res.status(500).json({ error: 'Error al guardar la firma' });
+      console.error('[Legal] Error insertando firma:', JSON.stringify(insErr));
+      return res.status(500).json({ error: `Error al guardar la firma: ${insErr.message}` });
     }
 
     // Log
@@ -141,15 +149,18 @@ router.post('/firmar-documento', async (req, res) => {
       ip: clientIp
     });
 
-    // Check if all documents are now signed
+    // Check if all documents are now signed (by codigo_modelo pattern)
     const { data: firmados } = await supabase
       .from('documentos_firmados')
       .select('codigo_modelo')
-      .eq('firmado_por', firmante_dip)
-      .eq('junior_id', junior.id)
-      .in('codigo_modelo', DOCUMENTOS_REQUERIDOS.map(d => d.codigo));
+      .eq('firmado_por', tutorId)
+      .eq('estado', 'firmado')
+      .ilike('codigo_modelo', `%::junior::${junior.id}`);
 
-    const firmadosSet = new Set((firmados || []).map(f => f.codigo_modelo));
+    const firmadosSet = new Set((firmados || []).map(f => {
+      // Extract just the doc code from "PJ-TYC-001::junior::7"
+      return f.codigo_modelo.split('::')[0];
+    }));
     const todosFirmados = DOCUMENTOS_REQUERIDOS.every(d => firmadosSet.has(d.codigo));
 
     // If all signed, activate the junior account
