@@ -119,36 +119,51 @@ router.get('/reporte-completo', verificarSesion, verificarRol('administrador', '
 // GET /api/admin/ciudadanos - Lista completa de ciudadanos desde Supabase
 router.get('/ciudadanos', verificarSesion, verificarRol('administrador', 'junta'), async (req, res) => {
   try {
-    // Primero Supabase
     const { data: solicitantes, error } = await supabase
       .from('solicitantes')
       .select('*')
       .order('creado_en', { ascending: false })
       .limit(500);
-    if (!error && solicitantes) return res.json(solicitantes);
+    if (!error && solicitantes) {
+      // Filtrar DIPs demo y placeid demo
+      const filtrados = solicitantes.filter(s =>
+        !s.dip?.toLowerCase().includes('demo') &&
+        !s.alias?.toLowerCase().includes('demo') &&
+        !s.nombre_real?.toLowerCase().includes('demo') &&
+        !s.email?.toLowerCase().includes('demo')
+      );
+      return res.json(filtrados);
+    }
   } catch (_) {}
-  // Fallback SQLite
   try {
     const db = getDb();
     const ciudadanos = db.prepare('SELECT * FROM solicitantes ORDER BY creado_en DESC').all();
-    return res.json(ciudadanos || []);
+    const filtrados = (ciudadanos || []).filter(s =>
+      !s.dip?.toLowerCase().includes('demo') &&
+      !s.alias?.toLowerCase().includes('demo') &&
+      !s.nombre_real?.toLowerCase().includes('demo')
+    );
+    return res.json(filtrados);
   } catch (_) {}
   res.json([]);
 });
 
-// DELETE /api/admin/ciudadanos/:dip
+// DELETE /api/admin/ciudadanos/:dip (con purge completo)
 router.delete('/ciudadanos/:dip', verificarSesion, verificarRol('administrador'), async (req, res) => {
   try {
     const { dip } = req.params;
     const { error } = await supabase.from('solicitantes').delete().eq('dip', dip);
     if (error) throw new Error(error.message);
     await supabase.from('junior_menores').delete().eq('dip', dip);
-    res.json({ success: true });
+    await supabase.from('tributos_contribuyentes').delete().eq('dip', dip);
+    res.json({ success: true, message: `DIP ${dip} eliminado de Supabase` });
   } catch (err) {
     try {
       const db = getDb();
       db.prepare('DELETE FROM solicitantes WHERE dip = ?').run(req.params.dip);
-      res.json({ success: true });
+      db.prepare('DELETE FROM junior_menores WHERE dip = ?').run(req.params.dip);
+      db.prepare('DELETE FROM cuentas_bancarias WHERE placeta_id = ?').run(req.params.dip);
+      res.json({ success: true, message: `DIP ${req.params.dip} eliminado de SQLite` });
     } catch (_) { res.status(500).json({ error: err.message }); }
   }
 });

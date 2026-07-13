@@ -103,6 +103,14 @@ router.post('/vincular', async (req, res) => {
         tutorDip: dip_tutor
       });
 
+      // ── GUARDAR IBAN Y CUENTA en junior_menores ─────────────────
+      if (cuentaInfo?.accountId || cuentaInfo?.iban) {
+        await sbUpdateJunior(junior.id, {
+          cuenta_banco: cuentaInfo.accountId || `u-${junior.dip?.toLowerCase().replace(/-/g, '')}`,
+          iban: cuentaInfo.iban || `CAPI-${junior.dip?.split('-')[1] || '0000'}`
+        });
+      }
+
       // ── Dar bono de bienvenida de 750 Pz (AGLDP → menor) ──────────
       try {
         await apiBanco('bono-bienvenida', {
@@ -271,9 +279,9 @@ router.get('/monedero', verificarJunior, async (req, res) => {
       historial: historial || [],
       nivel_academia: junior.nivel_academia || 1,
       cuenta_bancaria: {
-        id: `u-${junior.dip?.toLowerCase().replace(/-/g, '')}`,
+        id: junior.cuenta_banco || `u-${junior.dip?.toLowerCase().replace(/-/g, '')}`,
         tipo: 'Child',
-        iban: `CAPI-${junior.dip?.split('-')[1] || '0000'}`,
+        iban: junior.iban || `CAPI-${junior.dip?.split('-')[1] || '0000'}`,
         sendLimitPz: limitesEfectivos.gasto_diario
       }
     });

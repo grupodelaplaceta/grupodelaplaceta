@@ -202,21 +202,33 @@ router.get('/junior/cuentas', verificarSesion, verificarRol('administrador', 'ju
     const { dip } = req.query;
     const db = getDb();
     let cuentas = [];
-    // Intentar desde Supabase
+
+    // Intentar desde Supabase cuentas_bancarias
     const sbCuentas = await s('cuentas_bancarias', '*', { eq: { tipo_cuenta: 'Junior' }, order: { field: 'creado_en', asc: false }, limit: 200 });
-    if (sbCuentas && sbCuentas.length) cuentas = sbCuentas;
+    if (sbCuentas && sbCuentas.length) { cuentas = sbCuentas; }
     else {
-      // Fallback SQLite
-      const rows = dip
-        ? db.prepare("SELECT * FROM cuentas_bancarias WHERE tipo_cuenta='Junior' AND (placeta_id = ? OR id = ?)").all(dip, dip)
-        : db.prepare("SELECT * FROM cuentas_bancarias WHERE tipo_cuenta='Junior' ORDER BY creado_en DESC LIMIT 200").all();
-      cuentas = rows || [];
+      // Fallback: leer cuenta_banco/iban desde junior_menores
+      const juniorsConCuenta = await s('junior_menores', 'dip,nombre,apellidos,cuenta_banco,iban,placetas_saldo,estado', { limit: 500 }) || [];
+      const conCuenta = juniorsConCuenta.filter(j => j.cuenta_banco || j.iban);
+      if (conCuenta.length) {
+        cuentas = conCuenta.map(j => ({
+          id: j.cuenta_banco || `u-${j.dip?.toLowerCase().replace(/-/g,'')}`,
+          tipo_cuenta: 'Junior', saldo: j.placetas_saldo || 0, iban: j.iban || `CAPI-${j.dip?.split('-')[1] || '0000'}`,
+          placeta_id: j.dip, estado: j.estado === 'activo' ? 'activa' : 'inactiva',
+          junior_nombre: `${j.nombre} ${j.apellidos}`, junior_saldo: j.placetas_saldo || 0
+        }));
+      } else {
+        const rows = dip
+          ? db.prepare("SELECT * FROM cuentas_bancarias WHERE tipo_cuenta='Junior' AND (placeta_id = ? OR id = ?)").all(dip, dip)
+          : db.prepare("SELECT * FROM cuentas_bancarias WHERE tipo_cuenta='Junior' ORDER BY creado_en DESC LIMIT 200").all();
+        cuentas = rows || [];
+      }
     }
     // Enriquecer con nombre del junior
-    const juniors = await s('junior_menores', 'dip,nombre,apellidos,placetas_saldo', { limit: 500 }) || [];
+    const juniors = await s('junior_menores', 'dip,nombre,apellidos,placetas_saldo,cuenta_banco,iban', { limit: 500 }) || [];
     cuentas = cuentas.map(c => {
       const j = juniors.find(j => j.dip === (c.placeta_id || c.dip));
-      return { ...c, junior_nombre: j ? `${j.nombre} ${j.apellidos}` : '—', junior_saldo: j?.placetas_saldo || 0 };
+      return { ...c, junior_nombre: j ? `${j.nombre} ${j.apellidos}` : '—', junior_saldo: j?.placetas_saldo || 0, junior_cuenta_banco: j?.cuenta_banco || c.id, junior_iban: j?.iban || c.iban || '—' };
     });
     return res.json(cuentas);
   } catch (err) { return res.json([]); }
@@ -238,7 +250,69 @@ router.post('/junior/:id/crear-cuenta-bancaria', verificarSesion, verificarRol('
     });
     if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.error || 'Error API banco'); }
     const data = await r.json();
+    // Guardar cuenta e IBAN en junior_menores
+    if (data?.accountId || data?.iban) {
+      const upd = {};
+      if (data.accountId) upd.cuenta_banco = data.accountId;
+      if (data.iban) upd.iban = data.iban;
+      if (supabase) await supabase.from('junior_menores').update(upd).eq('id', id);
+      const placeholders = Object.keys(upd).map(k => `${k}=?`).join(',');
+      const vals = Object.values(upd);
+      vals.push(id);
+      db.prepare(`UPDATE junior_menores SET ${placeholders} WHERE id=?`).run(...vals);
+    }
     return res.json({ success: true, message: `Cuenta creada: ${data.accountId}`, cuenta: data });
+  } catch (err) { return res.status(500).json({ error: err.message }); }
+});
+
+// ── BACKFILL: Crear cuentas para juniors existentes sin cuenta ──────────────
+router.post('/junior/backfill-cuentas', verificarSesion, verificarRol('administrador', 'junta'), async (req, res) => {
+  const BANCO_API = (process.env.BANCO_API_URL || 'https://api.banco.laplaceta.org').replace(/\/+$/, '');
+  const CRM_KEY = process.env.CRM_READ_KEY || 'crm-gdlp-shared-key-2026';
+  const resultados = [];
+  try {
+    const juniors = await s('junior_menores', '*', { eq: { estado: 'activo' } }) || [];
+    for (const j of juniors) {
+      if (j.cuenta_banco && j.iban) { resultados.push({ dip: j.dip, estado: 'ya_tiene_cuenta' }); continue; }
+      try {
+        const r = await fetch(`${BANCO_API}/api/crm-state`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CRM-Key': CRM_KEY },
+          body: JSON.stringify({ action: 'crear-cuenta-infantil', juniorDip: j.dip, juniorNombre: `${j.nombre} ${j.apellidos}`, tutorAccountId: `u-${j.tutor_dip?.toLowerCase().replace(/-/g,'')}`, sendLimitPz: 50, tutorDip: j.tutor_dip }),
+          signal: AbortSignal.timeout(10000)
+        });
+        if (!r.ok) { resultados.push({ dip: j.dip, estado: 'error_api' }); continue; }
+        const data = await r.json();
+        const upd = {};
+        if (data.accountId) upd.cuenta_banco = data.accountId;
+        if (data.iban) upd.iban = data.iban;
+        if (Object.keys(upd).length && supabase) await supabase.from('junior_menores').update(upd).eq('id', j.id);
+        resultados.push({ dip: j.dip, estado: 'ok', cuenta: data.accountId, iban: data.iban });
+      } catch (e) { resultados.push({ dip: j.dip, estado: 'error', msg: e.message }); }
+    }
+    return res.json({ total: juniors.length, procesados: resultados.filter(r => r.estado === 'ok').length, ya_tienen: resultados.filter(r => r.estado === 'ya_tiene_cuenta').length, errores: resultados.filter(r => r.estado === 'error' || r.estado === 'error_api').length, resultados });
+  } catch (err) { return res.status(500).json({ error: err.message }); }
+});
+
+// ── AUDITORÍA COMPLETA ──────────────────────────────────────────────────────
+router.get('/junior/audit-completa', verificarSesion, verificarRol('administrador', 'junta'), async (req, res) => {
+  try {
+    const logsJun = await s('junior_logs', '*', { order: { field: 'creado_en', asc: false }, limit: 200 }) || [];
+    const logsGen = await s('logs_auditoria', '*', { order: { field: 'creado_en', asc: false }, limit: 200 }) || [];
+    const trans = await s('junior_transacciones', '*', { order: { field: 'creado_en', asc: false }, limit: 200 }) || [];
+    const juniors = await s('junior_menores', 'id,dip,nombre,apellidos', { limit: 500 }) || [];
+    const junMap = {};
+    juniors.forEach(j => { junMap[j.id] = `${j.nombre} ${j.apellidos} (${j.dip})`; });
+    const audit = [
+      ...logsJun.map(l => ({ fecha: l.creado_en, tipo: 'junior_log', accion: l.accion, detalle: l.detalle, junior: junMap[l.junior_id] || '—', ip: l.ip })),
+      ...logsGen.map(l => ({ fecha: l.creado_en, tipo: 'general', accion: l.accion, detalle: l.detalle, usuario: l.usuario_id, ip: l.ip })),
+      ...trans.map(t => ({ fecha: t.creado_en, tipo: 'transaccion', accion: t.tipo, detalle: `${t.concepto} (${t.cantidad} Pz)`, junior: junMap[t.junior_id] || '—', ip: t.ip }))
+    ];
+    audit.sort((a, b) => new Date(b.fecha || 0) - new Date(a.fecha || 0));
+    return res.json({ total: audit.length, logs: audit.slice(0, 200), resumen: {
+      logs_junior: logsJun.length, logs_generales: logsGen.length, transacciones: trans.length,
+      acciones_unicas: [...new Set(logsJun.map(l => l.accion))],
+      juniors_con_logs: [...new Set(logsJun.filter(l => l.junior_id).map(l => junMap[l.junior_id]).filter(Boolean))]
+    }});
   } catch (err) { return res.status(500).json({ error: err.message }); }
 });
 
