@@ -268,7 +268,7 @@ router.post('/contributors/:placetaId/tipo-contribucion', verificarSesion, verif
       updated = await sbUpdateTributosContributor(req.params.placetaId, { tipo_contribucion });
     }
     return res.json({ success: true, contributor: updated });
-  } catch (err) { return res.status(500).json({ error: err.message, tip: 'Ejecuta en SQL Editor de Supabase: ALTER TABLE tributos_contribuyentes ADD COLUMN tipo_contribucion TEXT DEFAULT &#39;estandar&#39;;' }); }
+  } catch (err) { return res.status(500).json({ error: err.message, tip: "Ejecuta en SQL Editor de Supabase: ALTER TABLE tributos_contribuyentes ADD COLUMN tipo_contribucion TEXT DEFAULT 'estandar';" }); }
 });
 
 // POST /contributors/:placetaId/detectar-tipo — Auto-detectar según reglas
