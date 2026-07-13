@@ -93,6 +93,11 @@
         <span class="action-title">Nueva declaración</span>
         <span class="action-desc">Crear declaración mensual</span>
       </a>
+      <a href="#" class="action-card" onclick="abrirAltaEmpresa(); return false;" style="border-left:3px solid var(--p500)">
+        <span class="action-icon">🏢</span>
+        <span class="action-title">Alta Empresa</span>
+        <span class="action-desc">Registrar empresa con EIP y cuenta bancaria</span>
+      </a>
       <a href="#" class="action-card" onclick="migrarEsquema(); return false;" style="border-left:3px solid var(--warning)">
         <span class="action-icon">🛠️</span>
         <span class="action-title">Migrar esquema</span>
@@ -597,26 +602,21 @@
         <label style="font-weight:600;font-size:13px">DIP <input type="text" id="ecDip" class="form-input" value="${contrib.dip || ''}"></label>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
           <label style="font-weight:600;font-size:13px">Tipo Sujeto
-            <select id="ecTipo" class="form-input">
+            <select id="ecTipo" class="form-input" onchange="autoEstadoFiscal()">
               <option value="Fisico" ${contrib.tipo_sujeto === 'Fisico' ? 'selected' : ''}>Físico</option>
               <option value="Empresa" ${contrib.tipo_sujeto === 'Empresa' ? 'selected' : ''}>Empresa</option>
-              <option value="Junior" ${contrib.tipo_sujeto === 'Junior' ? 'selected' : ''}>Junior</option>
+              <option value="Junior" ${contrib.tipo_sujeto === 'Junior' ? 'selected' : ''}>Junior (Capitalia)</option>
             </select>
           </label>
-          <label style="font-weight:600;font-size:13px">Estado Fiscal
-            <select id="ecEstado" class="form-input">
-              <option value="Al Dia" ${contrib.estado_fiscal === 'Al Dia' ? 'selected' : ''}>Al Día</option>
-              <option value="Capitalia" ${contrib.estado_fiscal === 'Capitalia' ? 'selected' : ''}>Capitalia</option>
-              <option value="Moroso" ${contrib.estado_fiscal === 'Moroso' ? 'selected' : ''}>Moroso</option>
-              <option value="Exento" ${contrib.estado_fiscal === 'Exento' ? 'selected' : ''}>Exento</option>
-            </select>
+          <label style="font-weight:600;font-size:13px">Estado Fiscal <span id="ecEstadoDisplay" style="display:inline-block;padding:4px 12px;border-radius:6px;font-size:13px;font-weight:600">—</span>
           </label>
         </div>
         <label style="font-weight:600;font-size:13px">Tipo Contribución
-          <select id="ecTipoContri" class="form-input">${opts}</select>
+          <select id="ecTipoContri" class="form-input" onchange="autoEstadoFiscal()">${opts}</select>
         </label>
-        <label style="font-weight:600;font-size:13px">IBAN (cuentas disponibles)
+        <label style="font-weight:600;font-size:13px">IBAN (para cobro de impuestos)
           <select id="ecIban" class="form-input">${ibanOpts}</select>
+          <small style="color:var(--text-muted);font-weight:400">El IBAN solo se usa para enviar la factura de impuestos. El cálculo usa TODAS las cuentas (personales, inversión, child).</small>
         </label>
         <label style="font-weight:600;font-size:13px">EIP (solo empresas) <input type="text" id="ecEip" class="form-input" value="${contrib.eip || ''}"></label>
         <label style="font-weight:600;font-size:13px">Roles (JSON array) <input type="text" id="ecRoles" class="form-input" value='${JSON.stringify(contrib.roles_json || ['ciudadano'])}'></label>
@@ -633,12 +633,18 @@
   }
 
   async function guardarContribuyente(placetaId) {
+    const tipo = document.getElementById('ecTipo').value;
+    const tipoContri = document.getElementById('ecTipoContri').value;
+    // Estado fiscal automático
+    let estadoFiscal = 'Al Dia';
+    if (tipo === 'Junior' || tipoContri === 'exenta_junior') estadoFiscal = 'Capitalia';
+    else if (tipoContri === 'empresa_exenta_igf') estadoFiscal = 'Al Dia';
     const data = {
       nombre: document.getElementById('ecNombre').value,
       dip: document.getElementById('ecDip').value,
-      tipo_sujeto: document.getElementById('ecTipo').value,
-      estado_fiscal: document.getElementById('ecEstado').value,
-      tipo_contribucion: document.getElementById('ecTipoContri').value,
+      tipo_sujeto: tipo,
+      estado_fiscal: estadoFiscal,
+      tipo_contribucion: tipoContri,
       iban: document.getElementById('ecIban').value,
       eip: document.getElementById('ecEip').value
     };
@@ -653,6 +659,17 @@
     } catch(e) { r.innerHTML = '<div style="color:var(--red)">❌ ' + e.message + '</div>'; }
   }
 
+  function autoEstadoFiscal() {
+    const tipo = document.getElementById('ecTipo').value;
+    const tipoContri = document.getElementById('ecTipoContri')?.value || 'estandar';
+    const el = document.getElementById('ecEstadoDisplay');
+    let estado = 'Al Dia', color = '#166534', bg = '#f0fdf4';
+    if (tipo === 'Junior' || tipoContri === 'exenta_junior') { estado = 'Capitalia'; color = '#9a3412'; bg = '#fffbeb'; }
+    else if (tipoContri === 'empresa_exenta_igf') { estado = 'Al Dia (Exenta IGF)'; color = '#1e40af'; bg = '#eff6ff'; }
+    el.textContent = estado;
+    el.style.cssText = `display:inline-block;padding:4px 12px;border-radius:6px;font-size:13px;font-weight:600;color:${color};background:${bg}`;
+  }
+
   async function calcularContribuyente(placetaId, nombre) {
     const r = document.getElementById('tcResultado');
     r.innerHTML = '⏳ Calculando...';
@@ -660,6 +677,11 @@
       const d = await apiFetch(`/api/admin/tributos/contributors/${placetaId}/calcular`);
       const ia = d.irm?.ia || 0;
       const mov = d.movimientos_mes || {};
+      const cuentasHtml = d.cuentas?.length
+        ? '<div style="margin-top:8px;font-size:12px"><strong>Cuentas incluidas:</strong><br>' +
+          d.cuentas.map(c => `&nbsp;&nbsp;• ${c.tipo}: ${(c.saldo||0).toLocaleString('es-ES')} Pz (${c.id})`).join('<br>') +
+          '</div>'
+        : '';
       r.innerHTML = `<div style="background:#f8f7fc;border-radius:10px;padding:14px;font-size:13px">
         <strong style="font-size:15px;color:#1c005f">${nombre}</strong>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
@@ -668,7 +690,7 @@
           <div><strong>📊 IA:</strong> ${ia}${d.irm?.nota ? '<br><small style="color:#856404">' + d.irm.nota + '</small>' : ''}</div>
           <div><strong>💳 IRM:</strong> ${(d.irm?.importe || 0).toLocaleString('es-ES')} Pz (${d.irm?.porcentaje}%)</div>
           <div><strong>🏛️ IGF:</strong> ${(d.igf?.importe || 0).toLocaleString('es-ES')} Pz${d.igf?.exento ? '<br><small>' + d.igf.exento + '</small>' : ''}</div>
-          <div><strong>🔄 Movimientos:</strong> ${mov.total_tx || 'sin datos'}</div>
+          <div><strong>🔄 Movimientos:</strong> ${mov.total_tx || 'sin datos'}${cuentasHtml}</div>
           <div style="grid-column:1/-1;background:#1c005f;color:#fff;padding:10px;border-radius:8px;font-size:16px;font-weight:700;text-align:center">
             TOTAL CONTRIBUCIÓN: ${(d.total_contribucion || 0).toLocaleString('es-ES')} Pz
             ${d.paga_capitalia ? '<br><span style="font-size:12px;font-weight:400">💰 Lo paga CAPITALIA a Tributos</span>' : `<br><span style="font-size:12px;font-weight:400">💳 De: ${d.pagador_efectivo} → 🏛️ TGLP</span>`}
@@ -696,6 +718,50 @@
       const d = await apiFetch('/api/admin/tributos/migrar-esquema', { method: 'POST' });
       mostrarToast(d.message || '✅ Esquema migrado', 'success');
     } catch(e) { mostrarToast('❌ ' + e.message, 'error'); }
+  }
+
+  // ── ALTA EMPRESA ──────────────────────────────────────────────────────────
+  async function abrirAltaEmpresa() {
+    const div = document.createElement('div');
+    div.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center';
+    div.onclick = e => { if (e.target === div) div.remove(); };
+    div.innerHTML = `<div style="background:#fff;border-radius:16px;padding:28px;max-width:500px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+      <h3 style="margin:0 0 4px 0;color:#1c005f">🏢 Alta de Empresa</h3>
+      <p style="color:#888;margin-bottom:16px;font-size:13px">Registrar nueva empresa en Tributos</p>
+      <div style="display:grid;gap:12px">
+        <label style="font-weight:600;font-size:13px">Nombre de la Empresa <input type="text" id="aeNombre" class="form-input" placeholder="MiEmpresa S.L."></label>
+        <label style="font-weight:600;font-size:13px">EIP (Identificador) <input type="text" id="aeEip" class="form-input" placeholder="EIP-XXXXXX"></label>
+        <label style="font-weight:600;font-size:13px">DIP del Representante <input type="text" id="aeDip" class="form-input" placeholder="12345678A"></label>
+        <label style="font-weight:600;font-size:13px">IBAN / Cuenta Bancaria <input type="text" id="aeIban" class="form-input" placeholder="CAPI-XXXXXXXX"></label>
+      </div>
+      <div style="display:flex;gap:12px;margin-top:16px">
+        <button class="btn btn-primary" onclick="guardarAltaEmpresa()">💾 Dar de alta</button>
+        <button class="btn btn-secondary" onclick="this.closest('div[style]').parentElement.remove()">Cancelar</button>
+      </div>
+      <div id="aeResultado" style="margin-top:12px"></div>
+    </div>`;
+    document.body.appendChild(div);
+  }
+
+  async function guardarAltaEmpresa() {
+    const r = document.getElementById('aeResultado');
+    r.innerHTML = '⏳ Dando de alta...';
+    try {
+      const data = {
+        placeta_id: 'EIP-' + document.getElementById('aeEip').value.replace(/[^A-Z0-9]/gi, '').toUpperCase(),
+        dip: document.getElementById('aeDip').value || null,
+        nombre: document.getElementById('aeNombre').value,
+        tipo_sujeto: 'Empresa',
+        eip: document.getElementById('aeEip').value,
+        iban: document.getElementById('aeIban').value || null,
+        roles_json: ['ciudadano', 'empresa']
+      };
+      const d = await apiFetch('/api/admin/tributos/contributors', { method: 'POST', body: JSON.stringify(data) });
+      r.innerHTML = d.success
+        ? '<div style="color:#166534;background:#f0fdf4;padding:10px;border-radius:8px">✅ Empresa creada: ' + data.placeta_id + '</div>'
+        : '<div style="color:var(--red)">❌ ' + (d.error || 'Error') + '</div>';
+      if (d.success) { cargarContribuyentes(); }
+    } catch(e) { r.innerHTML = '<div style="color:var(--red)">❌ ' + e.message + '</div>'; }
   }
 
   // ── Load Invoices ─────────────────────────────────────────────────────────

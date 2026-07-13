@@ -240,6 +240,7 @@ router.get('/contributors/:placetaId/calcular', verificarSesion, verificarRol('a
     if (!c) return res.status(404).json({ error: 'No encontrado' });
     let patrimonio = 0;
     let ingresos = 0, pagos = 0;
+    let cuentasUsadas = [];
     try {
       const r = await fetch(`${BANCO_API}/api/crm-state`, {
         method: 'POST',
@@ -249,15 +250,38 @@ router.get('/contributors/:placetaId/calcular', verificarSesion, verificarRol('a
       });
       if (r.ok) {
         const state = await r.json();
-        // Buscar cuenta del contribuyente
-        const accountId = `u-${c.dip?.toLowerCase().replace(/-/g, '')}`;
-        const account = state.accounts?.find(a => a.id === accountId || a.placetaId === c.placeta_id);
-        if (account) {
-          patrimonio = account.balancePz || 0;
-          // Calcular ingresos/pagos del mes actual del historial de transacciones
+        const dip = c.dip || '';
+        const dipKey = dip.toLowerCase().replace(/-/g, '');
+        // Buscar TODAS las cuentas del contribuyente: personal, inversión, child, etc.
+        const userAccounts = (state.accounts || []).filter(a => {
+          const id = (a.id || '').toLowerCase();
+          const pId = (a.placetaId || '').toLowerCase();
+          return id.includes(dipKey) || pId.includes(dipKey) || pId === c.placeta_id?.toLowerCase();
+        });
+        if (userAccounts.length) {
+          patrimonio = userAccounts.reduce((sum, a) => sum + (a.balancePz || 0), 0);
+          cuentasUsadas = userAccounts.map(a => ({ id: a.id, tipo: a.type || a.kind || 'Personal', saldo: a.balancePz || 0, iban: a.iban || '—' }));
+          // Ingresos/pagos del mes de TODAS las cuentas del usuario
           const mes = new Date().toISOString().slice(0, 7);
+          const accountIds = new Set(userAccounts.map(a => a.id));
           const txs = (state.transactions || []).filter(t =>
-            (t.fromAccountId === account.id || t.toAccountId === account.id) &&
+            (accountIds.has(t.fromAccountId) || accountIds.has(t.toAccountId)) &&
+            (t.createdAt || '').startsWith(mes)
+          );
+          for (const tx of txs) {
+            const amount = Math.abs(Number(tx.amountPz || 0));
+            if (accountIds.has(tx.toAccountId)) ingresos += amount;
+            if (accountIds.has(tx.fromAccountId)) pagos += amount;
+          }
+        }
+      }
+    } catch {}
+    if (!patrimonio) patrimonio = c.patrimonio_estimado || 1000;
+    const resultado = calcularContribucion(c, patrimonio, ingresos, pagos);
+    resultado.movimientos_mes = { ingresos, pagos, total_tx: ingresos + pagos > 0 ? 'con movimientos' : 'sin movimientos en el periodo' };
+    resultado.cuentas = cuentasUsadas;
+    resultado.patrimonio_desglosado = cuentasUsadas.length > 0;
+    return res.json(resultado);
             (t.createdAt || '').startsWith(mes)
           );
           for (const tx of txs) {
@@ -350,14 +374,25 @@ router.get('/contributors/:placetaId/cuentas', verificarSesion, verificarRol('ad
     const c = await sbGetTributosContributorByPlacetaId(req.params.placetaId);
     if (!c) return res.json([]);
     const dip = c.dip || req.params.placetaId.replace('PLID-', '');
-    // Buscar en bancario-proxy
     const cuentas = [];
+    // Buscar en bancario-proxy por DIP
     try {
-      const r = await fetch(`${BANCO_API}/api/account/search?dip=${dip}`, {
-        headers: { 'X-CRM-Key': process.env.CRM_READ_KEY || 'crm-gdlp-shared-key-2026' },
-        signal: AbortSignal.timeout(5000)
+      const r = await fetch(`${BANCO_API}/api/crm-state`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CRM-Key': process.env.CRM_READ_KEY || 'crm-gdlp-shared-key-2026' },
+        body: JSON.stringify({ action: 'get-state' }),
+        signal: AbortSignal.timeout(8000)
       });
-      if (r.ok) { const d = await r.json(); if (Array.isArray(d)) cuentas.push(...d); }
+      if (r.ok) {
+        const state = await r.json();
+        const accountId = `u-${dip.toLowerCase().replace(/-/g, '')}`;
+        const userAccounts = (state.accounts || []).filter(a =>
+          a.id === accountId || a.placetaId === c.placeta_id || a.dip === dip
+        );
+        for (const a of userAccounts) {
+          cuentas.push({ id: a.id, balancePz: a.balancePz || 0, iban: a.iban || `CAPI-${dip}`, type: a.type || 'Personal', displayName: a.displayName || a.id });
+        }
+      }
     } catch {}
     // Fallback SQLite
     if (!cuentas.length) {
