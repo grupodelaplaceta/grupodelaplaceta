@@ -223,6 +223,33 @@ router.post('/register', async (req, res) => {
 //  LOGIN — Por DIP del menor + verificación PlacetaID del tutor
 // ═══════════════════════════════════════════════════════════════════════════
 
+// ═══════════════════════════════════════════════════════════════════════════
+//  TUTOR INFO — Obtener datos del tutor por DIP para pre-rellenar
+// ═══════════════════════════════════════════════════════════════════════════
+
+router.get('/tutor-info/:dip', async (req, res) => {
+  try {
+    const dip = req.params.dip;
+    if (!dip) return res.status(400).json({ error: 'DIP requerido' });
+
+    const tutor = await sbFindSolicitanteByDip(dip).catch(() => null);
+    if (!tutor) return res.status(404).json({ error: 'Tutor no encontrado' });
+
+    res.json({
+      success: true,
+      dip: tutor.dip,
+      nombre: tutor.nombre_real || '',
+      email: tutor.email || ''
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Error interno' });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  LOGIN — Por DIP del menor + verificación PlacetaID del tutor
+// ═══════════════════════════════════════════════════════════════════════════
+
 router.post('/login', async (req, res) => {
   try {
     const { dip, password } = req.body;
