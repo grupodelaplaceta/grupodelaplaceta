@@ -461,3 +461,32 @@ router.get('/documento-verificable/:docId', async (req, res) => {
 });
 
 export default router;
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  GENERAL SIGNING API — Used by PlacetaID Móvil for any document
+// ═══════════════════════════════════════════════════════════════════════════
+
+export async function firmarDocumentoGeneral({ codigo_modelo, titulo, firma_base64, firmante_dip, firmante_nombre, metadata = {} }) {
+  const tutorSol = await sbFindSolicitanteByDip(firmante_dip);
+  const tutorId = tutorSol?.id || null;
+  const ahora = new Date().toISOString();
+  const firmaHash = crypto.createHash('sha256').update(firma_base64 + ahora).digest('hex');
+
+  const { data, error } = await supabase.from('documentos_firmados').insert({
+    usuario_id: tutorId,
+    codigo_modelo: codigo_modelo,
+    titulo_documento: titulo,
+    url_firma: firma_base64,
+    hash_documento: firmaHash,
+    firmado_por: tutorId,
+    estado: 'firmado',
+    creado_en: ahora
+  }).select().single();
+
+  if (error) {
+    if (error.code === '23505') return { success: true, ya_firmado: true, message: 'Documento ya firmado' };
+    return { success: false, error: error.message };
+  }
+
+  return { success: true, doc_id: data.id, hash: firmaHash, message: 'Documento firmado correctamente' };
+}
