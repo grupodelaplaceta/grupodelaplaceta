@@ -108,6 +108,9 @@ router.get('/cuestionarios', verificarJunior, async (req, res) => {
           id: `${materia}-${n}-${idx}`,
           pregunta: p.pregunta,
           opciones: p.opciones,
+          correcta: p.correcta,
+          imagen: p.imagen || null,
+          fuente: p.fuente || null,
           dificultad: p.dificultad,
           placetas_recompensa: p.placetas_recompensa
         }));
