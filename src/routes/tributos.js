@@ -408,13 +408,22 @@ router.post('/migrar-esquema', verificarSesion, verificarRol('administrador'), a
 router.get('/declarations', verificarSesion, verificarRol('administrador', 'junta', 'fiscal'), async (req, res) => {
   try {
     const declarations = await sbListTributosDeclarations();
-    // Enriquecer con datos del contribuyente
+    // Enriquecer con datos del contribuyente y recalcular IRM/IGF sobre la marcha
     const enriched = await Promise.all(declarations.map(async (d) => {
       if (!d.nombre && d.placeta_id) {
         try {
           const c = await sbGetTributosContributorByPlacetaId(d.placeta_id);
           if (c) { d.nombre = c.nombre; d.dip = c.dip; d.tipo_sujeto = c.tipo_sujeto; d.eip = c.eip; }
         } catch {}
+      }
+      // Recalcular IRM/IGF si están a 0 pero hay patrimonio
+      const pm = Number(d.patrimonio_medio || 0);
+      if ((!d.cuota_irm || d.cuota_irm == 0) && (!d.cuota_igf || d.cuota_igf == 0) && pm > 0) {
+        d.indice_acumulacion = 1;
+        d.tipo_irm = 5;
+        d.cuota_irm = Math.round(pm * 0.05 * 100) / 100;
+        const baseIGF = Math.max(0, pm - 5000);
+        d.cuota_igf = Math.round((Math.min(baseIGF, 15000) * 0.10 + Math.max(0, baseIGF - 15000) * 0.30) * 100) / 100;
       }
       return d;
     }));
