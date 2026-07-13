@@ -44,9 +44,15 @@ router.post('/register', async (req, res) => {
     if (!nombre || !apellidos || !fecha_nacimiento || !email || !password) {
       return res.status(400).json({ error: 'Todos los campos obligatorios deben completarse.' });
     }
-    if (!nombre_tutor || !apellidos_tutor || !dni_tutor) {
+    if (!dni_tutor) {
+      return res.status(400).json({ error: 'El DNI del tutor legal es obligatorio.' });
+    }
+    if (!tutor_ya_existe && (!nombre_tutor || !apellidos_tutor)) {
       return res.status(400).json({ error: 'Los datos del tutor legal son obligatorios.' });
     }
+    // When tutor already exists, use placeholder names (will be filled from DB)
+    const tutorFirstName = tutor_ya_existe ? (nombre_tutor || 'Tutor') : nombre_tutor;
+    const tutorLastName = tutor_ya_existe ? (apellidos_tutor || '') : apellidos_tutor;
 
     const nacimiento = new Date(fecha_nacimiento);
     const hoy = new Date(2026, 6, 11);
@@ -90,7 +96,7 @@ router.post('/register', async (req, res) => {
         const tutorAlias = `tutor-${dipRaw.slice(0, 6)}`;
         tutorRecord = await sbCreateSolicitante({
           alias: tutorAlias,
-          nombre_real: `${nombre_tutor} ${apellidos_tutor}`,
+          nombre_real: `${tutorFirstName} ${tutorLastName}`.trim(),
           email: cp.email_tutor || email,
           dip: dni_tutor,
           franja_edad: 'Alta_Plena',
@@ -103,7 +109,7 @@ router.post('/register', async (req, res) => {
         const tutorAlias = `tutor-${dipRaw.slice(0, 6)}`;
         tutorRecord = await sbCreateSolicitante({
           alias: tutorAlias,
-          nombre_real: `${nombre_tutor} ${apellidos_tutor}`,
+          nombre_real: `${tutorFirstName} ${tutorLastName}`.trim(),
           email: email,
           dip: dni_tutor,
           franja_edad: 'Alta_Plena',
@@ -142,7 +148,7 @@ router.post('/register', async (req, res) => {
       edad,
       modalidad: 'Placeta Junior',
       tutor_dip: dni_tutor,
-      tutor_nombre: `${nombre_tutor} ${apellidos_tutor}`,
+      tutor_nombre: `${tutorFirstName} ${tutorLastName}`.trim(),
       dni_tutor_hash: dniHash,
       dni_tutor_salt: salt,
       email_contacto: minorEmail,
@@ -203,7 +209,7 @@ router.post('/register', async (req, res) => {
       necesita_firma_tutor: true,
       junior_id: juniorRecord.id,
       tutor_dip: dni_tutor,
-      tutor_nombre: tutorRecord?.nombre_real || nombre_tutor + ' ' + apellidos_tutor,
+      tutor_nombre: tutorRecord?.nombre_real || (tutorFirstName + ' ' + tutorLastName).trim(),
       tutor_email: tutorRecord?.email || email
     };
 
