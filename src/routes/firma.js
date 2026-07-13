@@ -93,4 +93,64 @@ router.get('/documentos', verificarSesion, async (req, res) => {
   }
 });
 
+// ═══════════════════════════════════════════════════════════════════════════
+//  FIRMA GENERAL — PlacetaID Móvil (firma manuscrita base64)
+// ═══════════════════════════════════════════════════════════════════════════
+
+// POST /api/firma/firmar-manuscrito — Firmar cualquier documento con base64
+router.post('/firmar-manuscrito', verificarSesion, async (req, res) => {
+  try {
+    const { codigo_modelo, titulo, contenido, firma_base64 } = req.body;
+    if (!codigo_modelo || !titulo || !firma_base64) {
+      return res.status(400).json({ error: 'codigo_modelo, titulo y firma_base64 requeridos' });
+    }
+
+    const { sbFindSolicitanteById } = await import('../config/db-supabase.js');
+    const firmante = await sbFindSolicitanteById(req.session.usuario.id);
+    if (!firmante) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+    // Block admin from signing tutor-only docs
+    if (DOCUMENTOS_TUTOR_ONLY.includes(codigo_modelo)) {
+      const esAdmin = firmante.rol === 'administrador' || firmante.rol === 'admin';
+      if (esAdmin) {
+        return res.status(403).json({
+          error: '❌ Los administradores no pueden firmar documentos de Placeta Junior. Solo el tutor legal.',
+          codigo: 'FIRMA_BLOQUEADA_ADMIN'
+        });
+      }
+    }
+
+    const crypto = await import('crypto');
+    const ahora = new Date().toISOString();
+    const firmaHash = crypto.createHash('sha256').update(firma_base64 + ahora).digest('hex');
+    const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
+
+    const { supabase } = await import('../config/supabase.js');
+    const { data: doc, error } = await supabase.from('documentos_firmados').insert({
+      usuario_id: firmante.id,
+      codigo_modelo,
+      titulo_documento: titulo,
+      url_firma: firma_base64,
+      hash_documento: firmaHash,
+      firmado_por: firmante.id,
+      estado: 'firmado',
+      creado_en: ahora
+    }).select().single();
+
+    if (error) {
+      if (error.code === '23505') return res.json({ success: true, ya_firmado: true, message: 'Documento ya firmado' });
+      return res.status(500).json({ error: error.message });
+    }
+
+    res.json({
+      success: true, doc_id: doc.id, hash: firmaHash,
+      message: 'Documento firmado correctamente',
+      url_verificable: `/api/junior/documento-verificable/${doc.id}`
+    });
+  } catch (err) {
+    console.error('[Firma] Error:', err);
+    res.status(500).json({ error: 'Error al firmar documento' });
+  }
+});
+
 export default router;
