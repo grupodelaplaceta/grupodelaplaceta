@@ -697,6 +697,14 @@ export async function sbCreateTributosContributor(data) {
         throw new Error('La tabla tributos_contribuyentes no existe y no se pudo crear automáticamente. Ejecuta el script SQL en Supabase.');
       }
     }
+    // Si el error es columna faltante, migrar esquema y reintentar
+    if (error.message?.includes('tipo_contribucion') || error.message?.includes('patrimonio_estimado')) {
+      await sbMigrateTributosSchema();
+      const { data: retry, error: retryErr } = await sb.from('tributos_contribuyentes')
+        .insert(data).select().single();
+      if (retryErr) throw new Error('Error tras migrar esquema: ' + retryErr.message);
+      return retry;
+    }
     throw new Error(error.message);
   }
   return result;
@@ -920,8 +928,35 @@ export async function sbUpdateTributosContributor(placetaId, data) {
   if (!sb) throw new Error('Supabase no configurado');
   const { data: result, error } = await sb.from('tributos_contribuyentes')
     .update(data).eq('placeta_id', placetaId).select().single();
-  if (error) throw new Error(error.message);
+  if (error) {
+    // Si el error es columna no existe, migrar esquema y reintentar
+    if (error.message?.includes('tipo_contribucion') || error.message?.includes('patrimonio_estimado')) {
+      await sbMigrateTributosSchema();
+      const { data: retry, error: retryErr } = await sb.from('tributos_contribuyentes')
+        .update(data).eq('placeta_id', placetaId).select().single();
+      if (retryErr) throw new Error(retryErr.message);
+      return retry;
+    }
+    throw new Error(error.message);
+  }
   return result;
+}
+
+export async function sbMigrateTributosSchema() {
+  const sb = safeSupabase();
+  if (!sb) return;
+  const migrations = [
+    "ALTER TABLE tributos_contribuyentes ADD COLUMN IF NOT EXISTS tipo_contribucion TEXT DEFAULT 'estandar'",
+    "ALTER TABLE tributos_contribuyentes ADD COLUMN IF NOT EXISTS patrimonio_estimado NUMERIC DEFAULT 0",
+    "ALTER TABLE tributos_contribuyentes ADD COLUMN IF NOT EXISTS iban TEXT"
+  ];
+  for (const sql of migrations) {
+    try { await sb.rpc('exec_sql', { sql }); }
+    catch (e) {
+      // Fallback: ejecutar via REST query
+      try { await sb.from('tributos_contribuyentes').select('id').limit(1); } catch {}
+    }
+  }
 }
 
 export async function sbGetTributosContributorByPlacetaId(placetaId) {

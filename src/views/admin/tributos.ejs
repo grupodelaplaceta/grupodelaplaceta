@@ -93,6 +93,11 @@
         <span class="action-title">Nueva declaración</span>
         <span class="action-desc">Crear declaración mensual</span>
       </a>
+      <a href="#" class="action-card" onclick="migrarEsquema(); return false;" style="border-left:3px solid var(--warning)">
+        <span class="action-icon">🛠️</span>
+        <span class="action-title">Migrar esquema</span>
+        <span class="action-desc">Añadir columnas faltantes a Supabase</span>
+      </a>
     </div>
   </div>
 
@@ -631,6 +636,14 @@
         : '<div style="color:var(--red)">❌ Error</div>';
       if (d.success) { cargarContribuyentes(); }
     } catch(e) { r.innerHTML = '<div style="color:var(--red)">❌ ' + e.message + '</div>'; }
+  }
+
+  async function migrarEsquema() {
+    if (!confirm('¿Migrar esquema de tributos_contribuyentes?\nSe añadirán las columnas: tipo_contribucion, patrimonio_estimado, iban')) return;
+    try {
+      const d = await apiFetch('/api/admin/tributos/migrar-esquema', { method: 'POST' });
+      mostrarToast(d.message || '✅ Esquema migrado', 'success');
+    } catch(e) { mostrarToast('❌ ' + e.message, 'error'); }
   }
 
   // ── Load Invoices ─────────────────────────────────────────────────────────

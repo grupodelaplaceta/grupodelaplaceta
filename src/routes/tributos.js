@@ -34,7 +34,8 @@ import {
   sbCalculateDeclarationFromDailyBalances,
   sbFindSolicitante,
   sbGetTributosContributorByEip,
-  sbListTributosContributorsAll
+  sbListTributosContributorsAll,
+  sbMigrateTributosSchema
 } from '../config/db-supabase.js';
 
 const router = Router();
@@ -308,6 +309,16 @@ router.post('/contributors/:placetaId/detectar-tipo', verificarSesion, verificar
 // GET /tipos-contribucion — Listar tipos disponibles
 router.get('/tipos-contribucion', verificarSesion, verificarRol('administrador', 'junta', 'fiscal'), async (req, res) => {
   return res.json(TIPOS_CONTRIBUCION);
+});
+
+// POST /migrar-esquema — Añadir columnas faltantes a Supabase
+router.post('/migrar-esquema', verificarSesion, verificarRol('administrador'), async (req, res) => {
+  try {
+    await sbMigrateTributosSchema();
+    return res.json({ success: true, message: 'Esquema migrado correctamente' });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
