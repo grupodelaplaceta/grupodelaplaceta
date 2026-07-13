@@ -1,11 +1,15 @@
 import { Router } from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { getDb } from '../config/db.js';
 import { verificarSesion, verificarRol } from '../middleware/auth.js';
 import PDFGenerator from '../services/pdfGenerator.js';
 
-const router = Router();
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const LOGO_GDLP = path.join(__dirname, '..', '..', 'public', 'img', 'tributos.png');
+const LOGO_TRIBUTOS = path.join(__dirname, '..', '..', 'public', 'img', 'tributos.png');
 
-// ── RUTAS DE GENERACIÓN DE PDF ─────────────────────────────────────────────
+const router = Router();
 
 // POST /api/pdf/generar/:codigo - Generar PDF según código de modelo
 router.post('/generar/:codigo', verificarSesion, verificarRol('administrador', 'junta', 'juez'), async (req, res) => {
@@ -14,7 +18,7 @@ router.post('/generar/:codigo', verificarSesion, verificarRol('administrador', '
     const { codigo } = req.params;
     const datos = req.body;
 
-    const generator = new PDFGenerator();
+    const generator = new PDFGenerator({ logo: LOGO_GDLP });
     let doc;
 
     switch (codigo) {

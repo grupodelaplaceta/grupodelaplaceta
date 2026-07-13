@@ -357,8 +357,9 @@ router.get('/documento-verificable/:docId', async (req, res) => {
     .doc-header { background:linear-gradient(135deg,var(--primary-dark),var(--primary)); color:#fff; padding:32px 40px; position:relative; overflow:hidden; }
     .doc-header::before { content:''; position:absolute; top:-50px; right:-50px; width:200px; height:200px; background:rgba(255,255,255,.03); border-radius:50%; }
     .doc-header::after { content:''; position:absolute; bottom:-30px; right:60px; width:100px; height:100px; background:rgba(255,255,255,.04); border-radius:50%; }
-    .doc-logo { font-size:36px; font-weight:900; letter-spacing:-1px; position:relative; z-index:1; }
+    .doc-logo { font-size:36px; font-weight:900; letter-spacing:-1px; position:relative; z-index:1; display:flex; align-items:center; gap:12px; }
     .doc-logo span { color:var(--accent); }
+    .doc-logo img { height:44px; width:auto; }
     .doc-subtitle { font-size:12px; opacity:.75; margin-top:4px; position:relative; z-index:1; }
     .doc-stamp { position:absolute; top:24px; right:32px; border:3px solid rgba(255,255,255,.25); border-radius:50%; width:80px; height:80px; display:flex; align-items:center; justify-content:center; transform:rotate(-12deg); font-weight:900; font-size:10px; text-transform:uppercase; color:rgba(255,255,255,.4); text-align:center; line-height:1.2; z-index:1; }
     /* ── BODY ── */
@@ -403,7 +404,7 @@ router.get('/documento-verificable/:docId', async (req, res) => {
   <div class="document">
     <div class="doc-header">
       <div class="doc-stamp">FIRMADO<br>✓</div>
-      <div class="doc-logo">Placeta<span>Junior</span></div>
+      <div class="doc-logo"><img src="/img/logojunior.jpg" alt="Placeta Junior" style="height:44px;width:auto"> Placeta<span>Junior</span></div>
       <div class="doc-subtitle">Grupo de La Placeta — Documento Legal Verificable</div>
     </div>
 

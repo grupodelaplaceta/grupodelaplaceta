@@ -1,8 +1,13 @@
 import PDFDocument from 'pdfkit';
 import https from 'https';
+import fs from 'fs';
+import path from 'path';
 import crypto from 'crypto';
+import { fileURLToPath } from 'url';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const LOGO_URL = 'https://i.postimg.cc/RZYKzdmX/Diseno-sin-titulo-76.png';
+const LOGO_LOCAL = path.join(__dirname, '..', '..', 'public', 'img', 'tributos.png');
 
 function fetchImage(url) {
   return new Promise((resolve, reject) => {
@@ -23,10 +28,10 @@ export async function generarPDFDIP(datos) {
   const buffers = [];
   doc.on('data', b => buffers.push(b));
 
-  try {
-    const img = await fetchImage(LOGO_URL);
-    doc.image(img, 40, 40, { width: 90 });
-  } catch {}
+  let logoBuffer;
+  try { logoBuffer = fs.readFileSync(LOGO_LOCAL); } catch {}
+  if (!logoBuffer) { try { logoBuffer = await fetchImage(LOGO_URL); } catch {} }
+  if (logoBuffer) { try { doc.image(logoBuffer, 40, 40, { width: 90 }); } catch {} }
 
   doc.fontSize(10).font('Helvetica').fillColor('#666').text('Solicitud de DIP', 135, 45);
   doc.fontSize(7).fillColor('#999').text(`Generado: ${new Date().toLocaleString('es-ES')}`, 120, 70);
@@ -79,10 +84,10 @@ export async function generarPDFPlacetaID(datos) {
   const buffers = [];
   doc.on('data', b => buffers.push(b));
 
-  try {
-    const img = await fetchImage(LOGO_URL);
-    doc.image(img, 40, 40, { width: 90 });
-  } catch {}
+  let logoBuffer;
+  try { logoBuffer = fs.readFileSync(LOGO_LOCAL); } catch {}
+  if (!logoBuffer) { try { logoBuffer = await fetchImage(LOGO_URL); } catch {} }
+  if (logoBuffer) { try { doc.image(logoBuffer, 40, 40, { width: 90 }); } catch {} }
 
   doc.fontSize(10).font('Helvetica').fillColor('#666').text('Activación PlacetaID', 135, 45);
   doc.fontSize(7).fillColor('#999').text(`Generado: ${new Date().toLocaleString('es-ES')}`, 120, 70);
@@ -131,10 +136,10 @@ export async function generarPDFQueja(datos) {
   const buffers = [];
   doc.on('data', b => buffers.push(b));
 
-  try {
-    const img = await fetchImage(LOGO_URL);
-    doc.image(img, 40, 40, { width: 90 });
-  } catch {}
+  let logoBuffer;
+  try { logoBuffer = fs.readFileSync(LOGO_LOCAL); } catch {}
+  if (!logoBuffer) { try { logoBuffer = await fetchImage(LOGO_URL); } catch {} }
+  if (logoBuffer) { try { doc.image(logoBuffer, 40, 40, { width: 90 }); } catch {} }
 
   doc.fontSize(10).font('Helvetica').fillColor('#666').text('Registro de Queja / Sugerencia', 135, 45);
   doc.fontSize(7).fillColor('#999').text(`Generado: ${new Date().toLocaleString('es-ES')}`, 120, 70);
@@ -184,10 +189,10 @@ export async function generarPDFControlParental(datos) {
   const buffers = [];
   doc.on('data', b => buffers.push(b));
 
-  try {
-    const img = await fetchImage(LOGO_URL);
-    doc.image(img, 40, 40, { width: 90 });
-  } catch {}
+  let logoBuffer;
+  try { logoBuffer = fs.readFileSync(LOGO_LOCAL); } catch {}
+  if (!logoBuffer) { try { logoBuffer = await fetchImage(LOGO_URL); } catch {} }
+  if (logoBuffer) { try { doc.image(logoBuffer, 40, 40, { width: 90 }); } catch {} }
 
   doc.fontSize(10).font('Helvetica').fillColor('#666').text('Registro de Control Parental', 135, 45);
   doc.fontSize(7).fillColor('#999').text(`Generado: ${new Date().toLocaleString('es-ES')}`, 120, 70);
@@ -236,10 +241,10 @@ export async function generarPDFEntidad(datos) {
   const buffers = [];
   doc.on('data', b => buffers.push(b));
 
-  try {
-    const img = await fetchImage(LOGO_URL);
-    doc.image(img, 40, 40, { width: 90 });
-  } catch {}
+  let logoBuffer;
+  try { logoBuffer = fs.readFileSync(LOGO_LOCAL); } catch {}
+  if (!logoBuffer) { try { logoBuffer = await fetchImage(LOGO_URL); } catch {} }
+  if (logoBuffer) { try { doc.image(logoBuffer, 40, 40, { width: 90 }); } catch {} }
 
   doc.fontSize(10).font('Helvetica').fillColor('#666').text('Solicitud de Alta de Entidad', 135, 45);
   doc.fontSize(7).fillColor('#999').text(`Generado: ${new Date().toLocaleString('es-ES')}`, 120, 70);
