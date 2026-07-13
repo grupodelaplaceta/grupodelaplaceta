@@ -38,10 +38,10 @@ const router = Router();
 
 router.post('/register', async (req, res) => {
   try {
-    const { nombre, apellidos, fecha_nacimiento, nombre_tutor, apellidos_tutor, dni_tutor, email, password, tutor_ya_existe } = req.body;
+    const { nombre, apellidos, fecha_nacimiento, nombre_tutor, apellidos_tutor, dni_tutor, email, tutor_ya_existe } = req.body;
 
     // ── Validaciones básicas ──────────────────────────────────────────────
-    if (!nombre || !apellidos || !fecha_nacimiento || !email || !password) {
+    if (!nombre || !apellidos || !fecha_nacimiento || !email) {
       return res.status(400).json({ error: 'Todos los campos obligatorios deben completarse.' });
     }
     if (!dni_tutor) {
@@ -65,15 +65,18 @@ router.post('/register', async (req, res) => {
     }
 
     const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
-    const dipRaw = crypto.randomBytes(4).toString('hex').toUpperCase();
-    const dip = `JUNIOR-${dipRaw}`;
+    // DIP: 8 random digits + first letter of minor's name (same format as adult)
+    const dipDigits = String(Math.floor(10000000 + Math.random() * 90000000));
+    const dipLetter = (nombre.trim().charAt(0) || 'X').toUpperCase();
+    const dip = `${dipDigits}${dipLetter}`;
+    const dipShort = dipDigits.slice(0, 4);
 
     // ── Generar email único para el menor ─────────────────────────────────
     let minorEmail = email;
     if (tutor_ya_existe) {
-      minorEmail = `junior-${dipRaw.toLowerCase()}@laplaceta.org`;
+      minorEmail = `junior-${dipDigits}@laplaceta.org`;
       const exist = await sbFindSolicitanteByEmail(minorEmail).catch(() => null);
-      if (exist) minorEmail = `junior-${dipRaw.toLowerCase()}-${Date.now()}@laplaceta.org`;
+      if (exist) minorEmail = `junior-${dipDigits}-${Date.now()}@laplaceta.org`;
     } else {
       const emailExistente = await sbFindSolicitanteByEmail(email);
       if (emailExistente) {
@@ -93,7 +96,7 @@ router.post('/register', async (req, res) => {
       const cpRecords = await sbFindControlParentalByDni(dni_tutor);
       if (cpRecords && cpRecords.length > 0) {
         const cp = cpRecords[0];
-        const tutorAlias = `tutor-${dipRaw.slice(0, 6)}`;
+        const tutorAlias = `tutor-${dipDigits.slice(0, 6)}`;
         tutorRecord = await sbCreateSolicitante({
           alias: tutorAlias,
           nombre_real: `${tutorFirstName} ${tutorLastName}`.trim(),
@@ -106,9 +109,9 @@ router.post('/register', async (req, res) => {
         });
       } else {
         // Crear registro del tutor si no existe
-        const tutorAlias = `tutor-${dipRaw.slice(0, 6)}`;
+        const tutorAlias2 = `tutor-${dipDigits.slice(0, 6)}`;
         tutorRecord = await sbCreateSolicitante({
-          alias: tutorAlias,
+          alias: tutorAlias2,
           nombre_real: `${tutorFirstName} ${tutorLastName}`.trim(),
           email: email,
           dip: dni_tutor,
@@ -121,8 +124,8 @@ router.post('/register', async (req, res) => {
     }
 
     // ── Crear solicitante (menor) ────────────────────────────────────────
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const alias = `${nombre.toLowerCase().replace(/\s/g, '')}.${dipRaw.slice(0, 4).toLowerCase()}`;
+    // Minors don't have passwords — access is via tutor PlacetaID authorization
+    const alias = `${nombre.toLowerCase().replace(/\s/g, '')}.${dipDigits.slice(0, 4)}`;
 
     const nuevoSolicitante = await sbCreateSolicitante({
       alias,
@@ -131,9 +134,9 @@ router.post('/register', async (req, res) => {
       fecha_nacimiento,
       edad,
       dip,
-      placeid: `PLID-J${dipRaw}`,
+      placeid: `PLID-J${dipDigits.slice(0, 6)}`,
       franja_edad: 'Tutelada_Basica',
-      password_hash: hashedPassword,
+      password_hash: null,
       rol: 'miembro',
       estado: 'pendiente',
       ip_registro: ip
@@ -253,73 +256,87 @@ router.get('/tutor-info/:dip', async (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  LOGIN — Por DIP del menor + verificación PlacetaID del tutor
+//  LOGIN — DIP only, no password. Always goes through tutor PlacetaID auth.
 // ═══════════════════════════════════════════════════════════════════════════
 
 router.post('/login', async (req, res) => {
   try {
-    const { dip, password } = req.body;
-    if (!dip || !password) return res.status(400).json({ error: 'DIP y contraseña requeridos' });
+    const { dip } = req.body;
+    if (!dip) return res.status(400).json({ error: 'DIP requerido' });
 
     // Buscar por DIP
     const usuario = await sbFindSolicitanteByDip(dip);
-    if (!usuario) return res.status(401).json({ error: 'Credenciales inválidas' });
+    if (!usuario) return res.status(401).json({ error: 'DIP no encontrado en el sistema.' });
 
     // Verificar que sea un junior
     const junior = await sbFindJuniorByDip(usuario.dip);
     if (!junior) return res.status(403).json({ error: 'Esta cuenta no tiene acceso a Placeta Junior.' });
 
     if (junior.estado === 'pendiente_firma_tutor') {
-      return res.status(403).json({ error: 'El tutor legal debe firmar el alta desde PlacetaID Móvil antes de acceder.' });
+      return res.status(403).json({
+        error: 'Cuenta pendiente de activación.',
+        detalle: 'El tutor legal debe firmar los documentos desde PlacetaID Móvil.',
+        junior_id: junior.id,
+        estado: junior.estado
+      });
     }
 
     if (junior.estado === 'suspendido' || junior.estado === 'baja') {
       return res.status(403).json({ error: 'Cuenta suspendida o dada de baja.' });
     }
 
-    const validPassword = await bcrypt.compare(password, usuario.password_hash);
-    if (!validPassword) return res.status(401).json({ error: 'Credenciales inválidas' });
-
     const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
 
-    // ── Verificar acceso con el tutor vía PlacetaID ────────────────────
-    const { solicitarAutorizacionTutor, verificarTutor } = await import('../services/placetaidService.js');
-
-    // Verificar que el tutor esté registrado en PlacetaID
+    // ── Siempre requiere autorización del tutor vía PlacetaID ────────────
     if (junior.tutor_dip) {
-      const tutorStatus = await verificarTutor(junior.tutor_dip);
-      if (!tutorStatus.existe) {
-        console.warn(`[Login] Tutor ${junior.tutor_dip} no encontrado en PlacetaID`);
-      } else {
-        // Solicitar autorización al tutor vía PlacetaID Móvil
-        // El tutor recibe una notificación en su app y debe aprobar el acceso
+      try {
+        const { solicitarAutorizacionTutor } = await import('../services/placetaidService.js');
+
         const authReq = await solicitarAutorizacionTutor({
           dipTutor: junior.tutor_dip,
           concepto: `Acceso de ${junior.nombre} ${junior.apellidos} a Placeta Junior`,
           monto: 0,
           dipMenor: junior.dip,
-          detalles: `Inicio de sesión del menor ${junior.nombre} (DIP: ${junior.dip})`
+          detalles: `Inicio de sesión de ${junior.nombre} (DIP: ${junior.dip})`
         });
 
         if (authReq.success) {
-          // Guardar requestId en sesión para polling
-          req.session.authRequestId = authReq.requestId;
-          req.session.authCodigo = authReq.codigo;
+          await sbCreateLog({
+            usuario_id: usuario.id,
+            accion: 'login_junior_solicitud',
+            detalle: `Solicitud de acceso enviada al tutor ${junior.tutor_dip}. RequestId: ${authReq.requestId}`,
+            ip
+          });
 
           return res.json({
             success: true,
             requiere_autorizacion_tutor: true,
             requestId: authReq.requestId,
             codigo: authReq.codigo,
-            mensaje: 'Se ha enviado una solicitud al tutor. Debe aprobarla desde PlacetaID Móvil.',
+            mensaje: 'Solicitud enviada al tutor. Debe aprobarla desde PlacetaID Móvil.',
             dip_menor: junior.dip,
-            nombre_menor: `${junior.nombre} ${junior.apellidos}`
+            nombre_menor: `${junior.nombre} ${junior.apellidos}`,
+            junior: {
+              id: junior.id,
+              solicitante_id: usuario.id,
+              dip: usuario.dip,
+              nombre: junior.nombre,
+              apellidos: junior.apellidos,
+              alias: usuario.alias,
+              edad: junior.edad,
+              modalidad: junior.modalidad,
+              placetas_saldo: junior.placetas_saldo,
+              nivel_academia: junior.nivel_academia,
+              estado: junior.estado
+            }
           });
         }
+      } catch (authErr) {
+        console.warn('[Login] Error solicitando autorización PlacetaID:', authErr.message);
       }
     }
 
-    // Si no hay tutor o falla la verificación, login directo
+    // Fallback: if PlacetaID service is down, still allow (with log warning)
     await sbUpdateSolicitante(usuario.id, {
       ultimo_acceso: new Date().toISOString(),
       ip_ultimo_acceso: ip
@@ -327,23 +344,24 @@ router.post('/login', async (req, res) => {
 
     await sbCreateLog({
       usuario_id: usuario.id,
-      accion: 'login_junior',
-      detalle: `Inicio de sesión en Placeta Junior`,
+      accion: 'login_junior_directo',
+      detalle: 'Acceso directo (PlacetaID no disponible)',
       ip
     });
 
-    req.session.junior = {
-      id: junior.id,
-      solicitante_id: usuario.id,
-      dip: usuario.dip,
-      nombre: junior.nombre, apellidos: junior.apellidos,
-      alias: usuario.alias, edad: junior.edad,
-      modalidad: junior.modalidad,
-      placetas_saldo: junior.placetas_saldo,
-      nivel_academia: junior.nivel_academia, estado: junior.estado
-    };
-
-    res.json({ success: true, redirect: '/dashboard', junior: req.session.junior });
+    res.json({
+      success: true,
+      requiere_autorizacion_tutor: false,
+      redirect: '/dashboard',
+      junior: {
+        id: junior.id, solicitante_id: usuario.id,
+        dip: usuario.dip, nombre: junior.nombre, apellidos: junior.apellidos,
+        alias: usuario.alias, edad: junior.edad,
+        modalidad: junior.modalidad,
+        placetas_saldo: junior.placetas_saldo,
+        nivel_academia: junior.nivel_academia, estado: junior.estado
+      }
+    });
   } catch (err) {
     console.error('[Placeta Junior] Error en login:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
