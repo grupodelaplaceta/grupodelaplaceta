@@ -64,20 +64,20 @@ class PDFGenerator {
     if (this.logo) {
       try {
         const logoBuffer = fs.readFileSync(this.logo);
-        doc.image(logoBuffer, 50, 32, { width: 32 });
-        doc.font(this._f(true)).fontSize(11).fillColor('#1c005f');
-        const logoLabel = this.tipo === 'tributos' ? '  TRIBUTOS GDLP' : '  TLP';
-        doc.text(logoLabel, 85, 38);
+        doc.image(logoBuffer, 40, 28, { width: 80 });
+        doc.font(this._f(true)).fontSize(14).fillColor('#1c005f');
+        const logoLabel = this.tipo === 'tributos' ? '  TRIBUTOS GDLP' : '  GRUPO DE LA PLACETA';
+        doc.text(logoLabel, 125, 42);
       } catch (e) {
         console.error('[PDF] Logo error:', e.message);
-        doc.font(this._f(true)).fontSize(11).fillColor('#1c005f');
+        doc.font(this._f(true)).fontSize(14).fillColor('#1c005f');
         const fallback = this.tipo === 'tributos' ? '🏛️  TRIBUTOS GDLP' : '🏛️  GRUPO DE LA PLACETA';
-        doc.text(fallback, 50, 40);
+        doc.text(fallback, 40, 40);
       }
     } else {
-      doc.font(this._f(true)).fontSize(11).fillColor('#1c005f');
+      doc.font(this._f(true)).fontSize(14).fillColor('#1c005f');
       const fallback = this.tipo === 'tributos' ? '🏛️  TRIBUTOS GDLP' : '🏛️  GRUPO DE LA PLACETA';
-      doc.text(fallback, 50, 40);
+      doc.text(fallback, 40, 40);
     }
     doc.font(this._f(false, true)).fontSize(7).fillColor('#5c5566');
     doc.text(codigo || 'Documento Oficial', 50, 56);

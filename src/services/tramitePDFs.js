@@ -25,10 +25,10 @@ export async function generarPDFDIP(datos) {
 
   try {
     const img = await fetchImage(LOGO_URL);
-    doc.image(img, 60, 50, { width: 50 });
+    doc.image(img, 40, 40, { width: 90 });
   } catch {}
 
-  doc.fontSize(10).font('Helvetica').fillColor('#666').text('Solicitud de DIP', 120, 55);
+  doc.fontSize(10).font('Helvetica').fillColor('#666').text('Solicitud de DIP', 135, 45);
   doc.fontSize(7).fillColor('#999').text(`Generado: ${new Date().toLocaleString('es-ES')}`, 120, 70);
 
   doc.moveDown(4);
@@ -81,10 +81,10 @@ export async function generarPDFPlacetaID(datos) {
 
   try {
     const img = await fetchImage(LOGO_URL);
-    doc.image(img, 60, 50, { width: 50 });
+    doc.image(img, 40, 40, { width: 90 });
   } catch {}
 
-  doc.fontSize(10).font('Helvetica').fillColor('#666').text('Activación PlacetaID', 120, 55);
+  doc.fontSize(10).font('Helvetica').fillColor('#666').text('Activación PlacetaID', 135, 45);
   doc.fontSize(7).fillColor('#999').text(`Generado: ${new Date().toLocaleString('es-ES')}`, 120, 70);
 
   doc.moveDown(4);
@@ -133,10 +133,10 @@ export async function generarPDFQueja(datos) {
 
   try {
     const img = await fetchImage(LOGO_URL);
-    doc.image(img, 60, 50, { width: 50 });
+    doc.image(img, 40, 40, { width: 90 });
   } catch {}
 
-  doc.fontSize(10).font('Helvetica').fillColor('#666').text('Registro de Queja / Sugerencia', 120, 55);
+  doc.fontSize(10).font('Helvetica').fillColor('#666').text('Registro de Queja / Sugerencia', 135, 45);
   doc.fontSize(7).fillColor('#999').text(`Generado: ${new Date().toLocaleString('es-ES')}`, 120, 70);
 
   doc.moveDown(4);
@@ -186,10 +186,10 @@ export async function generarPDFControlParental(datos) {
 
   try {
     const img = await fetchImage(LOGO_URL);
-    doc.image(img, 60, 50, { width: 50 });
+    doc.image(img, 40, 40, { width: 90 });
   } catch {}
 
-  doc.fontSize(10).font('Helvetica').fillColor('#666').text('Registro de Control Parental', 120, 55);
+  doc.fontSize(10).font('Helvetica').fillColor('#666').text('Registro de Control Parental', 135, 45);
   doc.fontSize(7).fillColor('#999').text(`Generado: ${new Date().toLocaleString('es-ES')}`, 120, 70);
 
   doc.moveDown(4);
@@ -238,10 +238,10 @@ export async function generarPDFEntidad(datos) {
 
   try {
     const img = await fetchImage(LOGO_URL);
-    doc.image(img, 60, 50, { width: 50 });
+    doc.image(img, 40, 40, { width: 90 });
   } catch {}
 
-  doc.fontSize(10).font('Helvetica').fillColor('#666').text('Solicitud de Alta de Entidad', 120, 55);
+  doc.fontSize(10).font('Helvetica').fillColor('#666').text('Solicitud de Alta de Entidad', 135, 45);
   doc.fontSize(7).fillColor('#999').text(`Generado: ${new Date().toLocaleString('es-ES')}`, 120, 70);
 
   doc.moveDown(4);
