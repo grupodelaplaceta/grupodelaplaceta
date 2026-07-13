@@ -32,9 +32,6 @@
 
       <div class="sidebar-group">
         <div class="sidebar-group-title">Identidad</div>
-        <a href="/admin/identidad" class="sidebar-link <%= pathActual.startsWith('/admin/identidad') ? 'active' : '' %>">
-          <span class="sl-icon">🆔</span> Altas
-        </a>
         <a href="/admin/ciudadanos" class="sidebar-link <%= pathActual.startsWith('/admin/ciudadanos') ? 'active' : '' %>">
           <span class="sl-icon">👥</span> Ciudadanos
         </a>
@@ -44,6 +41,9 @@
         <a href="/admin/placeta-junior" class="sidebar-link <%= pathActual.startsWith('/admin/placeta-junior') ? 'active' : '' %>">
           <span class="sl-icon">🌈</span> Placeta Junior
         </a>
+        <a href="/admin/empresas" class="sidebar-link <%= pathActual.startsWith('/admin/empresas') ? 'active' : '' %>">
+          <span class="sl-icon">🏢</span> Empresas
+        </a>
       </div>
 
       <div class="sidebar-group">
@@ -51,63 +51,20 @@
         <a href="/admin/bancario" class="sidebar-link <%= pathActual.startsWith('/admin/bancario') ? 'active' : '' %>">
           <span class="sl-icon">🏦</span> Bancario
         </a>
-        <a href="/admin/audit-bancario" class="sidebar-link <%= pathActual.startsWith('/admin/audit-bancario') ? 'active' : '' %>">
-          <span class="sl-icon">🏛️</span> Gobierno
-        </a>
-        <a href="/admin/empresas" class="sidebar-link <%= pathActual.startsWith('/admin/empresas') ? 'active' : '' %>">
-          <span class="sl-icon">🏢</span> Empresas
-        </a>
         <a href="/admin/tributos" class="sidebar-link <%= pathActual.startsWith('/admin/tributos') ? 'active' : '' %>">
           <span class="sl-icon">🧾</span> Tributos
         </a>
-        <a href="/admin/fiscal" class="sidebar-link <%= pathActual.startsWith('/admin/fiscal') ? 'active' : '' %>">
-          <span class="sl-icon">📊</span> Fiscal
-        </a>
       </div>
 
       <div class="sidebar-group">
-        <div class="sidebar-group-title">Justicia</div>
-        <a href="/admin/justicia" class="sidebar-link <%= pathActual.startsWith('/admin/justicia') ? 'active' : '' %>">
-          <span class="sl-icon">⚖️</span> Expedientes
-        </a>
-        <a href="/admin/tramitacion" class="sidebar-link <%= pathActual.startsWith('/admin/tramitacion') ? 'active' : '' %>">
-          <span class="sl-icon">📋</span> Tramitación
-        </a>
-        <a href="/admin/vigilancia" class="sidebar-link <%= pathActual.startsWith('/admin/vigilancia') ? 'active' : '' %>">
-          <span class="sl-icon">👁️</span> Vigilancia
-        </a>
-      </div>
-
-      <div class="sidebar-group">
-        <div class="sidebar-group-title">Secretaría</div>
+        <div class="sidebar-group-title">Documentos</div>
         <a href="/admin/documentos" class="sidebar-link <%= pathActual.startsWith('/admin/documentos') ? 'active' : '' %>">
           <span class="sl-icon">📄</span> Documentos
-        </a>
-        <a href="/admin/rgpd" class="sidebar-link <%= pathActual.startsWith('/admin/rgpd') ? 'active' : '' %>">
-          <span class="sl-icon">🔒</span> RGPD
-        </a>
-        <a href="/admin/contenidos" class="sidebar-link <%= pathActual.startsWith('/admin/contenidos') ? 'active' : '' %>">
-          <span class="sl-icon">📝</span> Contenidos
-        </a>
-        <a href="/admin/pdf" class="sidebar-link <%= pathActual.startsWith('/admin/pdf') ? 'active' : '' %>">
-          <span class="sl-icon">📑</span> Generar PDF
         </a>
         <a href="/admin/firmas" class="sidebar-link <%= pathActual.startsWith('/admin/firmas') ? 'active' : '' %>">
           <span class="sl-icon">✍️</span> Firmas
         </a>
       </div>
-
-      <div class="sidebar-group">
-        <div class="sidebar-group-title">Grupos</div>
-        <a href="/admin/ocio" class="sidebar-link <%= pathActual.startsWith('/admin/ocio') ? 'active' : '' %>">
-          <span class="sl-icon">🎲</span> Ocio
-        </a>
-        <a href="/admin/voley-club" class="sidebar-link <%= pathActual.startsWith('/admin/voley-club') ? 'active' : '' %>">
-          <span class="sl-icon">🏐</span> Voley Club
-        </a>
-        <a href="/admin/recursos" class="sidebar-link <%= pathActual.startsWith('/admin/recursos') ? 'active' : '' %>">
-          <span class="sl-icon">🔧</span> Recursos
-        </a>
       </div>
     </nav>
 

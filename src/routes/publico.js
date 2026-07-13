@@ -26,6 +26,14 @@ router.get('/', (req, res) => {
   res.render('public/index', { titulo: 'Inicio', layout: 'layouts/publico', pathActual: '/' });
 });
 
+router.get('/contenidos', (req, res) => {
+  res.render('public/contenidos', { titulo: 'Contenidos', layout: 'layouts/publico', pathActual: '/contenidos' });
+});
+
+router.get('/galeria', (req, res) => {
+  res.render('public/galeria', { titulo: 'Galería', layout: 'layouts/publico', pathActual: '/galeria' });
+});
+
 router.get('/tramites', (req, res) => {
   const usuario = req.session.usuario || null;
   res.render('public/tramites', { titulo: 'Trámites', layout: 'layouts/publico', pathActual: '/tramites', usuario });
