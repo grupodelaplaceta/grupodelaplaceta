@@ -126,11 +126,16 @@ router.get('/junior/documentos', verificarSesion, verificarRol('administrador'),
     const { data: d, error } = await supabase
       .from('documentos_firmados')
       .select('*')
-      .or('codigo_modelo.ilike.%PJ-TYC-001%,codigo_modelo.ilike.%PJ-PRV-001%,codigo_modelo.ilike.%PJ-CON-001%')
       .order('creado_en', { ascending: false })
-      .limit(100);
+      .limit(200);
     if (error) { console.error('[Docs]', error); return res.json([]); }
-    return res.json(Array.isArray(d) ? d : []);
+    // Filter to only Placeta Junior documents (codigo_modelo contains 'PJ-')
+    const docs = (d || []).filter(doc => 
+      (doc.codigo_modelo || '').includes('PJ-TYC') || 
+      (doc.codigo_modelo || '').includes('PJ-PRV') || 
+      (doc.codigo_modelo || '').includes('PJ-CON')
+    );
+    return res.json(docs);
   } catch (err) { console.error('[Docs]', err); return res.json([]); }
 });
 

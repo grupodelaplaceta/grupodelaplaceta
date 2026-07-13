@@ -89,9 +89,9 @@
       </div>
       <div class="table-container" id="docsContainer"><p style="color:var(--text-light)">Cargando...</p></div>
       <div style="margin-top:16px;display:flex;gap:8px">
-        <a href="http://localhost:3005/documentos/terminos" target="_blank" class="btn btn-sm btn-glass">📄 Términos (PJ-TYC-001)</a>
-        <a href="http://localhost:3005/documentos/privacidad" target="_blank" class="btn btn-sm btn-glass">📄 Privacidad (PJ-PRV-001)</a>
-        <a href="http://localhost:3005/documentos/consentimiento" target="_blank" class="btn btn-sm btn-glass">📄 Consentimiento (PJ-CON-001)</a>
+        <button class="btn btn-sm btn-glass" onclick="verDocumento('PJ-TYC-001')">📄 Términos (PJ-TYC-001)</button>
+        <button class="btn btn-sm btn-glass" onclick="verDocumento('PJ-PRV-001')">📄 Privacidad (PJ-PRV-001)</button>
+        <button class="btn btn-sm btn-glass" onclick="verDocumento('PJ-CON-001')">📄 Consentimiento (PJ-CON-001)</button>
       </div>
     </div>
   </div>
@@ -305,15 +305,60 @@ async function cargarDocumentos() {
     const data = await apiFetch('/api/admin/junior/documentos');
     document.getElementById('docsContainer').innerHTML = (!data || !data.length)
       ? '<p style="color:var(--text-light)">Sin documentos</p>'
-      : `<table class="data-table"><thead><tr><th>Código</th><th>Título</th><th>Estado</th><th>Firmado por</th><th>Fecha</th></tr></thead>
+      : `<table class="data-table"><thead><tr><th>Código</th><th>Título</th><th>Estado</th><th>Firmado por</th><th>Fecha</th><th>Firma</th></tr></thead>
       <tbody>${data.slice(0,50).map(d => `<tr>
         <td><code>${d.codigo_modelo}</code></td>
         <td>${d.titulo_documento}</td>
         <td><span class="status-dot ${d.estado === 'firmado' ? 'green' : d.estado === 'pendiente' ? 'yellow' : 'red'}"></span> ${d.estado}</td>
         <td>${d.firmante?.alias || d.firmado_por || '—'}</td>
         <td><small>${d.fecha_firma ? new Date(d.fecha_firma).toLocaleDateString() : (d.creado_en ? new Date(d.creado_en).toLocaleDateString() : '—')}</small></td>
+        <td>${d.url_firma ? `<button class="btn btn-sm btn-glass" onclick="verFirma('${d.id}')" title="Ver firma">✍️ Ver</button>` : '—'}</td>
       </tr>`).join('')}</tbody></table>`;
   } catch (err) { document.getElementById('docsContainer').innerHTML = `<p>Error: ${err.message}</p>`; }
+}
+
+async function verDocumento(codigo) {
+  try {
+    const data = await apiFetch(`/api/junior/documento-contenido/${codigo}`);
+    const modal = document.createElement('div');
+    modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';
+    modal.onclick = e => { if (e.target === modal) modal.remove(); };
+    modal.innerHTML = `<div style="background:#fff;border-radius:16px;padding:32px;max-width:700px;max-height:85vh;overflow-y:auto;margin:20px;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <h2 style="margin:0;color:#1c005f">📜 ${data.titulo || codigo}</h2>
+        <button onclick="this.closest('div').parentElement.remove()" style="background:none;border:none;font-size:24px;cursor:pointer;color:#888">&times;</button>
+      </div>
+      <p style="color:#888;font-size:12px;margin-bottom:16px">Versión ${data.version || '1.0'} · ${data.fecha || ''}</p>
+      <div style="background:#f8f7fc;border-radius:12px;padding:20px;white-space:pre-wrap;font-size:13px;line-height:1.7;color:#333;border-left:4px solid #3f00d8">${data.contenido || 'Contenido no disponible'}</div>
+    </div>`;
+    document.body.appendChild(modal);
+  } catch (err) { alert('Error al cargar documento: ' + err.message); }
+}
+
+async function verFirma(docId) {
+  try {
+    const docs = await apiFetch('/api/admin/junior/documentos');
+    const doc = docs.find(d => d.id == docId);
+    if (!doc || !doc.url_firma) { alert('Firma no disponible'); return; }
+    const modal = document.createElement('div');
+    modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';
+    modal.onclick = e => { if (e.target === modal) modal.remove(); };
+    // url_firma contains base64 PNG
+    const imgSrc = doc.url_firma.startsWith('data:') ? doc.url_firma : `data:image/png;base64,${doc.url_firma}`;
+    modal.innerHTML = `<div style="background:#fff;border-radius:16px;padding:32px;max-width:600px;max-height:85vh;overflow-y:auto;margin:20px;box-shadow:0 20px 60px rgba(0,0,0,.3);text-align:center">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <h3 style="margin:0;color:#1c005f">✍️ Firma manuscrita</h3>
+        <button onclick="this.closest('div').parentElement.remove()" style="background:none;border:none;font-size:24px;cursor:pointer;color:#888">&times;</button>
+      </div>
+      <p style="color:#888;font-size:12px;margin-bottom:12px">Documento: ${doc.titulo_documento || doc.codigo_modelo}</p>
+      <div style="background:#f8f7fc;border-radius:12px;padding:16px;border:2px dashed #ccc">
+        <img src="${imgSrc}" style="max-width:100%;max-height:300px;background:#fff" alt="Firma manuscrita" />
+      </div>
+      <p style="color:#888;font-size:11px;margin-top:12px">Firma con validez legal conforme a eIDAS (UE 910/2014)</p>
+      ${doc.hash_documento ? `<p style="color:#aaa;font-size:10px;margin-top:8px;word-break:break-all">SHA-256: ${doc.hash_documento}</p>` : ''}
+    </div>`;
+    document.body.appendChild(modal);
+  } catch (err) { alert('Error: ' + err.message); }
 }
 
 async function cargarImpuestos() {
