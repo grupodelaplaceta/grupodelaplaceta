@@ -355,3 +355,126 @@ CREATE INDEX IF NOT EXISTS idx_fotos_url ON fotos_likes(foto_url);
 INSERT INTO solicitantes (alias, nombre_real, email, dip, placeid, rol, cargo, estado, password_hash, franja_edad)
 VALUES ('admin', 'Administrador CRM', 'admin@laplaceta.org', '00000001A', 'PLID-00000001A', 'administrador', 'Administrador del CRM', 'activo', '$2a$10$8KzQMGx5C5Kc5Qy5Q5z5Q.5z5Q5z5Q5z5Q5z5Q5z5Q5z5Q5z5Q5z', 'Alta_Plena')
 ON CONFLICT (alias) DO NOTHING;
+
+
+-- ============================================================
+-- PLACETA JUNIOR - Tablas añadidas
+-- ============================================================
+
+-- ============================================================
+-- PLACETA JUNIOR — Esquema para Supabase PostgreSQL
+-- Tablas específicas para Placeta Junior
+-- Compartidas con GDLP CRM
+-- Ejecutar en el SQL Editor de Supabase
+-- ============================================================
+
+-- 1. MENORES (juniors)
+CREATE TABLE IF NOT EXISTS junior_menores (
+  id BIGSERIAL PRIMARY KEY,
+  solicitante_id BIGINT REFERENCES solicitantes(id),
+  dip TEXT UNIQUE NOT NULL,
+  nombre TEXT NOT NULL,
+  apellidos TEXT NOT NULL,
+  fecha_nacimiento TEXT NOT NULL,
+  edad INTEGER NOT NULL DEFAULT 0,
+  modalidad TEXT NOT NULL CHECK (modalidad IN ('Placeta Junior', 'Placeta Joven')),
+  tutor_dip TEXT,
+  tutor_nombre TEXT,
+  dni_tutor_hash TEXT,
+  dni_tutor_salt TEXT,
+  email_contacto TEXT,
+  dip_digital TEXT UNIQUE,
+  dip_digital_generado_en TIMESTAMPTZ,
+  placetas_saldo INTEGER DEFAULT 0,
+  nivel_academia INTEGER DEFAULT 1,
+  firma_hash TEXT,
+  documentos_firmados JSONB,
+  firmado_en TIMESTAMPTZ,
+  ip_firma TEXT,
+  estado TEXT DEFAULT 'pendiente_firma_tutor' CHECK (estado IN ('pendiente_firma_tutor', 'activo', 'suspendido', 'baja')),
+  ultimo_acceso_aprobado TIMESTAMPTZ,
+  ip_registro TEXT,
+  creado_en TIMESTAMPTZ DEFAULT NOW(),
+  actualizado_en TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_junior_menores_dip ON junior_menores(dip);
+CREATE INDEX IF NOT EXISTS idx_junior_menores_tutor ON junior_menores(tutor_dip);
+CREATE INDEX IF NOT EXISTS idx_junior_menores_estado ON junior_menores(estado);
+
+-- 2. CONTROL PARENTAL JUNIOR
+CREATE TABLE IF NOT EXISTS junior_control_parental (
+  id BIGSERIAL PRIMARY KEY,
+  junior_id BIGINT NOT NULL REFERENCES junior_menores(id) ON DELETE CASCADE,
+  dip_menor TEXT NOT NULL,
+  dip_tutor TEXT NOT NULL,
+  limite_gasto_diario INTEGER DEFAULT 10,
+  limite_gasto_semanal INTEGER DEFAULT 50,
+  limite_aprobacion_tutor INTEGER DEFAULT 1000, -- Compras > necesitan aprobación PlacetaID
+  tiempo_uso_diario_minutos INTEGER DEFAULT 60,
+  categorias_bloqueadas JSONB DEFAULT '[]',
+  requiere_aprobacion_extra BOOLEAN DEFAULT TRUE,
+  creado_en TIMESTAMPTZ DEFAULT NOW(),
+  actualizado_en TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(junior_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_junior_control_parental_menor ON junior_control_parental(junior_id);
+
+-- 3. ACADEMIA — Progreso
+CREATE TABLE IF NOT EXISTS junior_academia (
+  id BIGSERIAL PRIMARY KEY,
+  junior_id BIGINT NOT NULL REFERENCES junior_menores(id) ON DELETE CASCADE,
+  completados JSONB DEFAULT '{}',
+  puntuacion_total INTEGER DEFAULT 0,
+  nivel_maximo INTEGER DEFAULT 1,
+  actualizado_en TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(junior_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_junior_academia_junior ON junior_academia(junior_id);
+
+-- 4. TRANSACCIONES (Placetas)
+CREATE TABLE IF NOT EXISTS junior_transacciones (
+  id BIGSERIAL PRIMARY KEY,
+  junior_id BIGINT NOT NULL REFERENCES junior_menores(id) ON DELETE CASCADE,
+  tipo TEXT NOT NULL CHECK (tipo IN ('ganar', 'gastar', 'bonus', 'ajuste')),
+  concepto TEXT NOT NULL,
+  cantidad INTEGER NOT NULL,
+  saldo_resultante INTEGER NOT NULL,
+  ip TEXT,
+  creado_en TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_junior_transacciones_junior ON junior_transacciones(junior_id);
+
+-- 5. LOGS JUNIOR
+CREATE TABLE IF NOT EXISTS junior_logs (
+  id BIGSERIAL PRIMARY KEY,
+  junior_id BIGINT REFERENCES junior_menores(id),
+  accion TEXT NOT NULL,
+  detalle TEXT,
+  ip TEXT,
+  creado_en TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_junior_logs_junior ON junior_logs(junior_id);
+CREATE INDEX IF NOT EXISTS idx_junior_logs_accion ON junior_logs(accion);
+
+-- Trigger para actualizar updated_at
+CREATE OR REPLACE FUNCTION update_junior_modified_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.actualizado_en = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_junior_menores_updated
+  BEFORE UPDATE ON junior_menores
+  FOR EACH ROW EXECUTE FUNCTION update_junior_modified_column();
+
+CREATE TRIGGER trg_junior_control_parental_updated
+  BEFORE UPDATE ON junior_control_parental
+  FOR EACH ROW EXECUTE FUNCTION update_junior_modified_column();
+
