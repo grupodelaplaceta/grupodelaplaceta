@@ -100,13 +100,14 @@ class FirmaDigitalService {
     let doc;
     try { doc = await sbFindDocumentoFirmadoById(documentoId); } catch (e) { doc = null; }
     if (!doc) return { valido: false, error: 'Documento no encontrado' };
-    const esValido = doc.estado === 'firmado' && doc.firma_hash !== null;
+    const esValido = doc.estado === 'firmado' && (doc.firma_hash !== null || doc.hash_documento !== null);
+    const hash = doc.firma_hash || doc.hash_documento;
 
     return {
       valido: esValido,
       documento: { codigo: doc.codigo_modelo, titulo: doc.titulo_documento, estado: doc.estado },
       firma: esValido ? {
-        hash: doc.firma_hash, fecha: doc.fecha_firma, ip: doc.ip_firma
+        hash, fecha: doc.fecha_firma || doc.creado_en, ip: doc.ip_firma
       } : null
     };
   }

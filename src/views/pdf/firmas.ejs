@@ -75,10 +75,11 @@
           <td><strong>${d.titulo_documento || '—'}</strong></td>
           <td>${d.firmante_alias || d.firmado_por || '—'}</td>
           <td>${d.fecha_firma ? formatFecha(d.fecha_firma) : formatFecha(d.creado_en)}</td>
-          <td><span class="tag ${d.firma_hash ? 'tag-green' : 'tag-gray'}">${d.firma_hash ? '🔐 Válido' : '⚠️ Sin hash'}</span></td>
+          <td><span class="tag ${(d.firma_hash || d.hash_documento) ? 'tag-green' : 'tag-gray'}">${(d.firma_hash || d.hash_documento) ? '🔐 Válido' : '⚠️ Sin hash'}</span></td>
           <td style="display:flex;gap:6px">
             <a href="/api/junior/documento-verificable/${d.id}" target="_blank" class="btn btn-sm btn-glass" title="Ver PDF">📄 PDF</a>
-            <button class="btn btn-sm btn-outline" onclick="verificarDoc(${d.id})" title="Verificar integridad">🔍</button>
+            <button class="btn btn-sm btn-outline" onclick="verificarDoc(${d.id})" title="Verificar integridad">🔍 Verificar</button>
+          </td>
           </td>
         </tr>`).join('');
     } catch(e) { console.error('[Firmas]', e); }
@@ -99,7 +100,11 @@
   async function verificarDoc(id) {
     try {
       const result = await apiFetch(`/api/firma/verificar/${id}`);
-      mostrarMensaje(result.valido ? 'success' : 'error', result.valido ? '✅ Documento VÁLIDO - Hash verificado' : '❌ Documento NO VÁLIDO');
+      const hash = result.firma?.hash || '';
+      mostrarMensaje(result.valido ? 'success' : 'error',
+        result.valido
+          ? `✅ Documento VÁLIDO<br><small style="font-family:monospace;font-size:10px">SHA-256: ${hash.substring(0,20)}...</small>`
+          : '❌ Documento NO VÁLIDO');
     } catch(e) { mostrarMensaje('error', e.message); }
   }
 
