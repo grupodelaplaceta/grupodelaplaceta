@@ -1,0 +1,121 @@
+<div class="dashboard">
+  <div class="dashboard-header">
+    <h1>🏦 Finanzas GDLP</h1>
+    <p class="dashboard-date">Central financiera · Emisión · Contribuyentes · Control monetario</p>
+  </div>
+
+  <!-- KPIs desde Supabase -->
+  <div class="stats-grid" id="statsFinanzas">
+    <div class="stat-card stat-primary"><div class="stat-icon">👥</div><div class="stat-content"><span class="stat-value" id="kpiCiudadanos">—</span><span class="stat-label">Ciudadanos</span></div></div>
+    <div class="stat-card stat-success"><div class="stat-icon">🌈</div><div class="stat-content"><span class="stat-value" id="kpiJuniors">—</span><span class="stat-label">Juniors</span></div></div>
+    <div class="stat-card stat-info"><div class="stat-icon">🧾</div><div class="stat-content"><span class="stat-value" id="kpiContribuyentes">—</span><span class="stat-label">Contribuyentes</span></div></div>
+    <div class="stat-card stat-warning"><div class="stat-icon">🏦</div><div class="stat-content"><span class="stat-value" id="kpiCuentas">—</span><span class="stat-label">Cuentas Bancarias</span></div></div>
+  </div>
+
+  <!-- Emisión / Quema -->
+  <div class="section">
+    <h2>🪙 Emisión y Quema Monetaria</h2>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <form id="emisionForm" style="width:100%">
+          <h3 style="margin-bottom:12px">Emitir Placetas</h3>
+          <div class="form-group"><label>Cantidad</label><input type="number" name="cantidad" min="1" required placeholder="10000"></div>
+          <div class="form-group"><label>DIP destino</label><input type="text" name="destino_dip" required placeholder="00000000A"></div>
+          <div class="form-group"><label>Motivo</label><input type="text" name="motivo" placeholder="Pago de nóminas"></div>
+          <button type="submit" class="btn btn-success btn-block">💸 Emitir</button>
+        </form>
+      </div>
+      <div class="stat-card">
+        <form id="quemaForm" style="width:100%">
+          <h3 style="margin-bottom:12px">🔥 Quemar Placetas</h3>
+          <div class="form-group"><label>ID Cuenta</label><input type="number" name="cuenta_id" required></div>
+          <div class="form-group"><label>Cantidad</label><input type="number" name="cantidad" min="1" required></div>
+          <div class="form-group"><label>Motivo</label><input type="text" name="motivo" placeholder="Exceso de capital"></div>
+          <button type="submit" class="btn btn-danger btn-block">🔥 Quemar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contribuyentes Tributos -->
+  <div class="section">
+    <h2>🧾 Contribuyentes (Tributos)</h2>
+    <div class="table-container"><table class="data-table"><thead><tr><th>PlacetaID</th><th>Nombre</th><th>DIP</th><th>Tipo</th><th>Estado Fiscal</th><th>Alta</th></tr></thead>
+      <tbody id="contribuyentesBody"><tr><td colspan="6">Cargando...</td></tr></tbody>
+    </table></div>
+    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-primary btn-sm" onclick="abrirAltaRapida()">➕ Alta rápida por DIP</button>
+      <button class="btn btn-outline btn-sm" onclick="cargarContribuyentes()">🔄 Refrescar</button>
+    </div>
+    <div id="altaResultado" style="margin-top:12px;display:none"></div>
+  </div>
+</div>
+
+<script>
+  async function kpiFetch(url) { try { const r = await fetch(url); if (!r.ok) throw Error(); return r.json(); } catch { return null; } }
+  
+  async function cargarTodo() {
+    // KPIs desde Supabase
+    const [ciud, jrs, cont, ctas] = await Promise.all([
+      kpiFetch('/api/admin/finanzas/kpi-ciudadanos'),
+      kpiFetch('/api/admin/finanzas/kpi-juniors'),
+      kpiFetch('/api/admin/finanzas/kpi-contribuyentes'),
+      kpiFetch('/api/admin/finanzas/kpi-cuentas')
+    ]);
+    document.getElementById('kpiCiudadanos').textContent = ciud?.count ?? '—';
+    document.getElementById('kpiJuniors').textContent = jrs?.count ?? '—';
+    document.getElementById('kpiContribuyentes').textContent = cont?.count ?? '—';
+    document.getElementById('kpiCuentas').textContent = ctas?.count ?? '—';
+  }
+
+  async function cargarContribuyentes() {
+    try {
+      const r = await fetch('/api/admin/finanzas/contribuyentes');
+      const data = await r.json();
+      const tb = document.getElementById('contribuyentesBody');
+      if (!data?.length) { tb.innerHTML = '<tr><td colspan="6">Sin contribuyentes</td></tr>'; return; }
+      tb.innerHTML = data.map(c => '<tr><td>'+ (c.placeta_id||'—') +'</td><td>'+ (c.nombre||'—') +'</td><td>'+ (c.dip||'—') +'</td><td><span class="badge">'+ (c.tipo_sujeto||'—') +'</span></td><td><span class="badge '+ (c.estado_fiscal==='Al Dia'?'badge-activo':c.estado_fiscal==='Capitalia'?'badge-junior':'badge-pendiente') +'">'+ (c.estado_fiscal||'—') +'</span></td><td>'+ (c.fecha_alta_tributos?.slice(0,10)||'—') +'</td></tr>').join('');
+    } catch(e) { document.getElementById('contribuyentesBody').innerHTML = '<tr><td colspan="6">Error: '+e.message+'</td></tr>'; }
+  }
+
+  async function abrirAltaRapida() {
+    const dip = prompt('DIP del ciudadano a dar de alta en Tributos:');
+    if (!dip) return;
+    document.getElementById('altaResultado').style.display = 'block';
+    document.getElementById('altaResultado').innerHTML = 'Procesando...';
+    try {
+      const r = await fetch('/api/admin/tributos/contributors/alta-rapida', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({dip}) });
+      const data = await r.json();
+      if (data.success) {
+        document.getElementById('altaResultado').innerHTML = '<div class="alert alert-success">✅ '+dip+' dado de alta'+(data.esJunior?' (régimen Capitalia)':'')+'</div>';
+        cargarContribuyentes(); cargarTodo();
+      } else document.getElementById('altaResultado').innerHTML = '<div class="alert alert-error">❌ '+(data.error||'Error')+'</div>';
+    } catch(e) { document.getElementById('altaResultado').innerHTML = '<div class="alert alert-error">❌ '+e.message+'</div>'; }
+  }
+
+  // Emission/Quema forms
+  document.getElementById('emisionForm').addEventListener('submit', async e => {
+    e.preventDefault(); const btn = e.target.querySelector('button'); btn.disabled=true; btn.textContent='Emitiendo...';
+    try {
+      const data = Object.fromEntries(new FormData(e.target));
+      const r = await fetch('/api/bancario/emision', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+      const j = await r.json();
+      alert(j.message || 'Emitido');
+      e.target.reset();
+    } catch(err) { alert('Error: '+err.message); }
+    finally { btn.disabled=false; btn.textContent='💸 Emitir'; }
+  });
+  document.getElementById('quemaForm').addEventListener('submit', async e => {
+    e.preventDefault(); const btn = e.target.querySelector('button'); btn.disabled=true; btn.textContent='Quemando...';
+    try {
+      const data = Object.fromEntries(new FormData(e.target));
+      const r = await fetch('/api/bancario/quema', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+      const j = await r.json();
+      alert(j.message || 'Quemado');
+      e.target.reset();
+    } catch(err) { alert('Error: '+err.message); }
+    finally { btn.disabled=false; btn.textContent='🔥 Quemar'; }
+  });
+
+  cargarTodo(); cargarContribuyentes();
+</script>

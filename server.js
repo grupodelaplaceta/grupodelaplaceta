@@ -44,6 +44,7 @@ import juniorMgmtRoutes from './src/routes/junior-mgmt.js';
 import juniorAcademyRoutes from './src/routes/junior-academy.js';
 import juniorLegalRoutes from './src/routes/junior-legal.js';
 import juniorAmigosRoutes from './src/routes/junior-amigos.js';
+import finanzasRoutes from './src/routes/finanzas.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -279,6 +280,7 @@ app.get('/admin/dashboard', verificarAuth, async (req, res) => {
 // Módulos
 app.get('/admin/identidad', verificarAuth, (req, res) => res.render('identidad/gestion', { titulo: 'Gestión de Identidad' }));
 app.get('/admin/bancario', verificarAuth, (req, res) => res.render('bancario/gestion', { titulo: 'Gestión Bancaria' }));
+app.get('/admin/finanzas', verificarAuth, (req, res) => res.render('admin/finanzas', { titulo: 'Finanzas' }));
 app.get('/admin/fiscal', verificarAuth, (req, res) => res.render('fiscal/gestion', { titulo: 'Gestión Fiscal' }));
 app.get('/admin/tributos', verificarAuth, (req, res) => res.render('admin/tributos', { titulo: 'Gestión de Tributos' }));
 app.get('/admin/placetid', verificarAuth, (req, res) => res.render('admin/placetid', { titulo: 'Administración PlacetaID' }));
