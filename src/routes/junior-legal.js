@@ -284,4 +284,142 @@ conforme al Reglamento eIDAS (UE 910/2014) y la Ley 6/2020 de servicios electró
   res.json(doc);
 });
 
+// ═══════════════════════════════════════════════════════════════════════════
+//  PDF VERIFICABLE — Documento legal con logo, firma y hash
+// ═══════════════════════════════════════════════════════════════════════════
+
+router.get('/documento-verificable/:docId', async (req, res) => {
+  try {
+    const { data: doc, error } = await supabase
+      .from('documentos_firmados')
+      .select('*')
+      .eq('id', req.params.docId)
+      .single();
+
+    if (error || !doc) return res.status(404).send('<h1>Documento no encontrado</h1>');
+
+    // Get junior info from codigo_modelo (format: "PJ-TYC-001::junior::8")
+    const parts = (doc.codigo_modelo || '').split('::');
+    const juniorId = parts[2] || null;
+    let junior = null;
+    if (juniorId) {
+      const { data: j } = await supabase.from('junior_menores')
+        .select('dip,nombre,apellidos,tutor_dip,tutor_nombre')
+        .eq('id', juniorId).single();
+      junior = j;
+    }
+
+    // Get tutor info
+    let tutorNombre = '—';
+    if (doc.firmado_por) {
+      const { data: sol } = await supabase.from('solicitantes')
+        .select('nombre_real,dip')
+        .eq('id', doc.firmado_por).single();
+      if (sol) tutorNombre = sol.nombre_real || sol.dip || '—';
+    }
+
+    const docCode = parts[0] || doc.codigo_modelo;
+    const fecha = doc.creado_en ? new Date(doc.creado_en).toLocaleDateString('es-ES', { day:'numeric', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '—';
+    const firmaImg = doc.url_firma 
+      ? (doc.url_firma.startsWith('data:') ? doc.url_firma : `data:image/png;base64,${doc.url_firma}`)
+      : null;
+
+    const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>${doc.titulo_documento || 'Documento Legal'} — Placeta Junior</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Outfit',system-ui,sans-serif; background:#f0edf7; color:#1a1a2e; line-height:1.6; }
+    .page { max-width:800px; margin:40px auto; background:#fff; border-radius:16px; box-shadow:0 10px 40px rgba(0,0,0,.08); overflow:hidden; }
+    .header { background:linear-gradient(135deg,#3f00d8,#1c005f); color:#fff; padding:40px 48px; text-align:center; position:relative; }
+    .header .logo { font-size:48px; font-weight:900; letter-spacing:-1px; }
+    .header .logo span { color:#FF6600; }
+    .header .sub { font-size:14px; opacity:.8; margin-top:6px; }
+    .header::after { content:''; position:absolute; bottom:-20px; left:50%; transform:translateX(-50%); width:60px; height:60px; background:#FF6600; border-radius:50%; border:4px solid #fff; display:flex; align-items:center; justify-content:center; font-size:24px; }
+    .body { padding:56px 48px 40px; }
+    .meta { background:#f8f7fc; border-radius:12px; padding:16px 20px; margin-bottom:24px; font-size:13px; display:grid; grid-template-columns:1fr 1fr; gap:8px; border-left:4px solid #3f00d8; }
+    .meta strong { color:#3f00d8; }
+    .content { white-space:pre-wrap; font-size:14px; line-height:1.8; color:#333; margin-bottom:32px; padding:20px; background:#fafafa; border-radius:10px; border:1px solid #eee; }
+    .signature-box { text-align:center; padding:24px; background:#fff; border:2px dashed #ddd; border-radius:12px; margin-bottom:24px; }
+    .signature-box img { max-width:400px; max-height:150px; }
+    .signature-box .label { font-size:11px; color:#999; margin-top:8px; }
+    .verify { background:#1c005f; color:#fff; padding:20px 24px; border-radius:12px; font-size:12px; word-break:break-all; }
+    .verify h4 { color:#FF6600; margin-bottom:8px; font-size:14px; }
+    .verify code { background:rgba(255,255,255,.1); padding:2px 6px; border-radius:4px; }
+    .footer { text-align:center; padding:24px; color:#999; font-size:11px; border-top:1px solid #eee; }
+    .footer strong { color:#3f00d8; }
+    .stamp { position:absolute; top:30px; right:40px; border:4px solid rgba(255,255,255,.3); border-radius:50%; width:90px; height:90px; display:flex; align-items:center; justify-content:center; transform:rotate(-15deg); font-weight:900; font-size:11px; text-transform:uppercase; color:rgba(255,255,255,.5); text-align:center; line-height:1.2; }
+    @media print {
+      body { background:#fff; }
+      .page { box-shadow:none; margin:0; max-width:100%; border-radius:0; }
+      .header { background:#3f00d8 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="header">
+      <div class="stamp">FIRMADO<br>✓</div>
+      <div class="logo">Placeta<span>Junior</span></div>
+      <div class="sub">Grupo de La Placeta — Documento Legal Verificable</div>
+    </div>
+
+    <div class="body">
+      <h2 style="color:#1c005f;margin-bottom:16px;font-size:22px">📜 ${doc.titulo_documento || 'Documento Legal'}</h2>
+
+      <div class="meta">
+        <div><strong>Código:</strong> ${docCode}</div>
+        <div><strong>Versión:</strong> 1.0</div>
+        <div><strong>Firmado por:</strong> ${tutorNombre}</div>
+        <div><strong>Fecha:</strong> ${fecha}</div>
+        ${junior ? `<div><strong>Menor:</strong> ${junior.nombre} ${junior.apellidos} (${junior.dip})</div>` : ''}
+        ${junior ? `<div><strong>Tutor:</strong> ${junior.tutor_nombre || '—'} (${junior.tutor_dip || '—'})</div>` : ''}
+        <div><strong>ID Documento:</strong> ${doc.id}</div>
+        <div><strong>Estado:</strong> ${doc.estado}</div>
+      </div>
+
+      <h3 style="color:#3f00d8;margin-bottom:8px;font-size:16px">Contenido del documento</h3>
+      <div class="content">${(doc.titulo_documento || '').toUpperCase()}
+
+(El contenido completo de este documento está disponible en la aplicación PlacetaID Móvil y en el CRM GDLP. Este PDF es un resumen verificable del documento firmado digitalmente.)
+
+Código de documento: ${docCode}
+Hash de verificación: ${doc.hash_documento || '—'}
+</div>
+
+      ${firmaImg ? `
+      <h3 style="color:#3f00d8;margin-bottom:8px;font-size:16px">✍️ Firma manuscrita del tutor</h3>
+      <div class="signature-box">
+        <img src="${firmaImg}" alt="Firma manuscrita" />
+        <div class="label">Firma digitalizada de ${tutorNombre} — Válida conforme a eIDAS (UE 910/2014)</div>
+      </div>` : ''}
+
+      <div class="verify">
+        <h4>🔐 Verificación de autenticidad</h4>
+        <p>Este documento ha sido firmado digitalmente con firma manuscrita digitalizada, con plena validez legal conforme al <strong>Reglamento eIDAS (UE 910/2014)</strong> y la <strong>Ley 6/2020</strong> de servicios electrónicos de confianza.</p>
+        <p style="margin-top:8px"><strong>Hash SHA-256:</strong> <code>${doc.hash_documento || '—'}</code></p>
+        <p style="margin-top:4px"><strong>ID de verificación:</strong> <code>PJ-${doc.id}-${docCode}</code></p>
+        <p style="margin-top:8px;font-size:10px;opacity:.7">Para verificar la autenticidad de este documento, contacte con Grupo de La Placeta a través de grupodelaplaceta.vercel.app o la app PlacetaID Móvil.</p>
+      </div>
+    </div>
+
+    <div class="footer">
+      <strong>Placeta Junior</strong> · Grupo de La Placeta · Documento generado el ${fecha}<br>
+      Este documento es legalmente vinculante. Cualquier modificación invalida su autenticidad.
+    </div>
+  </div>
+</body>
+</html>`;
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(html);
+  } catch (err) {
+    console.error('[Legal] Error generando documento PDF:', err);
+    res.status(500).send('<h1>Error al generar el documento</h1>');
+  }
+});
+
 export default router;

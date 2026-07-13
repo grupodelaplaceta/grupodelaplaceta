@@ -312,7 +312,7 @@ async function cargarDocumentos() {
         <td><span class="status-dot ${d.estado === 'firmado' ? 'green' : d.estado === 'pendiente' ? 'yellow' : 'red'}"></span> ${d.estado}</td>
         <td>${d.firmante?.alias || d.firmado_por || '—'}</td>
         <td><small>${d.fecha_firma ? new Date(d.fecha_firma).toLocaleDateString() : (d.creado_en ? new Date(d.creado_en).toLocaleDateString() : '—')}</small></td>
-        <td>${d.url_firma ? `<button class="btn btn-sm btn-glass" onclick="verFirma('${d.id}')" title="Ver firma">✍️ Ver</button>` : '—'}</td>
+        <td>${d.url_firma ? `<a href="/api/junior/documento-verificable/${d.id}" target="_blank" class="btn btn-sm btn-glass" title="Ver documento verificable">📄 PDF</a>` : '—'}</td>
       </tr>`).join('')}</tbody></table>`;
   } catch (err) { document.getElementById('docsContainer').innerHTML = `<p>Error: ${err.message}</p>`; }
 }
