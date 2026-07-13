@@ -324,6 +324,23 @@ router.get('/documento-verificable/:docId', async (req, res) => {
       ? (doc.url_firma.startsWith('data:') ? doc.url_firma : `data:image/png;base64,${doc.url_firma}`)
       : null;
 
+    // Get full document content
+    const contenidos = {
+      'PJ-TYC-001': {
+        titulo: 'Términos y Condiciones — Placeta Junior',
+        contenido: '1. PARTES\n1.1. Grupo de La Placeta (GDLP).\n1.2. El tutor legal, en representación del menor.\n\n2. OBJETO\n2.1. Placeta Junior es un servicio financiero-educativo para menores de 16 años.\n2.2. Incluye monedero digital, academia, y herramientas de ahorro.\n\n3. RESPONSABILIDAD DEL TUTOR\n3.1. El Tutor es responsable de las acciones del Menor.\n3.2. Puede establecer límites y supervisar la actividad.\n\n4. PROTECCIÓN DE DATOS\n4.1. Conforme al RGPD y LOPDGDD.\n4.2. El Tutor puede ejercer derechos ARCO.\n\n5. VIGENCIA\n5.1. Desde la firma digital manuscrita.\n5.2. Al cumplir 16 años debe migrar a PlacetaID estándar.'
+      },
+      'PJ-PRV-001': {
+        titulo: 'Política de Privacidad — Placeta Junior',
+        contenido: '1. RESPONSABLE: Grupo de La Placeta (GDLP).\n\n2. DATOS RECOGIDOS:\n• Identificativos del Menor (nombre, fecha nacimiento).\n• Datos del Tutor (DNI, nombre, email, firma).\n• Datos de uso (transacciones, progreso academia).\n\n3. FINALIDAD:\n• Gestión del monedero digital y cuenta bancaria infantil.\n• Formación financiera en Academia GDLP.\n• Cumplimiento legal y prevención de fraude.\n\n4. BASE LEGAL:\n• Consentimiento explícito del tutor (Art. 6.1.a y Art. 8 RGPD).\n\n5. CONSERVACIÓN: Mientras la cuenta esté activa + 5 años.\n\n6. DERECHOS: Acceso, rectificación, supresión, oposición, limitación, portabilidad.\n\n7. SEGURIDAD: Firma SHA-256, datos bancarios aislados, TLS 1.3.'
+      },
+      'PJ-CON-001': {
+        titulo: 'Consentimiento del Tutor Legal',
+        contenido: 'El abajo firmante, como tutor legal del menor, DECLARA Y CONSENTE:\n\n1. Autoriza al menor a usar Placeta Junior:\n   a) Monedero digital en Placeta (Pz).\n   b) Academia GDLP de educación financiera.\n   c) Bonos y recompensas educativas.\n\n2. Ha leído y acepta los Términos y Condiciones.\n3. Ha leído y acepta la Política de Privacidad.\n4. Es el tutor legal con capacidad para consentir.\n5. Puede revocar este consentimiento en cualquier momento.\n6. Se responsabiliza de supervisar al menor.\n\nLa firma manuscrita digitalizada tiene validez legal conforme al Reglamento eIDAS (UE 910/2014) y Ley 6/2020.'
+      }
+    };
+    const docInfo = contenidos[docCode] || { titulo: doc.titulo_documento, contenido: doc.titulo_documento };
+
     const html = `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -368,7 +385,7 @@ router.get('/documento-verificable/:docId', async (req, res) => {
     </div>
 
     <div class="body">
-      <h2 style="color:#1c005f;margin-bottom:16px;font-size:22px">📜 ${doc.titulo_documento || 'Documento Legal'}</h2>
+      <h2 style="color:#1c005f;margin-bottom:16px;font-size:22px">📜 ${docInfo.titulo || doc.titulo_documento}</h2>
 
       <div class="meta">
         <div><strong>Código:</strong> ${docCode}</div>
@@ -382,13 +399,7 @@ router.get('/documento-verificable/:docId', async (req, res) => {
       </div>
 
       <h3 style="color:#3f00d8;margin-bottom:8px;font-size:16px">Contenido del documento</h3>
-      <div class="content">${(doc.titulo_documento || '').toUpperCase()}
-
-(El contenido completo de este documento está disponible en la aplicación PlacetaID Móvil y en el CRM GDLP. Este PDF es un resumen verificable del documento firmado digitalmente.)
-
-Código de documento: ${docCode}
-Hash de verificación: ${doc.hash_documento || '—'}
-</div>
+      <div class="content">${docInfo.contenido.replace(/\n/g, '<br>')}</div>
 
       ${firmaImg ? `
       <h3 style="color:#3f00d8;margin-bottom:8px;font-size:16px">✍️ Firma manuscrita del tutor</h3>
