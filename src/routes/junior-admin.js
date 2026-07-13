@@ -123,14 +123,27 @@ router.get('/junior/impuestos', verificarSesion, verificarRol('administrador', '
 // ── 7. DOCUMENTOS ───────────────────────────────────────────────────────────
 router.get('/junior/documentos', verificarSesion, verificarRol('administrador'), async (req, res) => {
   try {
-    const { data: d, error } = await supabase
-      .from('documentos_firmados')
-      .select('*')
-      .order('creado_en', { ascending: false })
-      .limit(200);
-    if (error) { console.error('[Docs]', error); return res.json([]); }
-    // Filter to only Placeta Junior documents (codigo_modelo contains 'PJ-')
-    const docs = (d || []).filter(doc => 
+    // First try s() helper
+    let d = await s('documentos_firmados', '*', { order: { field: 'creado_en', asc: false }, limit: 200 });
+    
+    // If s() failed (returned null), try direct supabase query
+    if (!d && supabase) {
+      const { data: dd, error } = await supabase
+        .from('documentos_firmados')
+        .select('*')
+        .order('creado_en', { ascending: false })
+        .limit(200);
+      if (!error) d = dd;
+    }
+
+    if (!d) {
+      // Last resort: try without order
+      const { data: dd } = await supabase.from('documentos_firmados').select('*').limit(200);
+      d = dd || [];
+    }
+
+    // Filter to only Placeta Junior documents
+    const docs = (Array.isArray(d) ? d : []).filter(doc => 
       (doc.codigo_modelo || '').includes('PJ-TYC') || 
       (doc.codigo_modelo || '').includes('PJ-PRV') || 
       (doc.codigo_modelo || '').includes('PJ-CON')
