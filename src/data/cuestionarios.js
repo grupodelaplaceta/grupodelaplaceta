@@ -747,3 +747,23 @@ export const EXAMENES_FINALES = {
     aprobado_min: 70
   }
 };
+
+/**
+ * Rango de edad para adaptar dificultad
+ */
+export function getRangoEdad(edad) {
+  if (edad <= 8) return '6-8';
+  if (edad <= 11) return '9-11';
+  return '12-15';
+}
+
+/**
+ * Costo de desbloqueo por nivel (2 al 35)
+ */
+export const COSTO_DESBLOQUEO_POR_NIVEL = {
+  2:10, 3:25, 4:50, 5:75, 6:100, 7:150, 8:200, 9:300, 10:500,
+  11:750, 12:1000, 13:1500, 14:2000, 15:3000, 16:4000, 17:5000,
+  18:6000, 19:7500, 20:9000, 21:10000, 22:12000, 23:14000,
+  24:16000, 25:18000, 26:20000, 27:22000, 28:25000, 29:28000,
+  30:30000, 31:35000, 32:40000, 33:45000, 34:50000, 35:60000
+};

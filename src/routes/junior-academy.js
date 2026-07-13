@@ -381,11 +381,11 @@ function verificarJunior(req, res, next) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  RBU — Renta Básica Universal Junior (racha diaria)
+//  RBU — Renta Básica Universal Junior (5 Pz diarios)
 // ═══════════════════════════════════════════════════════════════════════════
 
-const RBU_SEMANAL = [5, 4, 3, 3, 3, 3, 3]; // L-V: 5,4,3,3,3,3,3 Pz
-const RBU_FUNDACION = 'FUNDACION_BP'; // Cuenta origen
+const RBU_DIARIO = 5; // 5 Pz cada día
+const RBU_FUNDACION = 'FUNDACION_BP';
 
 router.get('/rbu', verificarJunior, async (req, res) => {
   try {
@@ -393,7 +393,6 @@ router.get('/rbu', verificarJunior, async (req, res) => {
     if (!junior) return res.status(404).json({ error: 'Perfil no encontrado' });
     const esDemo = junior.tutor_dip === '11111111D';
 
-    // Check if already claimed today
     const hoy = new Date().toISOString().slice(0, 10);
     const { data: yaReclamado } = await supabase.from('junior_transacciones')
       .select('id').eq('junior_id', junior.id).eq('tipo', 'rbu')
@@ -403,7 +402,7 @@ router.get('/rbu', verificarJunior, async (req, res) => {
       return res.json({ success: false, message: 'Ya has reclamado tu RBU hoy. ¡Vuelve mañana! 🌅' });
     }
 
-    // Calculate streak: count consecutive days claimed this week
+    // Count streak days this week
     let streak = 1;
     for (let d = 1; d < 7; d++) {
       const fecha = new Date(Date.now() - d * 86400000).toISOString().slice(0, 10);
@@ -413,15 +412,15 @@ router.get('/rbu', verificarJunior, async (req, res) => {
       if (dia && dia.length > 0) streak++;
       else break;
     }
-    const cantidad = RBU_SEMANAL[Math.min(streak - 1, 6)] || 3;
-    const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
 
-    // Process bank transaction (demo = simulated)
+    const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
+    const cantidad = RBU_DIARIO;
+
     if (!esDemo) {
       try {
         await apiBanco('transferir', {
           from: RBU_FUNDACION, to: junior.cuenta_banco || junior.dip,
-          cantidad, concepto: `RBU día ${streak} — Placeta Junior`, ip, iva: 0
+          cantidad, concepto: `RBU día ${streak} — Placeta Junior`, ip
         });
       } catch (e) { console.warn('[RBU] Banco:', e.message); }
     }
@@ -435,12 +434,12 @@ router.get('/rbu', verificarJunior, async (req, res) => {
     });
     await sbCreateJuniorLog({
       junior_id: junior.id, accion: 'rbu_reclamado',
-      detalle: `RBU día ${streak}: +${cantidad} Pz. Saldo: ${nuevoSaldo} Pz${esDemo ? ' (Demo)' : ''}. Fuente: Fundación Banco de La Placeta`, ip
+      detalle: `RBU +${cantidad} Pz (día ${streak}). Saldo: ${nuevoSaldo} Pz${esDemo ? ' (Demo)' : ''}`, ip
     });
 
     res.json({
       success: true, cantidad, streak, nuevo_saldo: nuevoSaldo,
-      message: `¡RBU reclamada! +${cantidad} Pz. Día ${streak} de tu racha semanal.`,
+      message: `¡RBU reclamada! +${cantidad} Pz. Día ${streak} de racha semanal.`,
       es_demo: esDemo
     });
   } catch (err) {
