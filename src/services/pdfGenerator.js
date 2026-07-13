@@ -379,37 +379,31 @@ class PDFGenerator {
 
     // ── Desglose IRM ──
     const pm = Number(d.patrimonio_medio || 0);
-    const SALDO_MAX = 500000;
-    const exceso = Math.max(0, pm - SALDO_MAX);
-    const ratio = SALDO_MAX > 0 ? exceso / SALDO_MAX : 0;
-    let tasaIRM = 0, irmDesc = 'No aplica';
-    if (pm <= SALDO_MAX) {
-      irmDesc = 'Patrimonio dentro del límite legal (≤ 500.000 Pz)';
-    } else {
-      if (ratio <= 0.5) tasaIRM = 0.05;
-      else if (ratio <= 1.0) tasaIRM = 0.10;
-      else if (ratio <= 2.0) tasaIRM = 0.20;
-      else tasaIRM = 0.35;
-      irmDesc = `${(tasaIRM * 100).toFixed(0)}% sobre exceso de ${exceso.toLocaleString()} Pz`;
-    }
+    const ia = Number(d.indice_acumulacion || 0);
     const irmCalc = Number(d.cuota_irm || 0);
+    const irmPct = Number(d.tipo_irm || d.irm_porcentaje || 0);
 
-    this._titulo2('IRM · Impuesto sobre la Renta de La Placeta');
-    this._fila('Límite exento', '500.000 Pz');
+    this._titulo2('IRM · Impuesto de Regulación Monetaria (Art. 4.10)');
     this._fila('Patrimonio Medio', `${pm.toLocaleString()} Pz`);
-    this._fila('Exceso sobre límite', `${exceso.toLocaleString()} Pz`);
-    this._fila('Ratio exceso/límite', `${ratio.toFixed(4)}`);
-    this._fila('Tasa aplicable', `${(tasaIRM * 100).toFixed(2)}%`);
-    this._fila('Cálculo', irmDesc);
+    this._fila('Índice de Acumulación (IA)', `${ia.toFixed(4)}`);
+    this._fila('Tipo aplicable', `${(irmPct).toFixed(2)}%`);
     this._fila('Cuota IRM', `${irmCalc.toLocaleString()} Pz`);
 
     // ── Desglose IGF ──
     const igfCalc = Number(d.cuota_igf || 0);
-    this._titulo2('IGF · Impuesto General sobre el Patrimonio');
+    const igfBase = Math.max(0, pm - 5000); // Primeros 5.000 exentos
+    const esEmpresa = d.tipo_sujeto === 'Empresa';
+    let igfDesc = '';
+    if (igfCalc > 0) {
+      if (esEmpresa) igfDesc = 'Art. 4.14 (empresa): 5% (5K-20K) + 35% (20K-500K) + 85% (>500K)';
+      else igfDesc = 'Art. 4.13 (individual): 10% (5K-20K) + 30% (20K-500K)';
+    }
+    this._titulo2('IGF · Impuesto de Grandes Fortunas (Art. 4.13-4.15)');
     this._fila('Base imponible (Patrimonio Medio)', `${pm.toLocaleString()} Pz`);
-    this._fila('Tipo impositivo', '1.5%');
-    this._fila('Cálculo', `${pm.toLocaleString()} Pz × 1.5% = ${igfCalc.toLocaleString()} Pz`);
+    this._fila('Primeros 5.000 Pz exentos', 'Sí (Art. 4.13)');
+    this._fila('Tarifa aplicada', igfDesc || 'Exento');
     this._fila('Cuota IGF', `${igfCalc.toLocaleString()} Pz`);
+    if (d.exencion_igf || d.exencion_aplicada) this._fila('Exención IGF', d.exencion_igf || (d.exencion_aplicada ? 'Sí' : 'No'));
 
     // ── Totales ──
     this._titulo2('Resumen');
