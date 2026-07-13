@@ -72,8 +72,8 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 
-// CORS restrictivo en producción
-const corsOrigins = process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : ['http://localhost:3001', 'http://localhost:3000', 'https://id.laplaceta.org'];
+// CORS — permite todas las apps y browsers
+const corsOrigins = process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : true;
 app.use(cors({ origin: corsOrigins, credentials: true }));
 
 app.use(express.json({ limit: '10mb' }));
