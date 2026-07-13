@@ -8,7 +8,24 @@ import {
 } from '../config/db-supabase.js';
 import { supabase } from '../config/supabase.js';
 import { generarCuestionarios, COSTO_DESBLOQUEO_POR_NIVEL, getRangoEdad } from '../data/cuestionarios.js';
-// Pago bancario via API backend-banco
+
+const BANCO_API = (process.env.BANCO_API_URL || 'https://api.banco.laplaceta.org').replace(/\/+$/, '');
+const CRM_KEY = process.env.CRM_READ_KEY || 'crm-gdlp-shared-key-2026';
+
+async function apiBanco(action, data = {}) {
+  try {
+    const r = await fetch(`${BANCO_API}/api/crm-state`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CRM-Key': CRM_KEY },
+      body: JSON.stringify({ action, ...data }),
+      signal: AbortSignal.timeout(10000)
+    });
+    if (!r.ok) throw new Error('Banco no disponible');
+    return r.json();
+  } catch (e) { return { success: false, error: e.message }; }
+}
+
+// Pago bancario via API backend-banco (legacy, kept for reference)
 async function desbloquearNivelBanco({ juniorAccountId, costoPlacetas, juniorDip, tutorDip }) {
   try {
     const BRIDGE = process.env.MONGO_BRIDGE_URL || 'http://localhost:8787';
