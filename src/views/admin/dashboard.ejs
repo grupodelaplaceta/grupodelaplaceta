@@ -33,9 +33,17 @@
     <div class="stat-card stat-info">
       <div class="stat-icon">📄</div>
       <div class="stat-content">
-        <span class="stat-value" id="totalDocumentos">—</span>
-        <span class="stat-label">Documentos</span>
-        <span class="stat-detail" id="docPendientes"><span class="spinner"></span> Cargando...</span>
+        <span class="stat-value"><%= docsFirmados || 0 %></span>
+        <span class="stat-label">Documentos Firmados</span>
+        <span class="stat-detail"><span class="status-dot yellow"></span><%= docsPendientes || 0 %> pendientes</span>
+      </div>
+    </div>
+    <div class="stat-card stat-accent" style="border-left:4px solid #FF6600">
+      <div class="stat-icon">🌈</div>
+      <div class="stat-content">
+        <span class="stat-value"><%= totalJuniors || 0 %></span>
+        <span class="stat-label">Placeta Junior</span>
+        <span class="stat-detail"><span class="status-dot green"></span><%= juniorsActivos || 0 %> activos</span>
       </div>
     </div>
   </div>
@@ -80,6 +88,18 @@
         <span class="action-icon">📄</span>
         <span class="action-title">Documentos</span>
         <span class="action-desc">Generar PDF, firmas y gestión documental</span>
+      </a>
+      <a href="/admin/firmas" class="action-card">
+        <span class="action-icon">✍️</span>
+        <span class="action-title">Firmas</span>
+        <span class="action-desc">Crear y gestionar documentos para firma</span>
+        <span class="action-badge"><%= docsPendientes || 0 %> pendientes</span>
+      </a>
+      <a href="/admin/placeta-junior" class="action-card" style="border-left:4px solid #FF6600">
+        <span class="action-icon">🌈</span>
+        <span class="action-title">Placeta Junior</span>
+        <span class="action-desc">Menores, academia, control parental, documentos</span>
+        <span class="action-badge" style="background:#FF6600;color:#fff"><%= juniorsActivos || 0 %> activos</span>
       </a>
       <a href="/admin/rgpd" class="action-card">
         <span class="action-icon">🔒</span>
