@@ -52,7 +52,7 @@ router.get('/junior/stats', verificarSesion, verificarRol('administrador', 'junt
 // ── 2. JUNIORS ──────────────────────────────────────────────────────────────
 router.get('/junior/list', verificarSesion, verificarRol('administrador', 'junta'), async (req, res) => {
   try {
-    const d = await s('junior_menores', '*, tutor:solicitantes!junior_menores_tutor_dip_fkey(dip,alias,nombre_real,email)', { order: { field: 'creado_en', asc: false }, ...(req.query.estado ? { eq: { estado: req.query.estado } } : {}) });
+    const d = await s('junior_menores', '*', { order: { field: 'creado_en', asc: false }, ...(req.query.estado ? { eq: { estado: req.query.estado } } : {}) });
     if (d) return res.json(d);
     throw new Error('supabase_null');
   } catch {
@@ -67,7 +67,7 @@ router.get('/junior/list', verificarSesion, verificarRol('administrador', 'junta
 router.get('/junior/:dip', verificarSesion, verificarRol('administrador', 'junta'), async (req, res) => {
   try {
     if (!supabase) throw new Error('no_supabase');
-    const { data: j } = await supabase.from('junior_menores').select('*, tutor:solicitantes!junior_menores_tutor_dip_fkey(dip,alias,nombre_real,email)').eq('dip', req.params.dip).limit(1).single();
+    const { data: j } = await supabase.from('junior_menores').select('*').eq('dip', req.params.dip).limit(1).single();
     if (!j) return res.json({ junior: null, limites_parentales: null });
     const cp = await s('junior_control_parental', '*', { eq: { junior_id: j.id } });
     return res.json({ junior: j, limites_parentales: cp?.[0] || null });
@@ -86,7 +86,7 @@ router.post('/junior/:id/estado', verificarSesion, verificarRol('administrador',
 // ── 3. CONTROL PARENTAL ─────────────────────────────────────────────────────
 router.get('/junior/control-parental', verificarSesion, verificarRol('administrador', 'junta'), async (req, res) => {
   try {
-    const d = await s('junior_control_parental', '*, junior:junior_menores!junior_control_parental_junior_id_fkey(nombre,apellidos,dip)', { order: { field: 'actualizado_en', asc: false } });
+    const d = await s('junior_control_parental', '*', { order: { field: 'actualizado_en', asc: false } });
     if (d) return res.json(d);
     throw new Error('null');
   } catch { return res.json([]); }
@@ -95,7 +95,7 @@ router.get('/junior/control-parental', verificarSesion, verificarRol('administra
 // ── 4. AUTORIZACIONES ───────────────────────────────────────────────────────
 router.get('/junior/autorizaciones', verificarSesion, verificarRol('administrador'), async (req, res) => {
   try {
-    const d = await s('junior_logs', '*, junior:junior_menores!junior_logs_junior_id_fkey(nombre,apellidos,dip)', { in: { accion: ['solicitar_autorizacion_tutor','acceso_aprobado','vinculacion_tutor'] }, order: { field: 'creado_en', asc: false }, limit: 200 });
+    const d = await s('junior_logs', '*', { in: { accion: ['solicitar_autorizacion_tutor','acceso_aprobado','vinculacion_tutor'] }, order: { field: 'creado_en', asc: false }, limit: 200 });
     return res.json(d || []);
   } catch { return res.json([]); }
 });
@@ -103,8 +103,8 @@ router.get('/junior/autorizaciones', verificarSesion, verificarRol('administrado
 // ── 5. VINCULACIONES ────────────────────────────────────────────────────────
 router.get('/junior/vinculaciones', verificarSesion, verificarRol('administrador', 'junta'), async (req, res) => {
   try {
-    const d = await s('junior_menores', 'dip,nombre,apellidos,tutor_dip,tutor_nombre,firmado_en,estado', { eq: { estado: 'activo' }, order: { field: 'creado_en', asc: false } });
-    if (d) return res.json(d.map(j => ({ dip_menor: j.dip, nombre_menor: `${j.nombre} ${j.apellidos}`, dip_tutor: j.tutor_dip, nombre_tutor: j.tutor_nombre, firmado_en: j.firmado_en, estado: j.estado })));
+    const d = await s('junior_menores', 'dip,nombre,apellidos,tutor_dip,tutor_nombre,estado,creado_en', { eq: { estado: 'activo' }, order: { field: 'creado_en', asc: false } });
+    if (d) return res.json(d.map(j => ({ dip_menor: j.dip, nombre_menor: `${j.nombre} ${j.apellidos}`, dip_tutor: j.tutor_dip, nombre_tutor: j.tutor_nombre, vinculado_en: j.creado_en, estado: j.estado })));
     throw new Error('null');
   } catch { return res.json([]); }
 });
@@ -123,9 +123,15 @@ router.get('/junior/impuestos', verificarSesion, verificarRol('administrador', '
 // ── 7. DOCUMENTOS ───────────────────────────────────────────────────────────
 router.get('/junior/documentos', verificarSesion, verificarRol('administrador'), async (req, res) => {
   try {
-    const d = await s('documentos_firmados', '*, firmante:solicitantes!documentos_firmados_firmado_por_fkey(alias,dip)', { in: { codigo_modelo: ['PJ-TYC-001','PJ-PRV-001','PJ-CON-001'] }, order: { field: 'creado_en', asc: false }, limit: 100 });
+    const { data: d, error } = await supabase
+      .from('documentos_firmados')
+      .select('*')
+      .or('codigo_modelo.ilike.%PJ-TYC-001%,codigo_modelo.ilike.%PJ-PRV-001%,codigo_modelo.ilike.%PJ-CON-001%')
+      .order('creado_en', { ascending: false })
+      .limit(100);
+    if (error) { console.error('[Docs]', error); return res.json([]); }
     return res.json(Array.isArray(d) ? d : []);
-  } catch { return res.json([]); }
+  } catch (err) { console.error('[Docs]', err); return res.json([]); }
 });
 
 router.post('/junior/documentos/crear', verificarSesion, verificarRol('administrador'), async (req, res) => {
@@ -146,7 +152,7 @@ router.post('/junior/documentos/crear', verificarSesion, verificarRol('administr
 // ── 8. LOGS ─────────────────────────────────────────────────────────────────
 router.get('/junior/logs', verificarSesion, verificarRol('administrador'), async (req, res) => {
   try {
-    const d = await s('junior_logs', '*, junior:junior_menores!junior_logs_junior_id_fkey(nombre,apellidos,dip)', { order: { field: 'creado_en', asc: false }, limit: 100 });
+    const d = await s('junior_logs', '*', { order: { field: 'creado_en', asc: false }, limit: 100 });
     return res.json(d || []);
   } catch { return res.json([]); }
 });
