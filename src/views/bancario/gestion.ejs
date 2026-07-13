@@ -49,11 +49,11 @@
         apiFetch('/api/bancario-proxy/resumen-cuentas')
       ]);
       document.getElementById('kpiCuentas').textContent = resumen.totalCuentas || '—';
-      document.getElementById('kpiMasa').textContent = formatPz(resumen.masaMonetaria || 0);
+      document.getElementById('kpiMasa').textContent = formatPz(resumen.masaMonetaria || resumen.saldoTotal || 0);
       document.getElementById('kpiTx').textContent = resumen.totalTransacciones || '—';
       document.getElementById('kpiTesoro').textContent = formatPz(resumen.tesoro || 0);
       const tb = document.getElementById('cuentasBody');
-      tb.innerHTML = (cuentas || []).map(c => `<tr><td><strong>${c.tipo_cuenta}</strong></td><td>${c.total}</td><td>${formatPz(c.saldo_total||0)}</td><td>${c.total>0?formatPz((c.saldo_total||0)/c.total):'—'}</td></tr>`).join('') || '<tr><td colspan="4">Sin datos</td></tr>';
+      tb.innerHTML = (cuentas || []).map(c => '<tr><td><strong>'+(c.tipo_cuenta||'—')+'</strong></td><td>'+(c.total||0)+'</td><td>'+formatPz(c.saldo_total||0)+'</td><td>'+(c.total>0?formatPz((c.saldo_total||0)/c.total):'—')+'</td></tr>').join('') || '<tr><td colspan="4">Sin datos</td></tr>';
     } catch(e) { console.error(e); }
   }
 

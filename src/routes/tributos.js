@@ -156,17 +156,26 @@ router.post('/contributors/alta-rapida', verificarSesion, verificarRol('administ
     const placetaId = usuario.placeid || `PLID-${usuario.dip}`;
     const nombre = usuario.nombre_real || usuario.alias || `Usuario ${dip}`;
 
+    // Detectar si es junior (régimen Capitalia)
+    let esJunior = false;
+    try {
+      const { data: jr } = await supabase.from('junior_menores').select('id').eq('dip', dip).limit(1);
+      esJunior = !!(jr && jr.length);
+    } catch (_) {}
+
     const existente = await sbGetTributosContributorByPlacetaId(placetaId).catch(() => null);
     if (existente) return res.json({ success: true, yaExiste: true, contributor: existente });
 
     const contributor = await sbCreateTributosContributor({
       id: crypto.randomUUID?.() || String(Date.now()), placeta_id: placetaId,
-      dip, nombre, tipo_sujeto: 'Fisico', estado_fiscal: 'Al Dia',
+      dip, nombre, tipo_sujeto: esJunior ? 'Junior' : 'Fisico',
+      estado_fiscal: esJunior ? 'Capitalia' : 'Al Dia',
       fecha_alta_tributos: new Date().toISOString(),
-      roles_json: ['ciudadano'], iban: null, eip: null
+      roles_json: esJunior ? ['junior', 'capitalia'] : ['ciudadano'],
+      iban: null, eip: null
     });
 
-    return res.json({ success: true, contributor });
+    return res.json({ success: true, contributor, esJunior });
   } catch (err) {
     const msg = err.message?.includes('does not exist')
       ? 'Tabla tributos_contribuyentes no existe en Supabase. Ejecuta el script SQL primero.'

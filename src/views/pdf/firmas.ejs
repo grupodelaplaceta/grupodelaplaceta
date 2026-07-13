@@ -2,42 +2,6 @@
 <p class="dashboard-date">Sistema de Firma Digital vía PlacetaID · Firma manuscrita con validez eIDAS</p>
 
 <div class="section">
-  <h2>✍️ Crear Documento para Firma</h2>
-  <div class="stats-grid">
-    <div class="stat-card">
-      <form id="crearDocumentoForm" style="width:100%">
-        <div class="form-group">
-          <label>Código de Modelo</label>
-          <select name="codigoModelo" style="width:100%;padding:10px;border:2px solid var(--border);border-radius:var(--radius)">
-            <optgroup label="Justicia">
-              <option value="GDLP-JUS-001">GDLP-JUS-001: Inicio Expediente</option>
-              <option value="GDLP-JUS-002">GDLP-JUS-002: Medidas Cautelares</option>
-              <option value="GDLP-JUS-003">GDLP-JUS-003: Resolución Sancionadora</option>
-              <option value="GDLP-JUS-004">GDLP-JUS-004: Decreto de Expulsión</option>
-            </optgroup>
-            <optgroup label="Hacienda">
-              <option value="GDLP-HAC-010">GDLP-HAC-010: Requerimiento Descubierto</option>
-            </optgroup>
-            <optgroup label="Secretaría">
-              <option value="GDLP-SEC-020">GDLP-SEC-020: Certificado de Baja</option>
-              <option value="GDLP-SEC-021">GDLP-SEC-021: Certificado ARCO</option>
-            </optgroup>
-            <optgroup label="Placeta Junior">
-              <option value="PJ-TYC-001">PJ-TYC-001: Términos y Condiciones Junior</option>
-              <option value="PJ-PRV-001">PJ-PRV-001: Política Privacidad Junior</option>
-              <option value="PJ-CON-001">PJ-CON-001: Consentimiento Tutor Junior</option>
-            </optgroup>
-          </select>
-        </div>
-        <div class="form-group"><label>Título</label><input type="text" name="titulo" required></div>
-        <div class="form-group"><label>Contenido</label><textarea name="contenido" rows="3" style="width:100%;padding:10px;border:2px solid var(--border);border-radius:var(--radius)"></textarea></div>
-        <button type="submit" class="btn btn-primary btn-block">Crear Documento</button>
-      </form>
-    </div>
-  </div>
-</div>
-
-<div class="section">
   <h2>📋 Pendientes de Firma</h2>
   <div class="table-container"><table class="data-table"><thead><tr><th>Código</th><th>Título</th><th>Creado</th><th>Estado</th><th>Acción</th></tr></thead><tbody id="firmasPendientes"><tr><td colspan="5">Cargando...</td></tr></tbody></table></div>
 </div>

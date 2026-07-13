@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { verificarSesion, verificarRol } from '../middleware/auth.js';
 import { getDb } from '../config/db-supabase.js';
+import { supabase } from '../config/supabase.js';
 
 const router = Router();
 let raw = process.env.BANCO_API_URL || 'https://api.banco.laplaceta.org';
@@ -91,12 +92,47 @@ router.get('/resumen', verificarSesion, verificarRol('administrador', 'junta', '
       totalUsuarios: (state.users || []).length,
       totalCuentas: accounts.length,
       totalTransacciones: (state.transactions || []).length,
-      saldoTotal: accounts.reduce((sum, a) => sum + (a.balancePz || 0), 0),
+      masaMonetaria: accounts.reduce((sum, a) => sum + (a.balancePz || 0), 0),
       tesoro: tglp?.balancePz || 0,
       updatedAt: state.updatedAt
     });
   } catch (err) {
-    res.status(502).json({ error: err.message });
+    // Supabase fallback
+    try {
+      const { count: totalCuentas } = await supabase.from('cuentas_bancarias').select('*', { count: 'exact', head: true });
+      const { count: totalUsuarios } = await supabase.from('solicitantes').select('*', { count: 'exact', head: true });
+      const { count: totalTransacciones } = await supabase.from('transacciones').select('*', { count: 'exact', head: true });
+      res.json({ totalUsuarios: totalUsuarios || 0, totalCuentas: totalCuentas || 0, totalTransacciones: totalTransacciones || 0, masaMonetaria: 0, tesoro: 0 });
+    } catch { res.status(502).json({ error: err.message }); }
+  }
+});
+
+// ── Resumen de cuentas por tipo ────────────────────────────────────────────
+router.get('/resumen-cuentas', verificarSesion, verificarRol('administrador', 'junta', 'fiscal'), async (req, res) => {
+  try {
+    const state = await fetchBancoState(req);
+    const accounts = Array.isArray(state.accounts) ? state.accounts : Object.values(state.accounts || {});
+    const byType = {};
+    for (const a of accounts) {
+      const t = a.type || 'Otro';
+      if (!byType[t]) byType[t] = { tipo_cuenta: t, total: 0, saldo_total: 0 };
+      byType[t].total++;
+      byType[t].saldo_total += (a.balancePz || 0);
+    }
+    res.json(Object.values(byType));
+  } catch (err) {
+    // Supabase fallback
+    try {
+      const { data: cuentas } = await supabase.from('cuentas_bancarias').select('tipo_cuenta,saldo');
+      const byType = {};
+      for (const c of (cuentas || [])) {
+        const t = c.tipo_cuenta || 'Otro';
+        if (!byType[t]) byType[t] = { tipo_cuenta: t, total: 0, saldo_total: 0 };
+        byType[t].total++;
+        byType[t].saldo_total += (c.saldo || 0);
+      }
+      res.json(Object.values(byType));
+    } catch { res.json([]); }
   }
 });
 
