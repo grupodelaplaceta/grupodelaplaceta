@@ -1,31 +1,52 @@
-<h1>Documentos y Firmas <span style="color:#FF6600;font-size:.8rem">PlacetaID</span></h1>
-<p class="dashboard-date">Sistema de Firma Digital vía PlacetaID · Firma manuscrita con validez eIDAS</p>
+<div class="dashboard">
+  <div class="dashboard-header" style="display:flex;align-items:center;gap:16px">
+    <div style="width:64px;height:64px;background:linear-gradient(135deg,var(--p700),var(--p500));border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:32px;box-shadow:0 4px 16px rgba(90,47,194,.3)">🏛️</div>
+    <div>
+      <h1 style="margin:0">Documentos y Firmas</h1>
+      <p class="dashboard-date" style="margin:2px 0 0">Sistema de Firma Digital · Grupo de La Placeta · 2026</p>
+    </div>
+  </div>
 
-<div class="section">
-  <h2>📋 Pendientes de Firma</h2>
-  <div class="table-container"><table class="data-table"><thead><tr><th>Código</th><th>Título</th><th>Creado</th><th>Estado</th><th>Acción</th></tr></thead><tbody id="firmasPendientes"><tr><td colspan="5">Cargando...</td></tr></tbody></table></div>
-</div>
+  <div class="section" style="margin-top:24px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <h2 style="margin:0;font-size:18px">📋 Pendientes de Firma</h2>
+      <span class="badge" id="pendientesCount" style="background:var(--warning);color:#fff">0</span>
+    </div>
+    <div class="table-container">
+      <table class="data-table">
+        <thead><tr><th>Código</th><th>Documento</th><th>Creado</th><th>Estado</th><th>Firmar</th></tr></thead>
+        <tbody id="firmasPendientes"><tr><td colspan="5" class="loading-cell">Cargando...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
 
-<div class="section">
-  <h2>✅ Documentos Firmados</h2>
-  <div class="table-container"><table class="data-table"><thead><tr><th>Código</th><th>Título</th><th>Firmado por</th><th>Fecha</th><th>Hash</th><th>Acciones</th></tr></thead><tbody id="firmasCompletadas"><tr><td colspan="6">Cargando...</td></tr></tbody></table></div>
+  <div class="section">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <h2 style="margin:0;font-size:18px">✅ Documentos Firmados</h2>
+      <span class="badge" id="firmadosCount" style="background:var(--green);color:#fff">0</span>
+    </div>
+    <div class="table-container">
+      <table class="data-table">
+        <thead><tr><th>Código</th><th>Documento</th><th>Firmado por</th><th>Fecha</th><th>Validación</th><th>Acciones</th></tr></thead>
+        <tbody id="firmasCompletadas"><tr><td colspan="6" class="loading-cell">Cargando...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div style="margin-top:24px;padding:16px 20px;background:var(--surface-glass);border-radius:var(--radius-lg);border:1px solid rgba(255,255,255,.7);display:flex;align-items:center;gap:12px;font-size:13px;color:var(--text-light)">
+    <span style="font-size:24px">🔐</span>
+    <span>Firma digital con validez legal conforme a <strong>eIDAS (UE 910/2014)</strong>. Los documentos firmados son verificables mediante su hash SHA-256.</span>
+  </div>
 </div>
 
 <script>
-  // Fallback si crm.js aún no ha cargado
   if (typeof apiFetch === 'undefined') {
     window.apiFetch = async (url, opts) => {
       const r = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...opts });
       if (!r.ok) { let m = 'HTTP ' + r.status; try { const e = await r.json(); if (e.error) m += ': ' + e.error; } catch {} throw new Error(m); }
       return r.json();
     };
-    window.mostrarMensaje = (tipo, msg) => {
-      const d = document.getElementById('mensajes');
-      if (!d) return alert(msg);
-      d.innerHTML += '<div class="toast toast-' + tipo + '">' + msg + '</div>';
-      setTimeout(() => { const t = d.querySelector('.toast'); if (t) t.remove(); }, 4000);
-    };
-    window.formatPz = (n) => (n||0).toLocaleString('es-ES') + ' Pz';
+    window.mostrarMensaje = (tipo, msg) => { const d = document.getElementById('mensajes'); if (!d) return alert(msg); d.innerHTML += '<div class="toast toast-' + tipo + '">' + msg + '</div>'; setTimeout(() => { const t = d.querySelector('.toast'); if (t) t.remove(); }, 4000); };
     window.formatFecha = (d) => d ? new Date(d).toLocaleDateString('es-ES') : '—';
   }
 
@@ -33,31 +54,34 @@
     try {
       const docs = await apiFetch('/api/firma/documentos');
       const pendientes = docs.filter(d => d.estado === 'pendiente');
-      document.getElementById('firmasPendientes').innerHTML = pendientes.length === 0
-        ? '<tr><td colspan="5">Sin documentos pendientes</td></tr>'
+      const firmados = docs.filter(d => d.estado === 'firmado');
+      document.getElementById('pendientesCount').textContent = pendientes.length;
+      document.getElementById('firmadosCount').textContent = firmados.length;
+
+      document.getElementById('firmasPendientes').innerHTML = !pendientes.length
+        ? '<tr><td colspan="5"><div class="empty-state"><div class="empty-icon">✅</div><p>Sin documentos pendientes</p></div></td></tr>'
         : pendientes.map(d => `<tr>
-          <td><span class="badge">${d.codigo_modelo}</span></td>
-          <td>${d.titulo_documento}</td>
+          <td><span class="badge badge-pendiente">${d.codigo_modelo || '—'}</span></td>
+          <td><strong>${d.titulo_documento || '—'}</strong></td>
           <td>${formatFecha(d.creado_en)}</td>
-          <td><span class="badge" style="background:var(--warning);color:#fff">pendiente</span></td>
-          <td><button class="btn btn-success btn-sm" onclick="solicitarFirmaPlacetaID('${d.codigo_modelo}','${d.titulo_documento}')">✍️ Firmar vía PlacetaID</button></td>
+          <td><span class="tag tag-gold">⏳ Pendiente</span></td>
+          <td><button class="btn btn-success btn-sm" onclick="solicitarFirmaPlacetaID('${d.codigo_modelo}','${d.titulo_documento}')">✍️ Firmar</button></td>
         </tr>`).join('');
 
-      const firmados = docs.filter(d => d.estado === 'firmado');
-      document.getElementById('firmasCompletadas').innerHTML = firmados.length === 0
-        ? '<tr><td colspan="6">Sin documentos firmados</td></tr>'
+      document.getElementById('firmasCompletadas').innerHTML = !firmados.length
+        ? '<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">📄</div><p>Sin documentos firmados</p></div></td></tr>'
         : firmados.map(d => `<tr>
-          <td><span class="badge">${d.codigo_modelo}</span></td>
-          <td>${d.titulo_documento}</td>
+          <td><span class="badge badge-activo">${d.codigo_modelo || '—'}</span></td>
+          <td><strong>${d.titulo_documento || '—'}</strong></td>
           <td>${d.firmante_alias || d.firmado_por || '—'}</td>
           <td>${d.fecha_firma ? formatFecha(d.fecha_firma) : formatFecha(d.creado_en)}</td>
-          <td style="font-size:11px;font-family:monospace">${(d.firma_hash||'').substring(0,12)}...</td>
+          <td><span class="tag ${d.firma_hash ? 'tag-green' : 'tag-gray'}">${d.firma_hash ? '🔐 Válido' : '⚠️ Sin hash'}</span></td>
           <td style="display:flex;gap:6px">
-            <a href="/api/junior/documento-verificable/${d.id}" target="_blank" class="btn btn-sm btn-glass">📄 Ver PDF</a>
-            <button class="btn btn-sm btn-outline" onclick="verificar(${d.id})">🔍</button>
+            <a href="/api/junior/documento-verificable/${d.id}" target="_blank" class="btn btn-sm btn-glass" title="Ver PDF">📄 PDF</a>
+            <button class="btn btn-sm btn-outline" onclick="verificarDoc(${d.id})" title="Verificar integridad">🔍</button>
           </td>
         </tr>`).join('');
-    } catch(e) { console.error(e); }
+    } catch(e) { console.error('[Firmas]', e); }
   }
 
   async function solicitarFirmaPlacetaID(codigo, titulo) {
@@ -65,18 +89,17 @@
     if (!dip) return;
     try {
       const result = await apiFetch('/api/firma/firmar-manuscrito', {
-        method:'POST',
-        body:JSON.stringify({ codigo_modelo:codigo, firmante_dip:dip, firmante_nombre:'Admin CRM', firma_base64:'admin-approval' })
+        method:'POST', body:JSON.stringify({ codigo_modelo:codigo, firmante_dip:dip, firmante_nombre:'Admin CRM', firma_base64:'admin-approval' })
       });
-      if (result.success) { mostrarMensaje('success', `Firmado por ${dip}`); cargarDocumentos(); }
+      if (result.success) { mostrarMensaje('success', `✅ Firmado por ${dip}`); cargarDocumentos(); }
       else mostrarMensaje('error', result.error || 'Error');
     } catch(e) { mostrarMensaje('error', e.message); }
   }
 
-  async function verificar(id) {
+  async function verificarDoc(id) {
     try {
       const result = await apiFetch(`/api/firma/verificar/${id}`);
-      mostrarMensaje(result.valido ? 'success' : 'error', result.valido ? 'Documento VÁLIDO' : 'NO válido');
+      mostrarMensaje(result.valido ? 'success' : 'error', result.valido ? '✅ Documento VÁLIDO - Hash verificado' : '❌ Documento NO VÁLIDO');
     } catch(e) { mostrarMensaje('error', e.message); }
   }
 

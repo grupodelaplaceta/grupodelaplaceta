@@ -134,10 +134,35 @@ async function importarDePlacetaID() {
 }
 
 async function ejecutarImportacion() {
-  // ... existing import function
+  const checks = document.querySelectorAll('.importCheck:checked');
+  if (!checks.length) return alert('Selecciona al menos un ciudadano.');
+  const seleccionados = window._importables.filter(r => Array.from(checks).some(c => c.value === r.dip));
 
-  // ══ BATCH DELETE ══════════════════════════════════════════════════════════
+  let ok = 0, err = 0, skip = 0;
+  for (const r of seleccionados) {
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          alias: (r.nombre || 'user').toLowerCase().replace(/[^a-z0-9]/g,'') + r.dip.slice(-4),
+          nombre_real: r.nombre + ' ' + (r.apellidos || ''),
+          email: r.correo || r.dip + '@placeta.local',
+          fecha_nacimiento: r.fechaNacimiento ? r.fechaNacimiento.slice(0,10) : '2000-01-01',
+          password: Math.random().toString(36).slice(-12) + 'A1!',
+          dip: r.dip
+        })
+      });
+      if (res.status === 409) { skip++; continue; }
+      if (!res.ok) { err++; continue; }
+      ok++;
+    } catch { err++; }
+  }
+  alert(`✅ ${ok} importados, ⏭️ ${skip} ya existían, ❌ ${err} errores`);
+  cargarCiudadanos();
 }
+
+// ══ BATCH DELETE ══════════════════════════════════════════════════════════
 
 function toggleAll() {
   const checked = document.getElementById('selectAll').checked;
@@ -166,33 +191,6 @@ async function borrarSeleccionados() {
     } catch { fail++; }
   }
   alert(`✅ ${ok} borrados${fail ? ', ❌ ' + fail + ' fallaron' : ''}`);
-  cargarCiudadanos();
-}
-  const checks = document.querySelectorAll('.importCheck:checked');
-  if (!checks.length) return alert('Selecciona al menos un ciudadano.');
-  const seleccionados = window._importables.filter(r => Array.from(checks).some(c => c.value === r.dip));
-
-  let ok = 0, err = 0, skip = 0;
-  for (const r of seleccionados) {
-    try {
-      const res = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          alias: (r.nombre || 'user').toLowerCase().replace(/[^a-z0-9]/g,'') + r.dip.slice(-4),
-          nombre_real: r.nombre + ' ' + (r.apellidos || ''),
-          email: r.correo || r.dip + '@placeta.local',
-          fecha_nacimiento: r.fechaNacimiento ? r.fechaNacimiento.slice(0,10) : '2000-01-01',
-          password: Math.random().toString(36).slice(-12) + 'A1!',
-          dip: r.dip
-        })
-      });
-      if (res.status === 409) { skip++; continue; }
-      if (!res.ok) { err++; continue; }
-      ok++;
-    } catch { err++; }
-  }
-  alert(`✅ ${ok} importados, ⏭️ ${skip} ya existían, ❌ ${err} errores`);
   cargarCiudadanos();
 }
 
