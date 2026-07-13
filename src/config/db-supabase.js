@@ -1340,15 +1340,23 @@ export async function sbCreateJunior(data) {
 
 export async function sbFindJuniorByDip(dip) {
   const { data, error } = await supabase.from('junior_menores')
-    .select('*, tutor:solicitantes!junior_menores_tutor_dip_fkey(dip, alias, nombre_real, email)')
+    .select('*')
     .eq('dip', dip).limit(1).single();
-  if (error && error.code !== 'PGRST116') return null;
+  if (error && error.code !== 'PGRST116') {
+    // Try without FK join which may not exist
+    const { data: d2, error: e2 } = await supabase.from('junior_menores')
+      .select('*')
+      .eq('dip', dip).limit(1).maybeSingle();
+    if (e2) return null;
+    return d2;
+  }
+  if (error) return null;
   return data;
 }
 
 export async function sbFindJuniorByTutor(tutorDip) {
   const { data, error } = await supabase.from('junior_menores')
-    .select('*, tutor:solicitantes!junior_menores_tutor_dip_fkey(dip, alias, nombre_real, email)')
+    .select('*')
     .eq('tutor_dip', tutorDip)
     .order('creado_en', { ascending: false });
   if (error) return [];
@@ -1357,7 +1365,7 @@ export async function sbFindJuniorByTutor(tutorDip) {
 
 export async function sbListJuniors(filters = {}) {
   let query = supabase.from('junior_menores')
-    .select('*, tutor:solicitantes!junior_menores_tutor_dip_fkey(dip, alias, nombre_real, email)');
+    .select('*');
   if (filters.estado) query = query.eq('estado', filters.estado);
   if (filters.modalidad) query = query.eq('modalidad', filters.modalidad);
   query = query.order('creado_en', { ascending: false });
