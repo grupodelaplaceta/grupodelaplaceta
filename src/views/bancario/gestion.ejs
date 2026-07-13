@@ -1,164 +1,86 @@
 <div class="dashboard">
   <div class="dashboard-header">
     <h1>🏦 Gestión Bancaria</h1>
-    <p class="dashboard-date">Core Bancario y Divisa Placeta (Pz)</p>
-    <div style="display:flex;gap:8px;margin-top:12px">
-      <a href="/admin/audit-bancario" class="btn btn-sm btn-glass">🏛️ Panel de Gobierno</a>
-      <a href="/admin/empresas" class="btn btn-sm btn-glass">🏢 Empresas</a>
-      <a href="/admin/tributos" class="btn btn-sm btn-glass">🧾 Tributos</a>
-    </div>
+    <p class="dashboard-date">Core Bancario · Divisa Placeta (Pz) · Emisión y control monetario</p>
   </div>
 
   <div class="stats-grid">
-    <div class="stat-card stat-primary">
-      <div class="stat-icon">🏦</div>
-      <div class="stat-content">
-        <span class="stat-value" id="kpiCuentas">—</span>
-        <span class="stat-label">Cuentas</span>
-        <span class="stat-detail">Registradas en el core</span>
+    <div class="stat-card stat-primary"><div class="stat-icon">🏦</div><div class="stat-content"><span class="stat-value" id="kpiCuentas">—</span><span class="stat-label">Cuentas</span></div></div>
+    <div class="stat-card stat-success"><div class="stat-icon">💰</div><div class="stat-content"><span class="stat-value" id="kpiMasa">—</span><span class="stat-label">Masa Monetaria</span></div></div>
+    <div class="stat-card stat-info"><div class="stat-icon">📊</div><div class="stat-content"><span class="stat-value" id="kpiTx">—</span><span class="stat-label">Transacciones</span></div></div>
+    <div class="stat-card stat-warning"><div class="stat-icon">🏛️</div><div class="stat-content"><span class="stat-value" id="kpiTesoro">—</span><span class="stat-label">Tesorería</span></div></div>
+  </div>
+
+  <div class="section">
+    <h2>🪙 Emisión / Quema Monetaria</h2>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <form id="emisionForm" style="width:100%">
+          <h3 style="margin-bottom:12px">Emitir Placetas</h3>
+          <div class="form-group"><label>Cantidad</label><input type="number" name="cantidad" min="1" required placeholder="10000"></div>
+          <div class="form-group"><label>DIP destino</label><input type="text" name="destino_dip" required placeholder="00000000A"></div>
+          <div class="form-group"><label>Motivo</label><input type="text" name="motivo" placeholder="Pago de nóminas"></div>
+          <button type="submit" class="btn btn-success btn-block">Emitir</button>
+        </form>
       </div>
-    </div>
-    <div class="stat-card stat-success">
-      <div class="stat-icon">💰</div>
-      <div class="stat-content">
-        <span class="stat-value" id="kpiMasa">—</span>
-        <span class="stat-label">Masa Monetaria</span>
-        <span class="stat-detail">Total Pz en circulación</span>
-      </div>
-    </div>
-    <div class="stat-card stat-info">
-      <div class="stat-icon">📊</div>
-      <div class="stat-content">
-        <span class="stat-value" id="kpiTransacciones">—</span>
-        <span class="stat-label">Transacciones</span>
-        <span class="stat-detail">Registradas hoy</span>
-      </div>
-    </div>
-    <div class="stat-card stat-warning">
-      <div class="stat-icon">💳</div>
-      <div class="stat-content">
-        <span class="stat-value" id="kpiTarjetas">—</span>
-        <span class="stat-label">Tarjetas</span>
-        <span class="stat-detail">Emitidas</span>
+      <div class="stat-card">
+        <form id="quemaForm" style="width:100%">
+          <h3 style="margin-bottom:12px">🔥 Quemar Placetas</h3>
+          <div class="form-group"><label>ID Cuenta</label><input type="number" name="cuenta_id" required></div>
+          <div class="form-group"><label>Cantidad</label><input type="number" name="cantidad" min="1" required></div>
+          <div class="form-group"><label>Motivo</label><input type="text" name="motivo" placeholder="Exceso de capital"></div>
+          <button type="submit" class="btn btn-danger btn-block">Quemar</button>
+        </form>
       </div>
     </div>
   </div>
 
-<div class="section">
-  <h2>Emisión / Quema Monetaria</h2>
-  <div class="stats-grid">
-    <div class="stat-card">
-      <form id="emisionForm" data-api-form="/api/bancario/emision" style="width:100%">
-        <h3 style="margin-bottom:12px">🪙 Emitir Placetas</h3>
-        <div class="form-group">
-          <label>Cantidad a emitir</label>
-          <input type="number" name="cantidad" min="1" required placeholder="Ej: 10000">
-        </div>
-        <div class="form-group">
-          <label>DIP del destino</label>
-          <input type="text" name="destino_dip" required placeholder="00000000A">
-        </div>
-        <div class="form-group">
-          <label>Motivo</label>
-          <input type="text" name="motivo" placeholder="Ej: Pago de nóminas">
-        </div>
-        <button type="submit" class="btn btn-success btn-block">Emitir</button>
-      </form>
-    </div>
-    <div class="stat-card">
-      <form id="quemaForm" data-api-form="/api/bancario/quema" style="width:100%">
-        <h3 style="margin-bottom:12px">🔥 Quemar Placetas</h3>
-        <div class="form-group">
-          <label>ID de Cuenta</label>
-          <input type="number" name="cuenta_id" required placeholder="ID numérico de la cuenta">
-        </div>
-        <div class="form-group">
-          <label>Cantidad a quemar</label>
-          <input type="number" name="cantidad" min="1" required>
-        </div>
-        <div class="form-group">
-          <label>Motivo</label>
-          <input type="text" name="motivo" placeholder="Ej: Exceso de capital">
-        </div>
-        <button type="submit" class="btn btn-danger btn-block">Quemar</button>
-      </form>
-    </div>
-  </div>
-</div>
-
-<div class="section">
-  <h2>Resumen de Cuentas</h2>
-  <div class="table-container">
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>Tipo</th>
-          <th>Nº Cuentas</th>
-          <th>Saldo Total</th>
-          <th>Saldo Máximo</th>
-          <th>Promedio</th>
-        </tr>
-      </thead>
-      <tbody id="cuentasResumen">
-        <tr><td colspan="5" class="loading-cell">Cargando...</td></tr>
-      </tbody>
-    </table>
+  <div class="section">
+    <h2>📋 Cuentas por Tipo</h2>
+    <div class="table-container"><table class="data-table"><thead><tr><th>Tipo</th><th>Cuentas</th><th>Saldo Total</th><th>Promedio</th></tr></thead><tbody id="cuentasBody"><tr><td colspan="4">Cargando...</td></tr></tbody></table></div>
   </div>
 </div>
 
 <script>
-  async function cargarResumen() {
+  async function load() {
     try {
-      const reporte = await apiFetch('/api/admin/reporte-completo');
-      const tbody = document.getElementById('cuentasResumen');
-      tbody.innerHTML = reporte.cuentas_por_tipo.map(c => `
-        <tr>
-          <td><strong>${c.tipo_cuenta}</strong></td>
-          <td>${c.total}</td>
-          <td>${formatPz(c.saldo_total || 0)}</td>
-          <td>—</td>
-          <td>${c.total > 0 ? formatPz((c.saldo_total || 0) / c.total) : '—'}</td>
-        </tr>
-      `).join('');
-    } catch (e) {
-      document.getElementById('cuentasResumen').innerHTML = '<tr><td colspan="5" class="error-cell">Error</td></tr>';
-    }
+      const [resumen, cuentas] = await Promise.all([
+        apiFetch('/api/bancario-proxy/resumen'),
+        apiFetch('/api/bancario-proxy/resumen-cuentas')
+      ]);
+      document.getElementById('kpiCuentas').textContent = resumen.totalCuentas || '—';
+      document.getElementById('kpiMasa').textContent = formatPz(resumen.masaMonetaria || 0);
+      document.getElementById('kpiTx').textContent = resumen.totalTransacciones || '—';
+      document.getElementById('kpiTesoro').textContent = formatPz(resumen.tesoro || 0);
+      const tb = document.getElementById('cuentasBody');
+      tb.innerHTML = (cuentas || []).map(c => `<tr><td><strong>${c.tipo_cuenta}</strong></td><td>${c.total}</td><td>${formatPz(c.saldo_total||0)}</td><td>${c.total>0?formatPz((c.saldo_total||0)/c.total):'—'}</td></tr>`).join('') || '<tr><td colspan="4">Sin datos</td></tr>';
+    } catch(e) { console.error(e); }
   }
 
-  // Inicializar formularios con evento success
-  document.getElementById('emisionForm').addEventListener('submit', async (e) => {
+  document.getElementById('emisionForm').addEventListener('submit', async e => {
     e.preventDefault();
-    const form = e.target;
-    const btn = form.querySelector('button');
-    btn.disabled = true;
-    btn.textContent = 'Emitiendo...';
+    const btn = e.target.querySelector('button'); btn.disabled = true; btn.textContent='Emitiendo...';
     try {
-      const data = Object.fromEntries(new FormData(form));
-      const result = await apiFetch('/api/bancario/emision', { method: 'POST', body: JSON.stringify(data) });
+      const data = Object.fromEntries(new FormData(e.target));
+      const result = await apiFetch('/api/bancario/emision', {method:'POST', body:JSON.stringify(data)});
       mostrarMensaje('success', result.message);
-      if (result.detalle) {
-        mostrarMensaje('info', `Split: ${result.detalle.al_tesoro} al Tesoro, ${result.detalle.a_administracion} a Admin, ${result.detalle.al_destino} al destino`);
-      }
-      form.reset();
-    } catch (e) { mostrarMensaje('error', e.message); }
-    finally { btn.disabled = false; btn.textContent = 'Emitir'; }
+      if(result.detalle) mostrarMensaje('info', `Tesoro: ${result.detalle.al_tesoro} · Admin: ${result.detalle.a_administracion} · Destino: ${result.detalle.al_destino}`);
+      e.target.reset(); load();
+    } catch(err) { mostrarMensaje('error', err.message); }
+    finally { btn.disabled=false; btn.textContent='Emitir'; }
   });
 
-  document.getElementById('quemaForm').addEventListener('submit', async (e) => {
+  document.getElementById('quemaForm').addEventListener('submit', async e => {
     e.preventDefault();
-    const form = e.target;
-    const btn = form.querySelector('button');
-    btn.disabled = true;
-    btn.textContent = 'Quemando...';
+    const btn = e.target.querySelector('button'); btn.disabled = true; btn.textContent='Quemando...';
     try {
-      const data = Object.fromEntries(new FormData(form));
-      const result = await apiFetch('/api/bancario/quema', { method: 'POST', body: JSON.stringify(data) });
+      const data = Object.fromEntries(new FormData(e.target));
+      const result = await apiFetch('/api/bancario/quema', {method:'POST', body:JSON.stringify(data)});
       mostrarMensaje('success', result.message);
-      form.reset();
-    } catch (e) { mostrarMensaje('error', e.message); }
-    finally { btn.disabled = false; btn.textContent = 'Quemar'; }
+      e.target.reset(); load();
+    } catch(err) { mostrarMensaje('error', err.message); }
+    finally { btn.disabled=false; btn.textContent='Quemar'; }
   });
 
-  cargarResumen();
+  load();
 </script>
-</div>

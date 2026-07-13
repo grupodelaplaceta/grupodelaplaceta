@@ -126,17 +126,32 @@ router.post('/contributors/alta-rapida', verificarSesion, verificarRol('administ
       return res.json({ success: true, contributor });
     }
 
-    // Para personas: buscar por DIP
+    // Para personas: buscar por DIP — primero SQLite, luego Supabase
     if (!dip) return res.status(400).json({ error: 'DIP requerido' });
-    let usuario = await sbFindSolicitante(dip).catch(() => null);
-    // Fallback a SQLite si Supabase no responde
+    let usuario = null;
+    // Buscar en Supabase primero (fuente principal)
+    try {
+      usuario = await sbFindSolicitanteByDip(dip);
+    } catch (_) {}
+    // Fallback a SQLite
     if (!usuario) {
       try {
         const db = getDb();
-        usuario = db.prepare('SELECT * FROM solicitantes WHERE dip = ? OR alias = ?').get(dip, dip);
-      } catch (e) { /* SQLite fallback error */ }
+        usuario = db.prepare('SELECT * FROM solicitantes WHERE dip = ?').get(dip);
+      } catch (e) {}
     }
-    if (!usuario) return res.status(404).json({ error: 'Usuario no encontrado en PlacetaID' });
+    // Si no hay registro en CRM, crear contribuyente igualmente con datos mínimos
+    if (!usuario) {
+      const placetaId = `PLID-${dip}`;
+      const existente = await sbGetTributosContributorByPlacetaId(placetaId).catch(() => null);
+      if (existente) return res.json({ success: true, yaExiste: true, contributor: existente });
+      const contributor = await sbCreateTributosContributor({
+        id: crypto.randomUUID?.() || String(Date.now()), placeta_id: placetaId,
+        dip, nombre: `Ciudadano ${dip}`, tipo_sujeto: 'Fisico', estado_fiscal: 'Al Dia',
+        fecha_alta_tributos: new Date().toISOString(), roles_json: ['ciudadano'], iban: null
+      });
+      return res.json({ success: true, contributor });
+    }
 
     const placetaId = usuario.placeid || `PLID-${usuario.dip}`;
     const nombre = usuario.nombre_real || usuario.alias || `Usuario ${dip}`;

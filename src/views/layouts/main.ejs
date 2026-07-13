@@ -24,19 +24,15 @@
 
     <nav class="sidebar-nav">
       <div class="sidebar-group">
-        <div class="sidebar-group-title">Panel</div>
         <a href="/admin/dashboard" class="sidebar-link <%= pathActual === '/admin/dashboard' ? 'active' : '' %>">
           <span class="sl-icon">📊</span> Dashboard
         </a>
       </div>
 
       <div class="sidebar-group">
-        <div class="sidebar-group-title">Identidad</div>
+        <div class="sidebar-group-title">Ciudadanía</div>
         <a href="/admin/ciudadanos" class="sidebar-link <%= pathActual.startsWith('/admin/ciudadanos') ? 'active' : '' %>">
           <span class="sl-icon">👥</span> Ciudadanos
-        </a>
-        <a href="/admin/placetid" class="sidebar-link <%= pathActual.startsWith('/admin/placetid') ? 'active' : '' %>">
-          <span class="sl-icon">🔐</span> PlacetaID
         </a>
         <a href="/admin/placeta-junior" class="sidebar-link <%= pathActual.startsWith('/admin/placeta-junior') ? 'active' : '' %>">
           <span class="sl-icon">🌈</span> Placeta Junior
@@ -47,7 +43,7 @@
       </div>
 
       <div class="sidebar-group">
-        <div class="sidebar-group-title">Financiero</div>
+        <div class="sidebar-group-title">Finanzas</div>
         <a href="/admin/bancario" class="sidebar-link <%= pathActual.startsWith('/admin/bancario') ? 'active' : '' %>">
           <span class="sl-icon">🏦</span> Bancario
         </a>
@@ -58,11 +54,8 @@
 
       <div class="sidebar-group">
         <div class="sidebar-group-title">Documentos</div>
-        <a href="/admin/documentos" class="sidebar-link <%= pathActual.startsWith('/admin/documentos') ? 'active' : '' %>">
-          <span class="sl-icon">📄</span> Documentos
-        </a>
         <a href="/admin/firmas" class="sidebar-link <%= pathActual.startsWith('/admin/firmas') ? 'active' : '' %>">
-          <span class="sl-icon">✍️</span> Firmas
+          <span class="sl-icon">✍️</span> Firmas y Documentos
         </a>
       </div>
       </div>
