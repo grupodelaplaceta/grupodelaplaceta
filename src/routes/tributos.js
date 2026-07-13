@@ -1042,11 +1042,20 @@ router.post('/pdf/:tipo', verificarSesion, verificarRol('administrador', 'junta'
     switch (tipo) {
       case 'declaracion':
         // Enriquecer con datos del contribuyente si faltan
-        if ((!datos.nombre || datos.nombre === '—') && datos.placeta_id) {
-          try {
-            const c = await sbGetTributosContributorByPlacetaId(datos.placeta_id);
-            if (c) { datos.nombre = c.nombre; datos.dip = c.dip; datos.tipo_sujeto = c.tipo_sujeto; }
-          } catch {}
+        if (!datos.nombre || datos.nombre === '—' || !datos.placeta_id) {
+          const pid = datos.placeta_id || datos.cuenta_id_blp || datos.id;
+          if (pid && pid !== '—') {
+            try {
+              const c = await sbGetTributosContributorByPlacetaId(pid);
+              if (c) {
+                datos.placeta_id = c.placeta_id;
+                datos.nombre = c.nombre;
+                datos.dip = c.dip;
+                datos.tipo_sujeto = c.tipo_sujeto;
+                if (!datos.cuenta_id_blp) datos.cuenta_id_blp = c.placeta_id;
+              }
+            } catch {}
+          }
         }
         if (!datos.nombre) datos.nombre = datos.placeta_id || '—';
         if (!datos.dip) datos.dip = '—';
