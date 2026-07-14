@@ -410,10 +410,11 @@ router.get('/declarations', verificarSesion, verificarRol('administrador', 'junt
     const declarations = await sbListTributosDeclarations();
     // Enriquecer con datos del contribuyente y recalcular IRM/IGF sobre la marcha
     const enriched = await Promise.all(declarations.map(async (d) => {
-      if (!d.nombre && d.placeta_id) {
+      const pid = d.placeta_id || d.cuenta_id_blp;
+      if (!d.nombre && pid) {
         try {
-          const c = await sbGetTributosContributorByPlacetaId(d.placeta_id);
-          if (c) { d.nombre = c.nombre; d.dip = c.dip; d.tipo_sujeto = c.tipo_sujeto; d.eip = c.eip; }
+          const c = await sbGetTributosContributorByPlacetaId(pid);
+          if (c) { d.nombre = c.nombre; d.dip = c.dip; d.placeta_id = pid; d.tipo_sujeto = c.tipo_sujeto; d.eip = c.eip; }
         } catch {}
       }
       // Recalcular IRM/IGF sobre la marcha desde patrimonio

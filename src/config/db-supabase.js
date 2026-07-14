@@ -1282,6 +1282,7 @@ export async function sbCalculateDeclarationFromDailyBalances(placetaId, mesPeri
     declarationData.cuota_irm = cuotaIRM;
     declarationData.cuota_igf = cuotaIGF;
     declarationData.tipo_irm = tipoIRM;
+    declarationData.placeta_id = placetaId;
 
     if (existingDeclarations && existingDeclarations.length > 0) {
       const { data, error } = await sb.from('tributos_declaraciones')
@@ -1297,6 +1298,7 @@ export async function sbCalculateDeclarationFromDailyBalances(placetaId, mesPeri
     const { data, error } = await sb.from('tributos_declaraciones')
       .insert({
         id: crypto.randomUUID?.() || String(Date.now()),
+        placeta_id: placetaId,
         mes_periodo: mesPeriodo,
         cuenta_id_blp: placetaId,
         patrimonio_medio: patrimonioMedio,
