@@ -873,11 +873,16 @@ function verificarAuth(req, res, next) {
 }
 
 router.get('/ciudadano', verificarAuth, async (req, res) => {
-  const usuario = await sbFindSolicitanteById(req.session.usuario.id);
-  const docs = await sbFindDocumentosByUsuario(req.session.usuario.id, 10);
-  const notifs = await sbFindLogsByUsuario(req.session.usuario.id, 15);
-  res.render('public/ciudadano/dashboard', {
-    titulo: 'Mi Área', layout: 'layouts/publico', pathActual: '/ciudadano',
+  const usuario = req.session.usuario;
+  let docs = [], notifs = [];
+  try {
+    const fullUser = await sbFindSolicitanteById(usuario.id);
+    if (fullUser) Object.assign(usuario, fullUser);
+  } catch {}
+  try { docs = await sbFindDocumentosByUsuario(usuario.id, 10); } catch {}
+  try { notifs = await sbFindLogsByUsuario(usuario.id, 15); } catch {}
+  res.render('ciudadano/dashboard', {
+    titulo: 'Mi Área Personal', layout: 'layouts/main', pathActual: '/ciudadano',
     usuario, docs, notifs
   });
 });

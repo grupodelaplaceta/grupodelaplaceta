@@ -244,13 +244,13 @@
         </div>
         <div style="display:flex;gap:4px;align-items:center">
           <label style="font-size:12px;font-weight:600;color:var(--text-light)">📌 Estado:</label>
-          <select id="filterEstado" style="width:140px;padding:6px 10px;border:2px solid var(--line);border-radius:var(--radius);font-family:var(--font);font-size:13px">
+          <select id="filterEstado" style="width:150px;padding:6px 10px;border:2px solid var(--line);border-radius:var(--radius);font-family:var(--font);font-size:13px">
             <option value="">Todos</option>
             <option value="Borrador">📝 Borrador</option>
-            <option value="Pendiente_Aprobacion">⏳ Pendiente Aprobación</option>
-            <option value="Aprobada">✅ Aprobada</option>
-            <option value="Emitido">📨 Emitido</option>
-            <option value="Cobrado_Exito">💰 Cobrado</option>
+            <option value="pendiente">⏳ Pendiente Aprobación</option>
+            <option value="aprobada">✅ Aprobada</option>
+            <option value="emitida">📨 Emitida</option>
+            <option value="cobrada">💰 Cobrada</option>
           </select>
         </div>
         <button class="btn btn-sm btn-outline" onclick="filtrarDeclaraciones()">🔍 Filtrar</button>
@@ -618,11 +618,29 @@
           <select id="ecIban" class="form-input">${ibanOpts}</select>
           <small style="color:var(--text-muted);font-weight:400">El IBAN solo se usa para enviar la factura de impuestos. El cálculo usa TODAS las cuentas (personales, inversión, child).</small>
         </label>
-        <label style="font-weight:600;font-size:13px">EIP (solo empresas) <input type="text" id="ecEip" class="form-input" value="${contrib.eip || ''}"></label>
         <label style="font-weight:600;font-size:13px">Roles (JSON array) <input type="text" id="ecRoles" class="form-input" value='${JSON.stringify(contrib.roles_json || ['ciudadano'])}'></label>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <label style="font-weight:600;font-size:13px">Tipo de Cuenta
+          <select id="ecTipoCuenta" class="form-input">
+            <option value="">— Sin tipo específico —</option>
+            <option value="cuenta_personal" ${(contrib.roles_json||[]).includes('cuenta_personal')?'selected':''}>👤 Personal</option>
+            <option value="cuenta_empresa" ${(contrib.roles_json||[]).includes('cuenta_empresa')?'selected':''}>💼 Empresa</option>
+            <option value="cuenta_junior" ${(contrib.roles_json||[]).includes('cuenta_junior')?'selected':''}>🌈 Junior</option>
+            <option value="cuenta_inversion" ${(contrib.roles_json||[]).includes('cuenta_inversion')?'selected':''}>📈 Inversión</option>
+            <option value="cuenta_ahorros" ${(contrib.roles_json||[]).includes('cuenta_ahorros')?'selected':''}>🏦 Ahorros</option>
+          </select>
+        </label>
+        <label style="font-weight:600;font-size:13px">EIP
+          <div style="display:flex;gap:4px">
+            <input type="text" id="ecEip" class="form-input" value="${contrib.eip || ''}" style="flex:1">
+            <button class="btn btn-sm btn-outline" onclick="generarEipDesdeEditor('${placetaId}')" title="Auto-generar EIP">⚡</button>
+          </div>
+        </label>
       </div>
       <div style="display:flex;gap:12px;margin-top:16px;flex-wrap:wrap">
         <button class="btn btn-primary" onclick="guardarContribuyente('${placetaId}')">💾 Guardar</button>
+        <button class="btn btn-outline" onclick="guardarTipoCuenta('${placetaId}')">🏦 Guardar tipo cuenta</button>
         <button class="btn btn-outline" onclick="calcularContribuyente('${placetaId}','${contrib.nombre}')">📊 Calcular</button>
         <button class="btn btn-outline" onclick="detectarTipo('${placetaId}')">🤖 Auto-detectar</button>
         <button class="btn btn-secondary" onclick="this.closest('div[style]').parentElement.remove()">Cerrar</button>
@@ -712,6 +730,40 @@
     } catch(e) { r.innerHTML = '<div style="color:var(--red)">❌ ' + e.message + '</div>'; }
   }
 
+  // ── Guardar tipo de cuenta bancaria ──────────────────────────────────────
+  async function guardarTipoCuenta(placetaId) {
+    const tipoCuenta = document.getElementById('ecTipoCuenta')?.value;
+    if (!tipoCuenta) { mostrarToast('info', 'Selecciona un tipo de cuenta'); return; }
+    const r = document.getElementById('tcResultado');
+    r.innerHTML = '⏳ Guardando tipo de cuenta...';
+    try {
+      const d = await apiFetch(`/api/admin/tributos/contributors/${placetaId}/cuenta-tipo`, {
+        method: 'POST',
+        body: JSON.stringify({ tipo_cuenta: tipoCuenta })
+      });
+      r.innerHTML = d.success
+        ? '<div style="color:#166534;background:#f0fdf4;padding:10px;border-radius:8px">✅ Tipo de cuenta actualizado</div>'
+        : '<div style="color:var(--red)">❌ ' + (d.error || 'Error') + '</div>';
+      if (d.success) cargarContribuyentes();
+    } catch(e) { r.innerHTML = '<div style="color:var(--red)">❌ ' + e.message + '</div>'; }
+  }
+
+  // ── Generar EIP automático desde el editor ──────────────────────────────
+  async function generarEipDesdeEditor(placetaId) {
+    const r = document.getElementById('tcResultado');
+    r.innerHTML = '⏳ Generando EIP...';
+    try {
+      const d = await apiFetch(`/api/admin/tributos/contributors/${placetaId}/eip-auto`, { method: 'POST' });
+      if (d.success) {
+        document.getElementById('ecEip').value = d.eip;
+        r.innerHTML = '<div style="color:#166534;background:#f0fdf4;padding:10px;border-radius:8px">✅ EIP generado: ' + d.eip + '</div>';
+        cargarContribuyentes();
+      } else {
+        r.innerHTML = '<div style="color:var(--red)">❌ ' + (d.error || 'Error') + '</div>';
+      }
+    } catch(e) { r.innerHTML = '<div style="color:var(--red)">❌ ' + e.message + '</div>'; }
+  }
+
   async function migrarEsquema() {
     if (!confirm('¿Migrar esquema de tributos_contribuyentes?\nSe añadirán las columnas: tipo_contribucion, patrimonio_estimado, iban')) return;
     try {
@@ -720,27 +772,68 @@
     } catch(e) { mostrarToast('❌ ' + e.message, 'error'); }
   }
 
-  // ── ALTA EMPRESA ──────────────────────────────────────────────────────────
+  // ── ALTA EMPRESA (con EIP automático) ────────────────────────────────────
   async function abrirAltaEmpresa() {
     const div = document.createElement('div');
     div.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center';
     div.onclick = e => { if (e.target === div) div.remove(); };
-    div.innerHTML = `<div style="background:#fff;border-radius:16px;padding:28px;max-width:500px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+    div.innerHTML = `<div style="background:#fff;border-radius:16px;padding:28px;max-width:550px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.3)">
       <h3 style="margin:0 0 4px 0;color:#1c005f">🏢 Alta de Empresa</h3>
-      <p style="color:#888;margin-bottom:16px;font-size:13px">Registrar nueva empresa en Tributos</p>
+      <p style="color:#888;margin-bottom:16px;font-size:13px">Registrar nueva empresa en Tributos · El EIP se genera automáticamente</p>
       <div style="display:grid;gap:12px">
-        <label style="font-weight:600;font-size:13px">Nombre de la Empresa <input type="text" id="aeNombre" class="form-input" placeholder="MiEmpresa S.L."></label>
-        <label style="font-weight:600;font-size:13px">EIP (Identificador) <input type="text" id="aeEip" class="form-input" placeholder="EIP-XXXXXX"></label>
+        <label style="font-weight:600;font-size:13px">Nombre de la Empresa <input type="text" id="aeNombre" class="form-input" placeholder="MiEmpresa S.L." oninput="generarEipAuto()"></label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <label style="font-weight:600;font-size:13px">EIP (auto) <input type="text" id="aeEip" class="form-input" placeholder="Se genera automáticamente" readonly style="background:#f3f4f6;color:#6b7280"></label>
+          <label style="font-weight:600;font-size:13px">Tipo Cuenta
+            <select id="aeTipoCuenta" class="form-input">
+              <option value="cuenta_empresa">💼 Empresa</option>
+              <option value="cuenta_personal">👤 Personal</option>
+              <option value="cuenta_inversion">📈 Inversión</option>
+              <option value="cuenta_ahorros">🏦 Ahorros</option>
+            </select>
+          </label>
+        </div>
         <label style="font-weight:600;font-size:13px">DIP del Representante <input type="text" id="aeDip" class="form-input" placeholder="12345678A"></label>
         <label style="font-weight:600;font-size:13px">IBAN / Cuenta Bancaria <input type="text" id="aeIban" class="form-input" placeholder="CAPI-XXXXXXXX"></label>
       </div>
-      <div style="display:flex;gap:12px;margin-top:16px">
-        <button class="btn btn-primary" onclick="guardarAltaEmpresa()">💾 Dar de alta</button>
+      <div style="display:flex;gap:12px;margin-top:16px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="guardarAltaEmpresaNueva()">💾 Dar de alta con EIP auto</button>
+        <button class="btn btn-outline" onclick="guardarAltaEmpresa()">📝 Usar EIP manual</button>
         <button class="btn btn-secondary" onclick="this.closest('div[style]').parentElement.remove()">Cancelar</button>
       </div>
       <div id="aeResultado" style="margin-top:12px"></div>
     </div>`;
     document.body.appendChild(div);
+  }
+
+  function generarEipAuto() {
+    const nombre = document.getElementById('aeNombre').value;
+    if (!nombre) { document.getElementById('aeEip').value = ''; return; }
+    const siglas = nombre.replace(/[^a-zA-Z0-9\s]/g, '').split(/\s+/).map(w => w.charAt(0).toUpperCase()).join('').slice(0, 6);
+    const sufijo = Math.random().toString(36).substring(2, 6).toUpperCase();
+    document.getElementById('aeEip').value = siglas ? `EIP-${siglas}${sufijo}` : `EIP-${sufijo}`;
+  }
+
+  // Alta con EIP automático (usa endpoint /crear-empresa)
+  async function guardarAltaEmpresaNueva() {
+    const r = document.getElementById('aeResultado');
+    r.innerHTML = '⏳ Dando de alta con EIP automático...';
+    try {
+      const d = await apiFetch('/api/admin/tributos/crear-empresa', {
+        method: 'POST',
+        body: JSON.stringify({
+          nombre: document.getElementById('aeNombre').value,
+          dip_representante: document.getElementById('aeDip').value || null,
+          iban: document.getElementById('aeIban').value || null
+        })
+      });
+      if (d.success) {
+        r.innerHTML = '<div style="color:#166534;background:#f0fdf4;padding:10px;border-radius:8px">✅ Empresa creada: ' + d.eip + ' (' + d.placeta_id + ')</div>';
+        cargarContribuyentes();
+      } else {
+        r.innerHTML = '<div style="color:var(--red)">❌ ' + (d.error || 'Error') + '</div>';
+      }
+    } catch(e) { r.innerHTML = '<div style="color:var(--red)">❌ ' + e.message + '</div>'; }
   }
 
   async function guardarAltaEmpresa() {
@@ -754,7 +847,7 @@
         tipo_sujeto: 'Empresa',
         eip: document.getElementById('aeEip').value,
         iban: document.getElementById('aeIban').value || null,
-        roles_json: ['ciudadano', 'empresa']
+        roles_json: ['ciudadano', 'empresa', document.getElementById('aeTipoCuenta').value]
       };
       const d = await apiFetch('/api/admin/tributos/contributors', { method: 'POST', body: JSON.stringify(data) });
       r.innerHTML = d.success
@@ -805,12 +898,21 @@
     }
   }
 
+  function getEstadoFiltro(item) {
+    const p = item.id_permiso_junta || '';
+    if (p.startsWith('COBRADO')) return 'cobrada';
+    if (p.startsWith('APROBADA')) return 'aprobada';
+    if (p.startsWith('PENDIENTE_APROBACION') || p.startsWith('BYPASS')) return 'pendiente';
+    if (item.estado_pago === 'Emitido') return 'emitida';
+    return 'Borrador';
+  }
+
   function aplicarFiltrosYRender() {
     const mesFiltro = (document.getElementById('filterMesPeriodo')?.value || '').trim();
     const estadoFiltro = (document.getElementById('filterEstado')?.value || '').trim();
     let filtradas = _todasDeclaraciones;
     if (mesFiltro) filtradas = filtradas.filter(d => d.mes_periodo === mesFiltro);
-    if (estadoFiltro) filtradas = filtradas.filter(d => d.estado_pago === estadoFiltro);
+    if (estadoFiltro) filtradas = filtradas.filter(d => getEstadoFiltro(d) === estadoFiltro);
 
     document.getElementById('declTotalCount').textContent = filtradas.length;
     const tbody = document.querySelector('#declaracionesTable tbody');
@@ -819,38 +921,50 @@
       return;
     }
     tbody.innerHTML = filtradas.map(item => {
-      const estado = item.estado_pago || 'Borrador';
+      // Usar estado semántico del servidor
+      const estado = item._estado_semantico || item.estado_pago || 'Borrador';
+      const puedePublicar = item._puede_publicar !== false;
+      const puedeAprobar = item._puede_aprobar === true;
+      const puedeEmitir = item._puede_emitir === true;
+      const permiso = item.id_permiso_junta || '';
+      const esAprobada = permiso.startsWith('APROBADA');
+      const esCobrada = permiso.startsWith('COBRADO');
+      const esPendiente = permiso.startsWith('PENDIENTE_APROBACION') || permiso.startsWith('BYPASS');
+
       const nombreContrib = item.nombre || item.placeta_id || item.contributor_id || '—';
       const totalCuota = (item.cuota_irm || 0) + (item.cuota_igf || 0);
-      const estadoBadge = estado === 'Cobrado_Exito' ? 'badge-activo'
-        : estado === 'Aprobada' ? 'badge-login'
-        : estado === 'Emitido' ? 'badge-primary'
-        : estado === 'Pendiente_Aprobacion' ? 'badge-pendiente'
+      const estadoBadge = esCobrada ? 'badge-activo'
+        : esAprobada ? 'badge-login'
+        : item.estado_pago === 'Emitido' ? 'badge-primary'
+        : esPendiente ? 'badge-pendiente'
         : estado === 'Borrador' ? 'badge-baja' : 'badge-baja';
+      const estadoLabel = esCobrada ? '💰 Cobrada'
+        : esAprobada ? '✅ Aprobada'
+        : item.estado_pago === 'Emitido' ? '📨 Emitida'
+        : esPendiente ? '⏳ Pendiente Aprobación'
+        : '📝 Borrador';
       const bypassExplicado = item.bypass_junta_directiva
         ? '<span title="Aprobado sin Junta Directiva (bypass)">✅ Bypass</span>'
-        : (item.estado_pago === 'Aprobada' || item.estado_pago === 'Emitido' || item.estado_pago === 'Cobrado_Exito')
-          ? '<span title="Aprobado por Junta Directiva">🏛️ JD</span>'
-          : '—';
+        : esAprobada ? '<span title="Aprobado por Junta Directiva">🏛️ JD</span>'
+        : item.estado_pago === 'Emitido' ? '<span title="Emitida para cobro">📨 Emitida</span>'
+        : '—';
 
-      // Botones según estado
+      // Botones según estado semántico
       let acciones = '';
-      if (estado === 'Borrador') {
+      if (estado === 'Borrador' && !esPendiente && !esAprobada) {
         acciones = `
           <button class="btn btn-sm btn-primary" onclick="publicarDeclaracion('${item.id}')" title="Publicar → Pendiente Aprobación">📤 Publicar</button>
           <button class="btn btn-sm btn-success" onclick="aprobarDeclaracionDirecta('${item.id}')" title="Aprobar directamente (bypass Junta)">⚡ Bypass + Aprobar</button>
           <button class="btn btn-sm btn-danger" onclick="eliminarDeclaracion('${item.id}')" title="Eliminar borrador">🗑️</button>`;
-      } else if (estado === 'Pendiente_Aprobacion') {
+      } else if (esPendiente && !esAprobada) {
         acciones = `
           <button class="btn btn-sm btn-success" onclick="aprobarDeclaracion('${item.id}')" title="Aprobar para cobro">✅ Aprobar</button>
           <button class="btn btn-sm btn-outline" onclick="rechazarDeclaracion('${item.id}')" title="Rechazar → vuelve a Borrador">↩️ Rechazar</button>`;
-      } else if (estado === 'Aprobada') {
+      } else if (esAprobada && !esCobrada) {
         acciones = `
           <button class="btn btn-sm btn-warning" onclick="emitirDeclaracion('${item.id}')" title="Emitir y cobrar al banco">📨 Emitir + Cobrar</button>`;
-      } else if (estado === 'Emitido') {
-        acciones = `<span style="font-size:12px;color:var(--text-light)">📨 Emitida (pendiente cobro)</span>`;
-      } else if (estado === 'Cobrado_Exito') {
-        acciones = `<span style="font-size:12px;color:var(--success)">💰 Cobrada${item.transaction_id_blp ? ' · ID: ' + item.transaction_id_blp.slice(0,10) : ''}</span>`;
+      } else if (item.estado_pago === 'Emitido' || esCobrada) {
+        acciones = `<span style="font-size:12px;color:var(--success)">💰 ${esCobrada ? 'Cobrada' : 'Emitida'}${item.transaction_id_blp ? ' · ID: ' + item.transaction_id_blp.slice(0,10) : ''}</span>`;
       }
       acciones += ` <button class="btn btn-sm btn-glass" onclick="descargarPDFDeclaracion('${item.id}')" title="Descargar PDF">📄</button>`;
 
@@ -861,7 +975,7 @@
         <td title="PM: ${formatMoneda(item.patrimonio_medio)}">${formatMoneda(item.cuota_irm)}</td>
         <td>${formatMoneda(item.cuota_igf)}</td>
         <td><strong>${formatMoneda(totalCuota)}</strong></td>
-        <td><span class="badge ${estadoBadge}" style="cursor:help" title="${explicarEstado(estado)}">${estado.replace(/_/g,' ')}</span></td>
+        <td><span class="badge ${estadoBadge}" style="cursor:help" title="${explicarEstado(estado)}">${estadoLabel}</span></td>
         <td style="font-size:12px">${bypassExplicado}</td>
         <td>${item.updated_at ? new Date(item.updated_at).toLocaleDateString('es-ES') : '—'}</td>
         <td style="display:flex;gap:4px;flex-wrap:wrap">${acciones}</td>
@@ -874,10 +988,10 @@
   function explicarEstado(e) {
     const map = {
       'Borrador': '📝 Borrador — Sin publicar. Editable',
-      'Pendiente_Aprobacion': '⏳ Pendiente de aprobación por la Junta Directiva',
-      'Aprobada': '✅ Aprobada por la Junta — Lista para emitir y cobrar',
-      'Emitido': '📨 Emitida — Cobro pendiente de procesar',
-      'Cobrado_Exito': '💰 Cobrada con éxito — Pago realizado'
+      'pendiente': '⏳ Pendiente de aprobación por la Junta Directiva',
+      'aprobada': '✅ Aprobada por la Junta — Lista para emitir y cobrar',
+      'emitida': '📨 Emitida — Cobro pendiente de procesar',
+      'cobrada': '💰 Cobrada con éxito — Pago realizado'
     };
     return map[e] || e;
   }

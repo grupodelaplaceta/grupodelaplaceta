@@ -5,6 +5,20 @@ import { supabase } from '../config/supabase.js';
 
 const router = Router();
 
+// Helper seguro para consultas SQLite que pueden fallar (tabla no existe)
+function safeGet(db, sql, ...params) {
+  try {
+    const row = db.prepare(sql).get(...params);
+    return row || {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function safeGetTotal(db, sql, ...params) {
+  return safeGet(db, sql, ...params).total || 0;
+}
+
 // ── PANEL DE ADMINISTRACIÓN ─────────────────────────────────────────────────
 
 // GET /api/admin/dashboard - Estadísticas del dashboard
@@ -13,59 +27,59 @@ router.get('/dashboard', verificarSesion, verificarRol('administrador', 'junta')
 
   const stats = {
     usuarios: {
-      total: db.prepare('SELECT COUNT(*) as total FROM solicitantes').get().total,
-      activos: db.prepare("SELECT COUNT(*) as total FROM solicitantes WHERE estado='activo'").get().total,
-      pendientes: db.prepare("SELECT COUNT(*) as total FROM solicitantes WHERE estado='pendiente'").get().total,
-      suspendidos: db.prepare("SELECT COUNT(*) as total FROM solicitantes WHERE estado='suspendido'").get().total,
-      expulsados: db.prepare("SELECT COUNT(*) as total FROM solicitantes WHERE estado='expulsado'").get().total,
-      baja: db.prepare("SELECT COUNT(*) as total FROM solicitantes WHERE estado='baja'").get().total,
+      total: safeGetTotal(db, 'SELECT COUNT(*) as total FROM solicitantes'),
+      activos: safeGetTotal(db, "SELECT COUNT(*) as total FROM solicitantes WHERE estado='activo'"),
+      pendientes: safeGetTotal(db, "SELECT COUNT(*) as total FROM solicitantes WHERE estado='pendiente'"),
+      suspendidos: safeGetTotal(db, "SELECT COUNT(*) as total FROM solicitantes WHERE estado='suspendido'"),
+      expulsados: safeGetTotal(db, "SELECT COUNT(*) as total FROM solicitantes WHERE estado='expulsado'"),
+      baja: safeGetTotal(db, "SELECT COUNT(*) as total FROM solicitantes WHERE estado='baja'"),
       porFranja: {
-        tuteladaBasica: db.prepare("SELECT COUNT(*) as total FROM solicitantes WHERE franja_edad='Tutelada_Basica'").get().total,
-        tuteladaSenior: db.prepare("SELECT COUNT(*) as total FROM solicitantes WHERE franja_edad='Tutelada_Senior'").get().total,
-        altaPlena: db.prepare("SELECT COUNT(*) as total FROM solicitantes WHERE franja_edad='Alta_Plena'").get().total,
-        institucional: db.prepare("SELECT COUNT(*) as total FROM solicitantes WHERE franja_edad='Institucional'").get().total
+        tuteladaBasica: safeGetTotal(db, "SELECT COUNT(*) as total FROM solicitantes WHERE franja_edad='Tutelada_Basica'"),
+        tuteladaSenior: safeGetTotal(db, "SELECT COUNT(*) as total FROM solicitantes WHERE franja_edad='Tutelada_Senior'"),
+        altaPlena: safeGetTotal(db, "SELECT COUNT(*) as total FROM solicitantes WHERE franja_edad='Alta_Plena'"),
+        institucional: safeGetTotal(db, "SELECT COUNT(*) as total FROM solicitantes WHERE franja_edad='Institucional'")
       }
     },
     bancario: {
-      totalCuentas: db.prepare('SELECT COUNT(*) as total FROM cuentas_bancarias').get().total,
-      masaMonetaria: db.prepare("SELECT COALESCE(SUM(saldo),0) as total FROM cuentas_bancarias WHERE tipo_cuenta NOT IN ('Tesoro','Administracion')").get().total,
-      tesoro: db.prepare("SELECT COALESCE(saldo,0) as total FROM cuentas_bancarias WHERE tipo_cuenta='Tesoro'").get().total,
-      admin: db.prepare("SELECT COALESCE(saldo,0) as total FROM cuentas_bancarias WHERE tipo_cuenta='Administracion'").get().total,
-      cuentasNegativas: db.prepare("SELECT COUNT(*) as total FROM cuentas_bancarias WHERE saldo < 0 AND estado='activa'").get().total
+      totalCuentas: safeGetTotal(db, 'SELECT COUNT(*) as total FROM cuentas_bancarias'),
+      masaMonetaria: safeGetTotal(db, "SELECT COALESCE(SUM(saldo),0) as total FROM cuentas_bancarias WHERE tipo_cuenta NOT IN ('Tesoro','Administracion')"),
+      tesoro: safeGetTotal(db, "SELECT COALESCE(saldo,0) as total FROM cuentas_bancarias WHERE tipo_cuenta='Tesoro'"),
+      admin: safeGetTotal(db, "SELECT COALESCE(saldo,0) as total FROM cuentas_bancarias WHERE tipo_cuenta='Administracion'"),
+      cuentasNegativas: safeGetTotal(db, "SELECT COUNT(*) as total FROM cuentas_bancarias WHERE saldo < 0 AND estado='activa'")
     },
     justicia: {
-      expedientesAbiertos: db.prepare("SELECT COUNT(*) as total FROM expedientes_disciplinarios WHERE estado NOT IN ('firme','archivado')").get().total,
-      expedientesInstruccion: db.prepare("SELECT COUNT(*) as total FROM expedientes_disciplinarios WHERE estado='instruccion'").get().total,
-      expedientesAlegaciones: db.prepare("SELECT COUNT(*) as total FROM expedientes_disciplinarios WHERE estado='alegaciones'").get().total,
-      expedientesResolucion: db.prepare("SELECT COUNT(*) as total FROM expedientes_disciplinarios WHERE estado='resolucion'").get().total,
-      denunciasPendientes: db.prepare("SELECT COUNT(*) as total FROM denuncias WHERE estado='pendiente'").get().total,
-      totalSancionesAplicadas: db.prepare("SELECT COUNT(*) as total FROM multas_automaticas WHERE estado='pagada'").get().total
+      expedientesAbiertos: safeGetTotal(db, "SELECT COUNT(*) as total FROM expedientes_disciplinarios WHERE estado NOT IN ('firme','archivado')"),
+      expedientesInstruccion: safeGetTotal(db, "SELECT COUNT(*) as total FROM expedientes_disciplinarios WHERE estado='instruccion'"),
+      expedientesAlegaciones: safeGetTotal(db, "SELECT COUNT(*) as total FROM expedientes_disciplinarios WHERE estado='alegaciones'"),
+      expedientesResolucion: safeGetTotal(db, "SELECT COUNT(*) as total FROM expedientes_disciplinarios WHERE estado='resolucion'"),
+      denunciasPendientes: safeGetTotal(db, "SELECT COUNT(*) as total FROM denuncias WHERE estado='pendiente'"),
+      totalSancionesAplicadas: safeGetTotal(db, "SELECT COUNT(*) as total FROM multas_automaticas WHERE estado='pagada'")
     },
     fiscal: {
-      ultimoIRM: db.prepare('SELECT periodo, COUNT(*) as usuarios, SUM(importe_irm) as total_irm FROM impuestos_irm GROUP BY periodo ORDER BY periodo DESC LIMIT 1').get(),
-      multasPendientes: db.prepare("SELECT COUNT(*) as total FROM multas_automaticas WHERE estado='pendiente'").get().total,
-      rbuReclamadas: db.prepare('SELECT COUNT(*) as total FROM renta_basica_universal WHERE pagado=1').get().total,
-      rbuSemanaActual: db.prepare("SELECT COUNT(*) as total FROM renta_basica_universal WHERE semana = (SELECT semana FROM renta_basica_universal ORDER BY semana DESC LIMIT 1) AND pagado=1").get().total
+      ultimoIRM: safeGet(db, 'SELECT periodo, COUNT(*) as usuarios, SUM(importe_irm) as total_irm FROM impuestos_irm GROUP BY periodo ORDER BY periodo DESC LIMIT 1'),
+      multasPendientes: safeGetTotal(db, "SELECT COUNT(*) as total FROM multas_automaticas WHERE estado='pendiente'"),
+      rbuReclamadas: safeGetTotal(db, 'SELECT COUNT(*) as total FROM renta_basica_universal WHERE pagado=1'),
+      rbuSemanaActual: safeGetTotal(db, "SELECT COUNT(*) as total FROM renta_basica_universal WHERE semana = (SELECT semana FROM renta_basica_universal ORDER BY semana DESC LIMIT 1) AND pagado=1")
     },
     rgpd: {
       solicitudesARCO: {
-        total: db.prepare('SELECT COUNT(*) as total FROM solicitudes_arco').get().total,
-        pendientes: db.prepare("SELECT COUNT(*) as total FROM solicitudes_arco WHERE estado='pendiente'").get().total,
-        completadas: db.prepare("SELECT COUNT(*) as total FROM solicitudes_arco WHERE estado='completado'").get().total,
+        total: safeGetTotal(db, 'SELECT COUNT(*) as total FROM solicitudes_arco'),
+        pendientes: safeGetTotal(db, "SELECT COUNT(*) as total FROM solicitudes_arco WHERE estado='pendiente'"),
+        completadas: safeGetTotal(db, "SELECT COUNT(*) as total FROM solicitudes_arco WHERE estado='completado'"),
         porDerecho: {
-          acceso: db.prepare("SELECT COUNT(*) as total FROM solicitudes_arco WHERE derecho='acceso'").get().total,
-          rectificacion: db.prepare("SELECT COUNT(*) as total FROM solicitudes_arco WHERE derecho='rectificacion'").get().total,
-          supresion: db.prepare("SELECT COUNT(*) as total FROM solicitudes_arco WHERE derecho='supresion'").get().total,
-          oposicion: db.prepare("SELECT COUNT(*) as total FROM solicitudes_arco WHERE derecho='oposicion'").get().total,
-          limitacion: db.prepare("SELECT COUNT(*) as total FROM solicitudes_arco WHERE derecho='limitacion'").get().total
+          acceso: safeGetTotal(db, "SELECT COUNT(*) as total FROM solicitudes_arco WHERE derecho='acceso'"),
+          rectificacion: safeGetTotal(db, "SELECT COUNT(*) as total FROM solicitudes_arco WHERE derecho='rectificacion'"),
+          supresion: safeGetTotal(db, "SELECT COUNT(*) as total FROM solicitudes_arco WHERE derecho='supresion'"),
+          oposicion: safeGetTotal(db, "SELECT COUNT(*) as total FROM solicitudes_arco WHERE derecho='oposicion'"),
+          limitacion: safeGetTotal(db, "SELECT COUNT(*) as total FROM solicitudes_arco WHERE derecho='limitacion'")
         }
       },
-      consentimientos: db.prepare('SELECT COUNT(*) as total FROM consentimientos').get().total
+      consentimientos: safeGetTotal(db, 'SELECT COUNT(*) as total FROM consentimientos')
     },
     documentos: {
-      total: db.prepare('SELECT COUNT(*) as total FROM documentos_firmados').get().total,
-      pendientes: db.prepare("SELECT COUNT(*) as total FROM documentos_firmados WHERE estado='pendiente'").get().total,
-      firmados: db.prepare("SELECT COUNT(*) as total FROM documentos_firmados WHERE estado='firmado'").get().total
+      total: safeGetTotal(db, 'SELECT COUNT(*) as total FROM documentos_firmados'),
+      pendientes: safeGetTotal(db, "SELECT COUNT(*) as total FROM documentos_firmados WHERE estado='pendiente'"),
+      firmados: safeGetTotal(db, "SELECT COUNT(*) as total FROM documentos_firmados WHERE estado='firmado'")
     }
   };
 
@@ -94,23 +108,27 @@ router.get('/logs', verificarSesion, verificarRol('administrador'), (req, res) =
 router.get('/reporte-completo', verificarSesion, verificarRol('administrador', 'junta'), (req, res) => {
   const db = getDb();
   
+  const sg = (sql) => { try { return db.prepare(sql).get() || {}; } catch { return {}; } };
+  const sa = (sql) => { try { return db.prepare(sql).all(); } catch { return []; } };
+  const sgt = (sql) => sg(sql).t || 0;
+
   const reporte = {
     generado_en: new Date().toISOString(),
     resumen: {
-      total_usuarios: db.prepare('SELECT COUNT(*) as t FROM solicitantes').get().t,
-      usuarios_activos: db.prepare("SELECT COUNT(*) as t FROM solicitantes WHERE estado='activo'").get().t,
-      masa_monetaria_circulante: db.prepare("SELECT COALESCE(SUM(saldo),0) as t FROM cuentas_bancarias WHERE tipo_cuenta NOT IN ('Tesoro','Administracion')").get().t,
-      expedientes_activos: db.prepare("SELECT COUNT(*) as t FROM expedientes_disciplinarios WHERE estado NOT IN ('firme','archivado')").get().t,
-      solicitudes_rgpd_pendientes: db.prepare("SELECT COUNT(*) as t FROM solicitudes_arco WHERE estado='pendiente'").get().t
+      total_usuarios: sgt('SELECT COUNT(*) as t FROM solicitantes'),
+      usuarios_activos: sgt("SELECT COUNT(*) as t FROM solicitantes WHERE estado='activo'"),
+      masa_monetaria_circulante: sgt("SELECT COALESCE(SUM(saldo),0) as t FROM cuentas_bancarias WHERE tipo_cuenta NOT IN ('Tesoro','Administracion')"),
+      expedientes_activos: sgt("SELECT COUNT(*) as t FROM expedientes_disciplinarios WHERE estado NOT IN ('firme','archivado')"),
+      solicitudes_rgpd_pendientes: sgt("SELECT COUNT(*) as t FROM solicitudes_arco WHERE estado='pendiente'")
     },
-    usuarios_por_franja: db.prepare("SELECT franja_edad, COUNT(*) as total FROM solicitantes GROUP BY franja_edad").all(),
-    cuentas_por_tipo: db.prepare("SELECT tipo_cuenta, COUNT(*) as total, COALESCE(SUM(saldo),0) as saldo_total FROM cuentas_bancarias GROUP BY tipo_cuenta").all(),
-    expedientes_por_estado: db.prepare("SELECT estado, COUNT(*) as total FROM expedientes_disciplinarios GROUP BY estado").all(),
-    ultimos_logs: db.prepare(`
+    usuarios_por_franja: sa("SELECT franja_edad, COUNT(*) as total FROM solicitantes GROUP BY franja_edad"),
+    cuentas_por_tipo: sa("SELECT tipo_cuenta, COUNT(*) as total, COALESCE(SUM(saldo),0) as saldo_total FROM cuentas_bancarias GROUP BY tipo_cuenta"),
+    expedientes_por_estado: sa("SELECT estado, COUNT(*) as total FROM expedientes_disciplinarios GROUP BY estado"),
+    ultimos_logs: sa(`
       SELECT l.accion, l.detalle, l.creado_en, s.alias 
       FROM logs_auditoria l LEFT JOIN solicitantes s ON s.id=l.usuario_id 
       ORDER BY l.creado_en DESC LIMIT 50
-    `).all()
+    `)
   };
 
   res.json(reporte);

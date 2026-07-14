@@ -109,7 +109,8 @@
         <span class="sidebar-user-badge"><%= usuario.alias %></span>
         <span class="sidebar-user-rol"><%= usuario.rol %></span>
       </div>
-      <div style="display:flex;gap:6px;align-items:center">
+      <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
+        <button class="compact-toggle-btn" onclick="toggleCompactMode()" title="Modo compacto">📐</button>
         <a href="/admin/audit-bancario" style="position:relative;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.7);padding:6px 10px;border-radius:10px;text-decoration:none;font-size:14px" title="Notificaciones">🔔 <span id="notifBadge" style="display:none;background:var(--red);color:#fff;border-radius:50%;padding:1px 5px;font-size:10px;position:absolute;top:-4px;right:-4px">0</span></a>
         <form action="/api/auth/logout" method="POST">
           <button type="submit" class="sidebar-logout" title="Cerrar sesión">🚪 Salir</button>

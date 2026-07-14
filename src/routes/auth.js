@@ -184,7 +184,7 @@ router.post('/register', async (req, res) => {
         const sbUser = await sbCreateSolicitante({
           id: null, alias, nombre_real, email, fecha_nacimiento, edad, dip,
           placeid: `PLID-${dip}`,
-          password_hash: hashSync(password, 10),
+          password_hash: bcrypt.hashSync(password, 10),
           franja_edad: franja, estado: 'pendiente', rol: 'miembro',
           ip_ultimo_acceso: ip
         });
@@ -200,7 +200,7 @@ router.post('/register', async (req, res) => {
         password_hash, franja_edad, estado, rol, ip_registro, creado_en, actualizado_en)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente', 'miembro', ?, datetime('now'), datetime('now'))
     `).run(alias, nombre_real, email, fecha_nacimiento, edad, dip, `PLID-${dip}`,
-      hashSync(password, 10), franja, ip);
+      bcrypt.hashSync(password, 10), franja, ip);
 
     const userId = result.lastInsertRowid;
 

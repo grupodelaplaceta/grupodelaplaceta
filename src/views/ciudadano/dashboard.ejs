@@ -1,0 +1,184 @@
+<div class="dashboard">
+  <div class="dashboard-header">
+    <h1>👤 Mi Área Personal</h1>
+    <p class="dashboard-date">Panel del ciudadano · <%= usuario.alias || '—' %></p>
+  </div>
+
+  <!-- Status Bar -->
+  <div class="status-bar" id="ciudadanoStatus">
+    <span class="status-item">🆔 DIP: <strong><%= usuario.dip || '—' %></strong></span>
+    <span class="status-item">🏛️ PLID: <strong><%= usuario.placeid || '—' %></strong></span>
+    <span class="status-item"><span class="dot <%= usuario.estado === 'activo' ? 'online' : 'warning' %>"></span> <%= usuario.estado %></span>
+    <span class="status-item">📊 Franja: <strong><%= (usuario.franja_edad || '—').replace(/_/g, ' ') %></strong></span>
+    <span style="flex:1"></span>
+    <span class="status-item" style="font-size:10px;color:var(--text-muted)"><%= new Date().toLocaleDateString('es-ES', { weekday:'long', day:'numeric', month:'long', year:'numeric' }) %></span>
+  </div>
+
+  <!-- KPIs -->
+  <div class="stats-grid" style="margin-bottom:24px">
+    <div class="stat-card stat-primary">
+      <div class="stat-icon">📄</div>
+      <div class="stat-content">
+        <span class="stat-value" id="cDocsTotal"><%= docs.length %></span>
+        <span class="stat-label">Documentos</span>
+        <span class="stat-detail">Trámites y expedientes</span>
+      </div>
+    </div>
+    <div class="stat-card stat-success">
+      <div class="stat-icon">🔔</div>
+      <div class="stat-content">
+        <span class="stat-value" id="cNotifsTotal"><%= notifs.length %></span>
+        <span class="stat-label">Actividad</span>
+        <span class="stat-detail">Eventos registrados</span>
+      </div>
+    </div>
+    <div class="stat-card stat-info">
+      <div class="stat-icon">✍️</div>
+      <div class="stat-content">
+        <span class="stat-value" id="cFirmasPendientes">—</span>
+        <span class="stat-label">Firmas Pendientes</span>
+        <span class="stat-detail">Documentos por firmar</span>
+      </div>
+    </div>
+    <div class="stat-card stat-warning">
+      <div class="stat-icon">🧾</div>
+      <div class="stat-content">
+        <span class="stat-value" id="cTributosStatus">—</span>
+        <span class="stat-label">Estado Tributario</span>
+        <span class="stat-detail">Censo y declaraciones</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Acciones Rápidas -->
+  <div class="section">
+    <div class="section-header">
+      <div>
+        <h2>⚡ Acciones Rápidas</h2>
+        <p class="section-desc">Operaciones disponibles para tu cuenta</p>
+      </div>
+    </div>
+    <div class="quick-actions">
+      <a href="/tramites" class="action-card">
+        <span class="action-icon">📋</span>
+        <span class="action-title">Nuevo Trámite</span>
+        <span class="action-desc">Solicitar DIP, activar PlacetaID, quejas</span>
+      </a>
+      <a href="/ciudadano/documentos" class="action-card">
+        <span class="action-icon">📄</span>
+        <span class="action-title">Mis Documentos</span>
+        <span class="action-desc">Ver todos mis documentos y trámites</span>
+      </a>
+      <a href="/ciudadano/firmas" class="action-card">
+        <span class="action-icon">✍️</span>
+        <span class="action-title">Firmas Pendientes</span>
+        <span class="action-desc" id="cFirmasDesc">Documentos pendientes de firma</span>
+      </a>
+      <a href="/ciudadano/notificaciones" class="action-card">
+        <span class="action-icon">🔔</span>
+        <span class="action-title">Actividad</span>
+        <span class="action-desc">Historial de eventos y notificaciones</span>
+      </a>
+      <a href="/admin/tributos" class="action-card" style="border-left:3px solid var(--p500)">
+        <span class="action-icon">🧾</span>
+        <span class="action-title">Tributos</span>
+        <span class="action-desc">Estado fiscal y censo de contribuyentes</span>
+      </a>
+      <a href="/perfil" class="action-card">
+        <span class="action-icon">👤</span>
+        <span class="action-title">Mi Perfil</span>
+        <span class="action-desc">Datos personales y configuración</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Actividad Reciente + Trámites -->
+  <div class="dash-grid-2" style="margin-bottom:18px">
+    <div class="glass-card">
+      <div class="glass-card-header">
+        <h3>📁 Últimos Trámites</h3>
+      </div>
+      <div id="ultimosTramitesContenido" class="empty-state">
+        <div class="empty-icon">⏳</div>
+        <p>Cargando...</p>
+      </div>
+    </div>
+    <div class="glass-card">
+      <div class="glass-card-header">
+        <h3>🔔 Actividad Reciente</h3>
+        <a href="/ciudadano/notificaciones" class="btn btn-sm btn-glass">Ver todo</a>
+      </div>
+      <div id="actividadReciente">
+        <% if (notifs.length === 0) { %>
+        <div class="empty-state"><div class="empty-icon">📭</div><p>No hay actividad reciente.</p></div>
+        <% } else { %>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <% notifs.slice(0, 10).forEach(function(n) { %>
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface-2);border-radius:8px;font-size:12px">
+            <span><%= n.accion === 'login' ? '🔑' : n.accion === 'logout' ? '🚪' : n.accion === 'registro' ? '📝' : '📌' %></span>
+            <div style="flex:1;min-width:0">
+              <strong style="font-size:12px"><%= n.accion.replace(/_/g, ' ') %></strong>
+              <span style="color:var(--text-light);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><%= n.detalle ? n.detalle.substring(0, 120) : '—' %></span>
+            </div>
+            <span style="color:var(--text-muted);font-size:10px;white-space:nowrap"><%= n.creado_en ? new Date(n.creado_en.endsWith('Z') ? n.creado_en : n.creado_en + 'Z').toLocaleDateString('es-ES', { day:'numeric', month:'short' }) : '—' %></span>
+          </div>
+          <% }); %>
+        </div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(async function() {
+  // Cargar trámites
+  try {
+    const r = await fetch('/api/tramites/mis-documentos');
+    const docs = await r.json();
+    const div = document.getElementById('ultimosTramitesContenido');
+    if (!docs || !docs.length) {
+      div.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><p>No has realizado trámites aún. <a href="/tramites" style="color:var(--p500)">Ir a trámites →</a></p></div>';
+      return;
+    }
+    const iconos = { dip:'🪪', placetid:'🔑', queja:'💬', 'control-parental':'👨‍👩‍👧‍👦', entidad:'🏢', 'alta-tributos':'🧾', 'solicitar-factura':'📄' };
+    const nombres = { dip:'Solicitud DIP', placetid:'Activación PlacetaID', queja:'Queja/Sugerencia', 'control-parental':'Control Parental', entidad:'Alta Entidad', 'alta-tributos':'Alta en Tributos', 'solicitar-factura':'Factura' };
+    div.innerHTML = '<div style="display:flex;flex-direction:column;gap:6px">' + docs.slice(0, 8).map(function(d) {
+      const icono = iconos[d.tipo] || '📄';
+      const nombre = nombres[d.tipo] || d.tipo;
+      const fecha = (function(){ try { if (!d.creado_en) return '—'; const s = d.creado_en.endsWith('Z') ? d.creado_en : d.creado_en + 'Z'; return new Date(s).toLocaleDateString('es-ES'); } catch { return '—'; } })();
+      const estClass = d.estado === 'aprobado' ? '#22c55e' : d.estado === 'rechazado' ? '#ef4444' : '#f59e0b';
+      const estLabel = d.estado === 'aprobado' ? '✅' : d.estado === 'rechazado' ? '❌' : '⏳';
+      return '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface-2);border-radius:8px;border-left:3px solid ' + estClass + '">' +
+        '<span style="font-size:20px">' + icono + '</span>' +
+        '<div style="flex:1;min-width:0"><strong style="font-size:13px">' + nombre + '</strong><br><span style="font-size:11px;color:var(--text-light)">' + fecha + (d.referencia ? ' · ' + d.referencia : '') + ' · ' + estLabel + '</span></div>' +
+        (d.pdf_url ? '<a href="' + d.pdf_url + '" target="_blank" class="btn btn-sm btn-glass" style="font-size:11px">📄</a>' : '') +
+        '</div>';
+    }).join('') + '</div>';
+    if (docs.length > 8) div.innerHTML += '<div style="text-align:center;padding:8px"><a href="/ciudadano/documentos" class="btn btn-sm btn-outline">Ver todos (' + docs.length + ')</a></div>';
+  } catch(e) { document.getElementById('ultimosTramitesContenido').innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>Error al cargar</p></div>'; }
+
+  // Cargar firmas pendientes
+  try {
+    const r = await fetch('/api/firma/pendientes');
+    const data = await r.json();
+    const total = Array.isArray(data) ? data.length : (data.total || 0);
+    document.getElementById('cFirmasPendientes').textContent = total;
+    const desc = document.getElementById('cFirmasDesc');
+    if (desc) desc.textContent = total > 0 ? total + ' documentos pendientes de firma' : 'No hay documentos pendientes';
+  } catch(e) { document.getElementById('cFirmasPendientes').textContent = '—'; }
+
+  // Cargar estado tributario
+  try {
+    const uid = '<%= usuario.placeid || "PLID-" + (usuario.dip || "") %>';
+    const r = await fetch('/api/admin/tributos/contributors/' + uid);
+    if (r.ok) {
+      const c = await r.json();
+      const est = c.estado_fiscal || 'No censado';
+      document.getElementById('cTributosStatus').textContent = est;
+    } else {
+      document.getElementById('cTributosStatus').textContent = 'No censado';
+    }
+  } catch(e) { document.getElementById('cTributosStatus').textContent = '—'; }
+})();
+</script>

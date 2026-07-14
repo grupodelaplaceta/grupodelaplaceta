@@ -940,6 +940,103 @@ input:focus, select:focus, textarea:focus {
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   COMPACT MODE — Toggle para UI más densa
+   ═══════════════════════════════════════════════════════════════════════════ */
+body.compact-mode .main-content { padding: 16px 18px; }
+body.compact-mode .dashboard-header { margin-bottom: 14px; }
+body.compact-mode .dashboard-header h1 { font-size: 22px; }
+body.compact-mode .stats-grid { gap: 10px; margin-bottom: 18px; }
+body.compact-mode .stat-card { padding: 14px 18px; gap: 12px; border-radius: 12px; }
+body.compact-mode .stat-icon { font-size: 26px; }
+body.compact-mode .stat-value { font-size: 24px; }
+body.compact-mode .stat-label { font-size: 10px; letter-spacing: 0.5px; }
+body.compact-mode .stat-detail { font-size: 11px; }
+body.compact-mode .section { margin-bottom: 18px; }
+body.compact-mode .section-header { margin-bottom: 10px; }
+body.compact-mode .section h2 { font-size: 16px; }
+body.compact-mode .section-desc { font-size: 11px; }
+body.compact-mode .quick-actions { gap: 8px; }
+body.compact-mode .action-card { padding: 12px 16px; gap: 4px; border-radius: 12px; }
+body.compact-mode .action-icon { font-size: 22px; }
+body.compact-mode .action-title { font-size: 13px; }
+body.compact-mode .action-desc { font-size: 11px; }
+body.compact-mode .data-table th { padding: 8px 12px; font-size: 10px; }
+body.compact-mode .data-table td { padding: 7px 12px; font-size: 12px; }
+body.compact-mode .btn { padding: 8px 16px; font-size: 12px; border-radius: 8px; }
+body.compact-mode .btn-sm { padding: 5px 10px; font-size: 10px; border-radius: 6px; }
+body.compact-mode .form-grid { gap: 10px; padding: 12px; }
+body.compact-mode .form-grid label { font-size: 11px; gap: 3px; }
+body.compact-mode input, body.compact-mode select, body.compact-mode textarea { padding: 7px 10px; font-size: 12px; }
+body.compact-mode .modal-header { padding: 14px 18px 0; }
+body.compact-mode .modal-header h3 { font-size: 15px; }
+body.compact-mode .modal-body { padding: 10px 18px 16px; }
+body.compact-mode .modal-window { max-width: 480px; }
+body.compact-mode .table-container { border-radius: 12px; }
+body.compact-mode .glass-card { padding: 14px !important; border-radius: 14px; }
+body.compact-mode .glass-card-header { margin-bottom: 10px; }
+body.compact-mode .glass-card-header h3 { font-size: 13px; }
+body.compact-mode .inhibition-switch { padding: 10px 14px; }
+body.compact-mode .inhibition-switch .switch-label { font-size: 12px; }
+body.compact-mode .badge { padding: 2px 7px; font-size: 10px; }
+body.compact-mode .pill { padding: 2px 8px; font-size: 10px; }
+body.compact-mode .footer { padding: 8px 18px; font-size: 11px; }
+body.compact-mode .sidebar-link { padding: 6px 10px; font-size: 12px; }
+body.compact-mode .sidebar-group-title { padding: 6px 12px 2px; font-size: 8.5px; }
+body.compact-mode .tab-btn { padding: 6px 12px; font-size: 12px; }
+body.compact-mode .dash-grid-4 { gap: 10px; }
+body.compact-mode .dash-grid-2 { gap: 12px; }
+body.compact-mode .metric-card { padding: 14px; gap: 12px; }
+body.compact-mode .metric-card .m-value { font-size: 22px; }
+body.compact-mode .metric-card .m-label { font-size: 11px; }
+body.compact-mode .metric-card .m-change { font-size: 11px; }
+body.compact-mode .action-grid { gap: 6px; }
+body.compact-mode .action-item { padding: 6px 10px; font-size: 12px; border-radius: 8px; }
+body.compact-mode .section-compact { margin-bottom: 14px; }
+body.compact-mode .sc-header { margin-bottom: 8px; }
+body.compact-mode .sc-header h3 { font-size: 14px; }
+body.compact-mode .empty-state { padding: 20px; }
+body.compact-mode .stat-mini { padding: 6px 10px; }
+body.compact-mode .stat-mini .label { font-size: 11px; }
+body.compact-mode .stat-mini .value { font-size: 14px; }
+body.compact-mode .tag { padding: 2px 8px; font-size: 10px; }
+
+/* ── Compact Toggle Button ────────────────────────────────────────────── */
+.compact-toggle-btn {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.7);
+  padding: 6px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: var(--transition);
+  line-height: 1;
+}
+.compact-toggle-btn:hover { background: rgba(255,255,255,0.15); color: white; }
+body.compact-mode .compact-toggle-btn { background: rgba(255,255,255,0.15); color: var(--gold-light); }
+
+/* ── System Status Banner ──────────────────────────────────────────── */
+.status-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 8px 14px;
+  background: var(--surface-glass);
+  backdrop-filter: blur(12px);
+  border-radius: var(--radius);
+  border: 1px solid rgba(255,255,255,0.7);
+  font-size: 11px;
+  color: var(--text-light);
+  margin-bottom: 14px;
+}
+.status-bar .status-item { display: flex; align-items: center; gap: 4px; }
+.status-bar .dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+.status-bar .dot.online { background: var(--green); box-shadow: 0 0 4px rgba(35,178,109,0.5); }
+.status-bar .dot.offline { background: var(--red); box-shadow: 0 0 4px rgba(226,77,77,0.5); }
+.status-bar .dot.warning { background: var(--warning); box-shadow: 0 0 4px rgba(245,158,11,0.5); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
    RENOVATED UI v3.0 — Modern Utilities
    ═══════════════════════════════════════════════════════════════════════════ */
 

@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
   inicializarSidebar();
   inicializarBusqueda();
   cargarContadorNotificaciones();
+  inicializarCompactMode();
 });
 
 // ── Contador de notificaciones ─────────────────────────────────────────────
@@ -25,6 +26,17 @@ async function cargarContadorNotificaciones() {
       }
     });
   } catch (e) { /* silencioso */ }
+}
+
+// ── Compact Mode ────────────────────────────────────────────────────────────
+function inicializarCompactMode() {
+  const compact = localStorage.getItem('gdlp-crm-compact') === 'true';
+  if (compact) document.body.classList.add('compact-mode');
+}
+
+function toggleCompactMode() {
+  document.body.classList.toggle('compact-mode');
+  localStorage.setItem('gdlp-crm-compact', document.body.classList.contains('compact-mode'));
 }
 
 // ── Sidebar ─────────────────────────────────────────────────────────────────

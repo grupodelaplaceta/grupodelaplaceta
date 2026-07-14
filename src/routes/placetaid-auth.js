@@ -62,8 +62,8 @@ router.post('/login', async (req, res) => {
     }
 
     if (localUser && validLocal) {
-      const validLocal = await bcrypt.compare(password, localUser.password_hash);
-      if (validLocal) {
+      const validLocalPassword = await bcrypt.compare(password, localUser.password_hash);
+      if (validLocalPassword) {
         const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
         const sessionData = {
           id: localUser.id,
@@ -91,7 +91,6 @@ router.post('/login', async (req, res) => {
       body: JSON.stringify({
         dip: alias,
         password,
-        servicio: 'GDLP CRM',
         servicio: 'CRM GDLP',
         servicioUrl: process.env.PLACETAID_REDIRECT_URI || 'https://www.laplaceta.org/placetid/callback',
         clientId: PLACETAID_CLIENT_ID,

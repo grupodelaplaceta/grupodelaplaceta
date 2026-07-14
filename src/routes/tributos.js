@@ -190,11 +190,117 @@ router.post('/contributors/alta-rapida', verificarSesion, verificarRol('administ
 
 router.put('/contributors/:placetaId', verificarSesion, verificarRol('administrador', 'junta', 'fiscal'), async (req, res) => {
   try {
+    // Si se incluye tipo_contribucion, migrar esquema automáticamente si falla
+    if (req.body.tipo_contribucion) {
+      try {
+        const updated = await sbUpdateTributosContributor(req.params.placetaId, req.body);
+        return res.json({ success: true, contributor: updated });
+      } catch (e) {
+        // Migrar esquema e intentar de nuevo
+        console.log('[Tributos] Reintentando con migración de esquema...');
+        await sbMigrateTributosSchema();
+        const updated = await sbUpdateTributosContributor(req.params.placetaId, req.body);
+        return res.json({ success: true, contributor: updated });
+      }
+    }
     const updated = await sbUpdateTributosContributor(req.params.placetaId, req.body);
     return res.json({ success: true, contributor: updated });
   } catch (err) {
     console.error('[Tributos] Error update contributor:', err.message);
-    return res.status(500).json({ error: 'error_actualizar_contribuyente' });
+    return res.status(500).json({ error: 'error_actualizar_contribuyente', detalle: err.message });
+  }
+});
+
+// ── EIP Auto-asignación ─────────────────────────────────────────────────
+// POST /contributors/:placetaId/eip-auto — Genera EIP automático para empresas
+router.post('/contributors/:placetaId/eip-auto', verificarSesion, verificarRol('administrador', 'junta', 'fiscal'), async (req, res) => {
+  try {
+    const c = await sbGetTributosContributorByPlacetaId(req.params.placetaId);
+    if (!c) return res.status(404).json({ error: 'No encontrado' });
+
+    // Generar EIP: EIP + siglas del nombre o random
+    let siglas = '';
+    if (c.nombre) {
+      siglas = c.nombre
+        .replace(/[^a-zA-Z0-9\s]/g, '')
+        .split(/\s+/)
+        .map(w => w.charAt(0).toUpperCase())
+        .join('')
+        .slice(0, 6);
+    }
+    const randomSufix = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const eip = siglas ? `EIP-${siglas}${randomSufix}` : `EIP-${randomSufix}`;
+
+    const updated = await sbUpdateTributosContributor(req.params.placetaId, { eip, tipo_sujeto: 'Empresa' });
+    return res.json({ success: true, eip, contributor: updated });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Editar tipo de cuenta bancaria ──────────────────────────────────────
+// POST /contributors/:placetaId/cuenta-tipo — Actualiza tipo de IBAN/cuenta
+router.post('/contributors/:placetaId/cuenta-tipo', verificarSesion, verificarRol('administrador', 'junta', 'fiscal'), async (req, res) => {
+  try {
+    const { iban, tipo_cuenta } = req.body;
+    const c = await sbGetTributosContributorByPlacetaId(req.params.placetaId);
+    if (!c) return res.status(404).json({ error: 'No encontrado' });
+
+    const updateData = {};
+    if (iban !== undefined) updateData.iban = iban;
+
+    // Guardar tipo_cuenta en roles_json o en un campo especial
+    if (tipo_cuenta) {
+      const roles = Array.isArray(c.roles_json) ? [...c.roles_json] : ['ciudadano'];
+      // Quitar tipos anteriores
+      const tiposCuenta = ['cuenta_personal', 'cuenta_empresa', 'cuenta_junior', 'cuenta_inversion', 'cuenta_ahorros'];
+      const filteredRoles = roles.filter(r => !tiposCuenta.includes(r));
+      filteredRoles.push(tipo_cuenta);
+      updateData.roles_json = filteredRoles;
+    }
+
+    const updated = await sbUpdateTributosContributor(req.params.placetaId, updateData);
+    return res.json({ success: true, contributor: updated });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Alta rápida de empresa con EIP auto ─────────────────────────────────
+// POST /contributors/crear-empresa — Crea empresa con EIP automático
+router.post('/crear-empresa', verificarSesion, verificarRol('administrador', 'junta', 'fiscal'), async (req, res) => {
+  try {
+    const { nombre, dip_representante, iban } = req.body;
+    if (!nombre) return res.status(400).json({ error: 'nombre_requerido' });
+
+    // Generar EIP automático
+    const siglas = nombre
+      .replace(/[^a-zA-Z0-9\s]/g, '')
+      .split(/\s+/)
+      .map(w => w.charAt(0).toUpperCase())
+      .join('')
+      .slice(0, 6);
+    const randomSufix = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const eip = siglas ? `EIP-${siglas}${randomSufix}` : `EIP-${randomSufix}`;
+    const placetaId = `EIP-${eip.replace('EIP-', '')}`;
+
+    const contributor = await sbCreateTributosContributor({
+      id: crypto.randomUUID?.() || String(Date.now()),
+      placeta_id: placetaId,
+      dip: dip_representante || null,
+      nombre,
+      tipo_sujeto: 'Empresa',
+      estado_fiscal: 'Al Dia',
+      fecha_alta_tributos: new Date().toISOString(),
+      roles_json: ['ciudadano', 'empresa', 'cuenta_empresa'],
+      iban: iban || null,
+      eip
+    });
+
+    return res.json({ success: true, eip, placeta_id: placetaId, contributor });
+  } catch (err) {
+    console.error('[Tributos] Error crear empresa:', err.message);
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -410,6 +516,23 @@ router.get('/declarations', verificarSesion, verificarRol('administrador', 'junt
     const declarations = await sbListTributosDeclarations();
     // Enriquecer con datos del contribuyente y recalcular IRM/IGF sobre la marcha
     const enriched = await Promise.all(declarations.map(async (d) => {
+      // Interpretar estado semántico desde los campos internos
+      const permiso = d.id_permiso_junta || '';
+      const bypass = d.bypass_junta_directiva === true;
+      if (d.estado_pago === 'Borrador') {
+        if (permiso.startsWith('APROBADA')) d._estado_semantico = 'Aprobada';
+        else if (permiso.startsWith('PENDIENTE_APROBACION')) d._estado_semantico = 'Pendiente_Aprobacion';
+        else if (permiso.startsWith('BYPASS')) d._estado_semantico = bypass ? 'Pendiente_Aprobacion' : 'Borrador';
+        else d._estado_semantico = 'Borrador';
+      } else if (d.estado_pago === 'Emitido') {
+        d._estado_semantico = d.transaction_id_blp ? 'Cobrado_Exito' : 'Emitido';
+      } else {
+        d._estado_semantico = d.estado_pago;
+      }
+      d._puede_publicar = d._estado_semantico === 'Borrador' && !permiso;
+      d._puede_aprobar = d._estado_semantico === 'Pendiente_Aprobacion';
+      d._puede_emitir = d._estado_semantico === 'Aprobada';
+
       const pid = d.placeta_id || d.cuenta_id_blp;
       if (!d.nombre && pid) {
         try {
@@ -442,8 +565,17 @@ router.post('/declarations', verificarSesion, verificarRol('administrador', 'jun
       return res.status(400).json({ error: 'placeta_id_mes_periodo_requeridos' });
     }
 
+    // Buscar contributor_id desde placeta_id
+    let contributorId = null;
+    try {
+      const c = await sbGetTributosContributorByPlacetaId(placeta_id);
+      if (c) contributorId = c.id;
+    } catch {}
+
     const declaration = await sbCreateTributosDeclaration({
       id: crypto.randomUUID?.() || String(Date.now()),
+      placeta_id,
+      contributor_id: contributorId,
       mes_periodo,
       cuenta_id_blp: cuenta_id_blp || placeta_id,
       patrimonio_medio: Number(patrimonio_medio || 0),
@@ -472,37 +604,50 @@ router.delete('/declarations/:id', verificarSesion, verificarRol('administrador'
   }
 });
 
-// ── Publicar declaración (Borrador → Pendiente_Aprobacion) ─────────────
+// ── Publicar declaración (Borrador → Pendiente_Aprobacion ─ guardado en bypass_junta_directiva) ─
 router.put('/declarations/:id/publish', verificarSesion, verificarRol('administrador', 'junta', 'fiscal'), async (req, res) => {
   try {
     const dec = await sbGetTributosDeclaration(req.params.id);
     if (!dec) return res.status(404).json({ error: 'Declaración no encontrada' });
     if (dec.estado_pago !== 'Borrador') return res.status(400).json({ error: 'Solo se pueden publicar borradores', estado_actual: dec.estado_pago });
 
+    const bypass = req.body.bypass_junta_directiva === true;
+    // Guardar "Pendiente_Aprobacion" en id_permiso_junta como marca del estado real
+    // porque el CHECK constraint de PostgreSQL no permite 'Pendiente_Aprobacion'
     const updated = await sbUpdateTributosDeclaration(req.params.id, {
-      estado_pago: 'Pendiente_Aprobacion',
-      bypass_junta_directiva: req.body.bypass_junta_directiva === true,
-      id_permiso_junta: req.body.id_permiso_junta || null
+      estado_pago: bypass ? 'Borrador' : 'Borrador',
+      bypass_junta_directiva: bypass,
+      id_permiso_junta: bypass ? `BYPASS-${Date.now()}` : `PENDIENTE_APROBACION-${Date.now()}`
     });
-    res.json({ success: true, declaration: updated });
+    res.json({
+      success: true,
+      declaration: updated,
+      nota: bypass
+        ? '⚡ Bypass activado: publicada con aprobación automática (usa Aprobar para confirmar)'
+        : '📤 Marcada como pendiente de aprobación de la Junta Directiva'
+    });
   } catch (err) {
     console.error('[Tributos] Error publicar declaration:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
-// ── Aprobar declaración (Pendiente_Aprobacion → Aprobada) ──────────────
+// ── Aprobar declaración (Pendiente → Aprobada) ─────────────────────────
 router.put('/declarations/:id/approve', verificarSesion, verificarRol('administrador', 'junta'), async (req, res) => {
   try {
     const dec = await sbGetTributosDeclaration(req.params.id);
     if (!dec) return res.status(404).json({ error: 'Declaración no encontrada' });
-    if (dec.estado_pago !== 'Pendiente_Aprobacion' && dec.estado_pago !== 'Borrador') {
-      return res.status(400).json({ error: 'Solo se pueden aprobar declaraciones en estado Pendiente_Aprobacion o Borrador', estado_actual: dec.estado_pago });
+    // Aceptamos Borrador (si tiene bypass o id_permiso_junta marcado) o cualquier estado publicable
+    const esPublicable = dec.estado_pago === 'Borrador'
+      && (dec.bypass_junta_directiva === true || (dec.id_permiso_junta || '').startsWith('PENDIENTE_APROBACION'));
+    if (!esPublicable && dec.estado_pago !== 'Borrador') {
+      return res.status(400).json({ error: 'Solo se pueden aprobar declaraciones marcadas para aprobación', estado_actual: dec.estado_pago });
     }
 
     const updated = await sbUpdateTributosDeclaration(req.params.id, {
-      estado_pago: 'Aprobada',
-      bypass_junta_directiva: false
+      estado_pago: 'Borrador', // Se mantiene Borrador por CHECK constraint, pero se marca como aprobada
+      bypass_junta_directiva: false,
+      id_permiso_junta: `APROBADA-${Date.now()}`
     });
     res.json({ success: true, declaration: updated });
   } catch (err) {
@@ -511,13 +656,13 @@ router.put('/declarations/:id/approve', verificarSesion, verificarRol('administr
   }
 });
 
-// ── Rechazar declaración (Pendiente_Aprobacion → Borrador) ─────────────
+// ── Rechazar declaración (devuelve a Borrador limpio) ──────────────────
 router.put('/declarations/:id/reject', verificarSesion, verificarRol('administrador', 'junta'), async (req, res) => {
   try {
     const dec = await sbGetTributosDeclaration(req.params.id);
     if (!dec) return res.status(404).json({ error: 'Declaración no encontrada' });
-    if (dec.estado_pago !== 'Pendiente_Aprobacion') {
-      return res.status(400).json({ error: 'Solo se pueden rechazar declaraciones Pendiente_Aprobacion', estado_actual: dec.estado_pago });
+    if (!dec.id_permiso_junta) {
+      return res.status(400).json({ error: 'Esta declaración no está pendiente de aprobación', estado_actual: dec.estado_pago });
     }
     const updated = await sbUpdateTributosDeclaration(req.params.id, {
       estado_pago: 'Borrador',
@@ -536,8 +681,9 @@ router.put('/declarations/:id/emit', verificarSesion, verificarRol('administrado
   try {
     const dec = await sbGetTributosDeclaration(req.params.id);
     if (!dec) return res.status(404).json({ error: 'Declaración no encontrada' });
-    if (dec.estado_pago !== 'Aprobada' && dec.estado_pago !== 'Borrador') {
-      return res.status(400).json({ error: 'Solo se pueden emitir declaraciones Aprobadas', estado_actual: dec.estado_pago });
+    const esAprobada = (dec.id_permiso_junta || '').startsWith('APROBADA');
+    if (!esAprobada && dec.estado_pago !== 'Borrador') {
+      return res.status(400).json({ error: 'Solo se pueden emitir declaraciones aprobadas', estado_actual: dec.estado_pago });
     }
 
     const totalCuota = (dec.cuota_irm || 0) + (dec.cuota_igf || 0);
@@ -573,8 +719,9 @@ router.put('/declarations/:id/emit', verificarSesion, verificarRol('administrado
     }
 
     const updated = await sbUpdateTributosDeclaration(req.params.id, {
-      estado_pago: transactionId ? 'Cobrado_Exito' : 'Emitido',
-      transaction_id_blp: transactionId
+      estado_pago: 'Emitido',
+      transaction_id_blp: transactionId || null,
+      id_permiso_junta: transactionId ? `COBRADO-${transactionId.slice(0,8)}` : `EMITIDO-${Date.now()}`
     });
 
     res.json({

@@ -218,9 +218,19 @@ async function autoMigrateSupabase() {
     const statements = sql.split(';').filter(s => s.trim().startsWith('CREATE'));
     for (const stmt of statements) {
       try { await sb.rpc('exec_sql', { sql: stmt + ';' }); } catch (e) {
-        // Intentar via REST query directo si rpc falla
-        try { await sb.query(stmt + ';'); } catch (e2) {
-          console.warn('  ⚠️  No se pudo crear tabla via RPC ni query. Ejecuta el SQL manualmente en Supabase.');
+        // Intentar via REST endpoint si rpc falla (usando fetch directo)
+        try {
+          const supabaseUrl = process.env.SUPABASE_URL;
+          const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY;
+          if (supabaseUrl && supabaseKey) {
+            await fetch(`${supabaseUrl}/rest/v1/rpc/exec_sql`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` },
+              body: JSON.stringify({ sql: stmt + ';' })
+            });
+          }
+        } catch (e2) {
+          console.warn('  ⚠️  No se pudo crear tabla via RPC. Ejecuta el SQL manualmente en Supabase.');
         }
       }
     }
@@ -948,7 +958,13 @@ export async function sbMigrateTributosSchema() {
   const migrations = [
     "ALTER TABLE tributos_contribuyentes ADD COLUMN IF NOT EXISTS tipo_contribucion TEXT DEFAULT 'estandar'",
     "ALTER TABLE tributos_contribuyentes ADD COLUMN IF NOT EXISTS patrimonio_estimado NUMERIC DEFAULT 0",
-    "ALTER TABLE tributos_contribuyentes ADD COLUMN IF NOT EXISTS iban TEXT"
+    "ALTER TABLE tributos_contribuyentes ADD COLUMN IF NOT EXISTS iban TEXT",
+    "ALTER TABLE tributos_declaraciones ADD COLUMN IF NOT EXISTS bypass_junta_directiva BOOLEAN DEFAULT FALSE",
+    "ALTER TABLE tributos_declaraciones ADD COLUMN IF NOT EXISTS id_permiso_junta TEXT",
+    "ALTER TABLE tributos_declaraciones ADD COLUMN IF NOT EXISTS transaction_id_blp TEXT",
+    "ALTER TABLE tributos_declaraciones ADD COLUMN IF NOT EXISTS pdf_hash TEXT",
+    "ALTER TABLE tributos_declaraciones DROP CONSTRAINT IF EXISTS tributos_declaraciones_estado_pago_check",
+    "ALTER TABLE tributos_declaraciones ADD CONSTRAINT tributos_declaraciones_estado_pago_check CHECK (estado_pago IN ('Borrador','Pendiente_Aprobacion','Aprobada','Emitido','Inhibido','Cobrado_Exito','Mora_Falta_Saldo','Rectificado_Completado'))"
   ];
   for (const sql of migrations) {
     try { await sb.rpc('exec_sql', { sql }); }

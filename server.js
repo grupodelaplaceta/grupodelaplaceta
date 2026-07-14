@@ -89,19 +89,12 @@ app.get('/favicon.ico', (req, res) => {
 });
 
 // Rate limiting general API
-const keyGenerator = (req) => {
-  const fwd = req.headers['x-forwarded-for'];
-  return fwd ? fwd.split(',')[0].trim() : (req.ip || req.socket?.remoteAddress || 'unknown');
-};
-// Silenciar warning de IPv6 (compatible con version actual de express-rate-limit)
-process.env.ERL_IPV6_UNSAFE = '1';
-
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 200,
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator
+  validate: { xForwardedForHeader: false }
 });
 app.use('/api/', limiter);
 
@@ -110,7 +103,7 @@ const authLimiter = rateLimit({
   max: 20,
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator,
+  validate: { xForwardedForHeader: false },
   message: { error: 'Demasiados intentos. Intenta de nuevo más tarde.' }
 });
 app.use('/api/auth/login', authLimiter);
@@ -143,6 +136,17 @@ app.use((req, res, next) => {
 // ── Health Check ─────────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', version: '1.0.0', timestamp: new Date().toISOString() });
+});
+
+// ── System Status — verifica conectividad con servicios externos ────────────
+const STATUS_BANCO_API = (process.env.BANCO_API_URL || 'https://api.banco.laplaceta.org').replace(/\/+$/, '');
+app.get('/api/admin/status', verificarAuth, async (req, res) => {
+  const result = { supabase: 'offline', banco_api: 'offline', placetaid: 'offline', sqlite: 'offline' };
+  try { if (supabase) { const { error } = await supabase.from('solicitantes').select('id').limit(1); result.supabase = error ? 'error' : 'online'; } } catch { result.supabase = 'error'; }
+  try { const db = getDb(); db.prepare('SELECT 1').get(); result.sqlite = 'online'; } catch {}
+  try { const r = await fetch(`${STATUS_BANCO_API}/api/health`, { signal: AbortSignal.timeout(3000) }); result.banco_api = r.ok ? 'online' : 'error'; } catch { result.banco_api = 'offline'; }
+  try { const pu = (process.env.PLACETAID_API_URL || 'https://id.laplaceta.org/api').replace(/\/api$/, ''); const r = await fetch(`${pu}/api/health`, { signal: AbortSignal.timeout(3000) }); result.placetaid = r.ok ? 'online' : 'error'; } catch { result.placetaid = 'offline'; }
+  res.json({ status: result, timestamp: new Date().toISOString() });
 });
 
 // ── Rutas API ────────────────────────────────────────────────────────────────
@@ -253,12 +257,20 @@ app.get('/admin/dashboard', verificarAuth, async (req, res) => {
     totalUsuarios = todos.length;
     activos = todos.filter(u => u.estado === 'activo').length;
     pendientes = todos.filter(u => u.estado === 'pendiente').length;
-    const { data: jrs } = await supabase.from('junior_menores').select('*');
-    if (jrs) { totalJuniors = jrs.length; juniorsActivos = jrs.filter(j => j.estado === 'activo').length; }
-    const { count: dfCount } = await supabase.from('documentos_firmados').select('*', { count: 'exact', head: true });
-    docsFirmados = dfCount || 0;
-    const { count: dpCount } = await supabase.from('documentos_firmados').select('*', { count: 'exact', head: true }).eq('estado', 'pendiente');
-    docsPendientes = dpCount || 0;
+  } catch (e) { /* fallback */ }
+  try {
+    if (supabase) {
+      const { data: jrs } = await supabase.from('junior_menores').select('*');
+      if (jrs) { totalJuniors = jrs.length; juniorsActivos = jrs.filter(j => j.estado === 'activo').length; }
+    }
+  } catch (e) { /* fallback */ }
+  try {
+    if (supabase) {
+      const { count: dfCount } = await supabase.from('documentos_firmados').select('*', { count: 'exact', head: true });
+      docsFirmados = dfCount || 0;
+      const { count: dpCount } = await supabase.from('documentos_firmados').select('*', { count: 'exact', head: true }).eq('estado', 'pendiente');
+      docsPendientes = dpCount || 0;
+    }
   } catch (e) { /* fallback */ }
 
   // SQLite: stats bancarias/fiscal/justicia
@@ -338,6 +350,15 @@ function verificarAuth(req, res, next) {
 // ── Error 404 ────────────────────────────────────────────────────────────────
 app.use((req, res) => {
   res.status(404).render('parciales/error', { titulo: '404 - No encontrado', error: 'La página solicitada no existe.' });
+});
+
+// ── Global Error Handler ────────────────────────────────────────────────────
+app.use((err, req, res, next) => {
+  console.error('❌ Error no controlado:', err.message || err);
+  if (req.xhr || req.path.startsWith('/api/') || req.headers.accept?.includes('json')) {
+    return res.status(500).json({ error: 'Error interno del servidor', detalle: process.env.NODE_ENV === 'development' ? err.message : undefined });
+  }
+  res.status(500).render('parciales/error', { titulo: '500 - Error interno', error: 'Ha ocurrido un error inesperado.' });
 });
 
 // ── Iniciar Servidor (asíncrono) ────────────────────────────────────────────
