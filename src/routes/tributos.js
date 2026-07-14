@@ -416,9 +416,9 @@ router.get('/declarations', verificarSesion, verificarRol('administrador', 'junt
           if (c) { d.nombre = c.nombre; d.dip = c.dip; d.tipo_sujeto = c.tipo_sujeto; d.eip = c.eip; }
         } catch {}
       }
-      // Recalcular IRM/IGF si están a 0 pero hay patrimonio
+      // Recalcular IRM/IGF sobre la marcha desde patrimonio
       const pm = Number(d.patrimonio_medio || 0);
-      if ((!d.cuota_irm || d.cuota_irm == 0) && (!d.cuota_igf || d.cuota_igf == 0) && pm > 0) {
+      if (pm > 0) {
         d.indice_acumulacion = 1;
         d.tipo_irm = 5;
         d.cuota_irm = Math.round(pm * 0.05 * 100) / 100;
