@@ -298,7 +298,10 @@ router.get('/monedero', verificarJunior, async (req, res) => {
       cuenta_bancaria: {
         id: junior.cuenta_banco || `u-${junior.dip?.toLowerCase().replace(/-/g, '')}`,
         tipo: 'Child',
-        iban: junior.iban || `CAPI-${junior.dip?.split('-')[1] || '0000'}`,
+        // Siempre formato GDLP-AP, aunque la BD tenga CAPI-xxx guardado
+        iban: (!junior.iban || junior.iban.startsWith('CAPI-'))
+          ? generarIbanGdlp(junior.dip || `junior-${junior.id}`)
+          : junior.iban,
         sendLimitPz: limitesEfectivos.gasto_diario
       }
     });
