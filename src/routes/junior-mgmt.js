@@ -16,7 +16,9 @@ const CRM_KEY = process.env.CRM_READ_KEY || 'crm-gdlp-shared-key-2026';
 // Genera IBAN formato oficial app: GDLP-AP{control:2d}-{body:3d}
 // Mismo algoritmo que capitalia-app y banco-web
 function generarIbanGdlp(seed) {
-  const normalized = (seed || '0000').toUpperCase().replace(/[^A-Z0-9]/g, '').padEnd(1, '0');
+  // Seed único: DIP + timestamp + random para evitar colisiones
+  const uniqueSeed = `${seed || '0000'}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+  const normalized = uniqueSeed.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 20);
   let body = 17;
   for (const ch of normalized) body = (body * 31 + ch.charCodeAt(0)) % 1000;
   const control = ((body * 97) + 13) % 100;
@@ -34,6 +36,17 @@ async function apiBanco(action, data = {}) {
     const err = await r.json().catch(() => ({ error: r.statusText }));
     throw new Error(err.error || 'Error en API banco');
   }
+  return r.json();
+}
+
+// Lee el estado completo del banco para obtener datos reales de cuentas
+async function apiBancoGetState() {
+  const r = await fetch(`${BANCO_API}/api/crm-state`, {
+    method: 'GET',
+    headers: { 'X-CRM-Key': CRM_KEY },
+    signal: AbortSignal.timeout(10000)
+  });
+  if (!r.ok) return null;
   return r.json();
 }
 
@@ -285,25 +298,54 @@ router.get('/monedero', verificarJunior, async (req, res) => {
       .filter(t => t.tipo === 'ganar' || t.tipo === 'bonus')
       .reduce((s, t) => s + (t.cantidad || 0), 0);
 
+    // ── Obtener cuenta REAL del banco (MongoDB) ────────────────────
+    let cuentaBanco = {
+      id: junior.cuenta_banco || `u-${junior.dip?.toLowerCase().replace(/-/g, '')}`,
+      tipo: 'Child',
+      iban: '',
+      sendLimitPz: limitesEfectivos.gasto_diario,
+      saldo_real: 0
+    };
+
+    try {
+      const bankState = await apiBancoGetState();
+      if (bankState?.accounts) {
+        const accountId = junior.cuenta_banco || `u-${junior.dip?.toLowerCase().replace(/-/g, '')}`;
+        const realAccount = bankState.accounts.find(a => a.id === accountId);
+        if (realAccount) {
+          cuentaBanco = {
+            id: realAccount.id || accountId,
+            tipo: realAccount.type || 'Child',
+            iban: realAccount.iban || '',
+            sendLimitPz: realAccount.sendLimitPz || limitesEfectivos.gasto_diario,
+            saldo_real: realAccount.balancePz || 0
+          };
+        }
+      }
+    } catch (bankErr) {
+      console.warn('[Monedero] Error consultando banco:', bankErr.message);
+    }
+
+    // Si el banco no tiene IBAN, usamos el generado localmente como fallback
+    if (!cuentaBanco.iban || cuentaBanco.iban.startsWith('CAPI-')) {
+      cuentaBanco.iban = generarIbanGdlp(
+        junior.dip || `junior-${junior.id}-${Date.now()}`
+      );
+    }
+
     res.json({
-      saldo_actual: junior.placetas_saldo || 0,
+      saldo_actual: cuentaBanco.saldo_real || junior.placetas_saldo || 0,
       ingresos_totales: ingresos,
       gasto_hoy: gastoHoy,
       gasto_semana: gastoSemana,
       limites: limitesEfectivos,
-        saldo_disponible_hoy: Math.max(0, limitesEfectivos.gasto_diario - gastoHoy),
+      saldo_disponible_hoy: Math.max(0, limitesEfectivos.gasto_diario - gastoHoy),
       saldo_disponible_semana: Math.max(0, limitesEfectivos.gasto_semanal - gastoSemana),
       historial: historial || [],
       nivel_academia: junior.nivel_academia || 1,
-      cuenta_bancaria: {
-        id: junior.cuenta_banco || `u-${junior.dip?.toLowerCase().replace(/-/g, '')}`,
-        tipo: 'Child',
-        // Siempre formato GDLP-AP, aunque la BD tenga CAPI-xxx guardado
-        iban: (!junior.iban || junior.iban.startsWith('CAPI-'))
-          ? generarIbanGdlp(junior.dip || `junior-${junior.id}`)
-          : junior.iban,
-        sendLimitPz: limitesEfectivos.gasto_diario
-      }
+      nombre_menor: `${junior.nombre || ''} ${junior.apellidos || ''}`.trim(),
+      tutor_nombre: junior.tutor_nombre || '',
+      cuenta_bancaria: cuentaBanco
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
