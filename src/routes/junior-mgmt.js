@@ -13,6 +13,16 @@ import { supabase } from '../config/supabase.js';
 const BANCO_API = (process.env.BANCO_API_URL || 'https://api.banco.laplaceta.org').replace(/\/+$/, '');
 const CRM_KEY = process.env.CRM_READ_KEY || 'crm-gdlp-shared-key-2026';
 
+// Genera IBAN formato oficial app: GDLP-AP{control:2d}-{body:3d}
+// Mismo algoritmo que capitalia-app y banco-web
+function generarIbanGdlp(seed) {
+  const normalized = (seed || '0000').toUpperCase().replace(/[^A-Z0-9]/g, '').padEnd(1, '0');
+  let body = 17;
+  for (const ch of normalized) body = (body * 31 + ch.charCodeAt(0)) % 1000;
+  const control = ((body * 97) + 13) % 100;
+  return `GDLP-AP${String(control).padStart(2, '0')}-${String(body).padStart(3, '0')}`;
+}
+
 async function apiBanco(action, data = {}) {
   const r = await fetch(`${BANCO_API}/api/crm-state`, {
     method: 'POST',
@@ -104,10 +114,17 @@ router.post('/vincular', async (req, res) => {
       });
 
       // ── GUARDAR IBAN Y CUENTA en junior_menores ─────────────────
-      if (cuentaInfo?.accountId || cuentaInfo?.iban) {
+      // Usamos formato oficial GDLP-AP, NO el CAPI-XXXX que devuelve el banco
+      const ibanCorrecto = generarIbanGdlp(junior.dip || juniorNombre);
+      if (cuentaInfo?.accountId) {
         await sbUpdateJunior(junior.id, {
-          cuenta_banco: cuentaInfo.accountId || `u-${junior.dip?.toLowerCase().replace(/-/g, '')}`,
-          iban: cuentaInfo.iban || `CAPI-${junior.dip?.split('-')[1] || '0000'}`
+          cuenta_banco: cuentaInfo.accountId,
+          iban: ibanCorrecto
+        });
+      } else {
+        await sbUpdateJunior(junior.id, {
+          cuenta_banco: `u-${junior.dip?.toLowerCase().replace(/-/g, '')}`,
+          iban: ibanCorrecto
         });
       }
 
