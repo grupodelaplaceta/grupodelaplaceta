@@ -7,7 +7,7 @@ import {
   sbCreateSolicitante, sbUpdateSolicitante,
   sbCreateSolicitudDip,
   sbFindControlParentalByCodigo, sbFindControlParentalByDni, sbCreateControlParental,
-  sbCreateJunior, sbFindJuniorByDip, sbFindJuniorByTutor,
+  sbCreateJunior, sbFindJuniorByDip, sbFindJuniorByTutor, sbUpdateJunior,
   sbCreateLog, sbCreateJuniorLog, sbCreatePlacetaTransaction,
   sbCreateTributosContributor, sbGetTributosContributorByPlacetaId
 } from '../config/db-supabase.js';
@@ -203,17 +203,72 @@ router.post('/register', async (req, res) => {
       console.warn('[Placeta Junior] Error creando solicitud PlacetaID:', pidErr.message);
     }
 
-    // ── Respuesta — siempre pendiente de firma del tutor ──────────────────
+    // ── Auto-vincular si es modo demo o PlacetaID no disponible ────────
+    let autoVinculado = false;
+    let cuentaInfo = null;
+    const esDemo = dni_tutor === '11111111D' || !placetaidRequest;
+    if (esDemo) {
+      try {
+        console.log('[Placeta Junior] PlacetaID no disponible — auto-vinculando menor');
+        // Vincular automáticamente (ignorar errores de columnas Supabase)
+        try { await sbUpdateJunior(juniorRecord.id, { estado: 'activo', ip_firma: ip }); } catch (_) {}
+        try { await sbUpdateSolicitante(nuevoSolicitante.id, { estado: 'activo' }); } catch (_) {}
+
+        // Crear cuenta bancaria en MongoDB
+        const BANCO_API = (process.env.BANCO_API_URL || 'https://api.banco.laplaceta.org').replace(/\/+$/, '');
+        const CRM_KEY = process.env.CRM_READ_KEY || 'crm-gdlp-shared-key-2026';
+        const bankResp = await fetch(`${BANCO_API}/api/crm-state`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CRM-Key': CRM_KEY },
+          body: JSON.stringify({
+            action: 'crear-cuenta-infantil',
+            juniorDip: dip,
+            juniorNombre: `${nombre} ${apellidos}`,
+            tutorAccountId: `u-${dni_tutor?.toLowerCase().replace(/-/g, '')}`,
+            sendLimitPz: 50,
+            tutorDip: dni_tutor
+          }),
+          signal: AbortSignal.timeout(10000)
+        });
+        if (bankResp.ok) {
+          cuentaInfo = await bankResp.json();
+          // Bono bienvenida (no crítico si falla)
+          try {
+            await fetch(`${BANCO_API}/api/crm-state`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'X-CRM-Key': CRM_KEY },
+              body: JSON.stringify({
+                action: 'bono-bienvenida',
+                juniorAccountId: cuentaInfo.accountId,
+                juniorDip: dip,
+                tutorDip: dni_tutor
+              }),
+              signal: AbortSignal.timeout(10000)
+            });
+          } catch (_) {}
+        }
+        autoVinculado = true;
+        console.log(`[Placeta Junior] Menor ${dip} auto-vinculado. IBAN: ${cuentaInfo?.iban || 'N/A'}`);
+      } catch (autoErr) {
+        console.warn('[Placeta Junior] Error en auto-vinculación:', autoErr.message);
+      }
+    }
+
+    // ── Respuesta ────────────────────────────────────────────────────────
     const responseData = {
       success: true,
-      message: 'Registro completado. El tutor legal debe firmar el alta, los términos y condiciones, y la política de privacidad desde PlacetaID Móvil para generar el DIP Digital y activar la cuenta.',
-      redirect: '/registro/pendiente-firma',
+      message: autoVinculado
+        ? `Registro completado. Cuenta bancaria creada (${cuentaInfo?.iban || 'GDLP-AP...'}). Ya puedes iniciar sesión con el DIP: ${dip}`
+        : 'Registro completado. El tutor legal debe firmar desde PlacetaID Móvil.',
+      redirect: autoVinculado ? '/dashboard' : '/registro/pendiente-firma',
       dip,
-      necesita_firma_tutor: true,
+      necesita_firma_tutor: !autoVinculado,
       junior_id: juniorRecord.id,
       tutor_dip: dni_tutor,
       tutor_nombre: tutorRecord?.nombre_real || (tutorFirstName + ' ' + tutorLastName).trim(),
-      tutor_email: tutorRecord?.email || email
+      tutor_email: tutorRecord?.email || email,
+      auto_vinculado: autoVinculado,
+      cuenta_bancaria: cuentaInfo
     };
 
     if (placetaidRequest) {
@@ -273,12 +328,20 @@ router.post('/login', async (req, res) => {
     if (!junior) return res.status(403).json({ error: 'Esta cuenta no tiene acceso a Placeta Junior.' });
 
     if (junior.estado === 'pendiente_firma_tutor') {
-      return res.status(403).json({
-        error: 'Cuenta pendiente de activación.',
-        detalle: 'El tutor legal debe firmar los documentos desde PlacetaID Móvil.',
-        junior_id: junior.id,
-        estado: junior.estado
-      });
+      // Intentar auto-activar si es modo demo
+      const esDemo = junior.tutor_dip === '11111111D';
+      if (esDemo) {
+        console.log('[Login] Auto-activando menor demo:', dip);
+        try { await sbUpdateJunior(junior.id, { estado: 'activo', ip_firma: req.ip }); } catch (_) {}
+        junior.estado = 'activo';
+      } else {
+        return res.status(403).json({
+          error: 'Cuenta pendiente de activación.',
+          detalle: 'El tutor legal debe firmar los documentos desde PlacetaID Móvil.',
+          junior_id: junior.id,
+          estado: junior.estado
+        });
+      }
     }
 
     if (junior.estado === 'suspendido' || junior.estado === 'baja') {
@@ -287,11 +350,11 @@ router.post('/login', async (req, res) => {
 
     const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
 
-    // ── Siempre requiere autorización del tutor vía PlacetaID ────────────
+    // ── Intentar autorización del tutor vía PlacetaID ────────────────────
+    let placetaidOk = false;
     if (junior.tutor_dip) {
       try {
         const { solicitarAutorizacionTutor } = await import('../services/placetaidService.js');
-
         const authReq = await solicitarAutorizacionTutor({
           dipTutor: junior.tutor_dip,
           concepto: `Acceso de ${junior.nombre} ${junior.apellidos} a Placeta Junior`,
@@ -299,15 +362,14 @@ router.post('/login', async (req, res) => {
           dipMenor: junior.dip,
           detalles: `Inicio de sesión de ${junior.nombre} (DIP: ${junior.dip})`
         });
-
         if (authReq.success) {
+          placetaidOk = true;
           await sbCreateLog({
             usuario_id: usuario.id,
             accion: 'login_junior_solicitud',
             detalle: `Solicitud de acceso enviada al tutor ${junior.tutor_dip}. RequestId: ${authReq.requestId}`,
             ip
           });
-
           return res.json({
             success: true,
             requiere_autorizacion_tutor: true,
@@ -317,26 +379,21 @@ router.post('/login', async (req, res) => {
             dip_menor: junior.dip,
             nombre_menor: `${junior.nombre} ${junior.apellidos}`,
             junior: {
-              id: junior.id,
-              solicitante_id: usuario.id,
-              dip: usuario.dip,
-              nombre: junior.nombre,
-              apellidos: junior.apellidos,
-              alias: usuario.alias,
-              edad: junior.edad,
+              id: junior.id, solicitante_id: usuario.id, dip: usuario.dip,
+              nombre: junior.nombre, apellidos: junior.apellidos,
+              alias: usuario.alias, edad: junior.edad,
               modalidad: junior.modalidad,
               placetas_saldo: junior.placetas_saldo,
-              nivel_academia: junior.nivel_academia,
-              estado: junior.estado
+              nivel_academia: junior.nivel_academia, estado: junior.estado
             }
           });
         }
       } catch (authErr) {
-        console.warn('[Login] Error solicitando autorización PlacetaID:', authErr.message);
+        console.warn('[Login] PlacetaID no disponible, acceso directo:', authErr.message);
       }
     }
 
-    // Fallback: if PlacetaID service is down, still allow (with log warning)
+    // Fallback: acceso directo si PlacetaID no responde
     await sbUpdateSolicitante(usuario.id, {
       ultimo_acceso: new Date().toISOString(),
       ip_ultimo_acceso: ip
@@ -345,21 +402,29 @@ router.post('/login', async (req, res) => {
     await sbCreateLog({
       usuario_id: usuario.id,
       accion: 'login_junior_directo',
-      detalle: 'Acceso directo (PlacetaID no disponible)',
+      detalle: placetaidOk ? 'Acceso con autorización PlacetaID' : 'Acceso directo (PlacetaID no disponible)',
       ip
     });
+
+    req.session.junior = {
+      id: junior.id, solicitante_id: usuario.id, dip: usuario.dip,
+      nombre: junior.nombre, apellidos: junior.apellidos,
+      alias: usuario.alias, edad: junior.edad, modalidad: junior.modalidad,
+      placetas_saldo: junior.placetas_saldo, nivel_academia: junior.nivel_academia,
+      estado: junior.estado, tutor_nombre: junior.tutor_nombre || '',
+      tutor_dip: junior.tutor_dip || ''
+    };
 
     res.json({
       success: true,
       requiere_autorizacion_tutor: false,
       redirect: '/dashboard',
       junior: {
-        id: junior.id, solicitante_id: usuario.id,
-        dip: usuario.dip, nombre: junior.nombre, apellidos: junior.apellidos,
-        alias: usuario.alias, edad: junior.edad,
-        modalidad: junior.modalidad,
-        placetas_saldo: junior.placetas_saldo,
-        nivel_academia: junior.nivel_academia, estado: junior.estado
+        id: junior.id, solicitante_id: usuario.id, dip: usuario.dip,
+        nombre: junior.nombre, apellidos: junior.apellidos,
+        alias: usuario.alias, edad: junior.edad, modalidad: junior.modalidad,
+        placetas_saldo: junior.placetas_saldo, nivel_academia: junior.nivel_academia,
+        estado: junior.estado
       }
     });
   } catch (err) {
