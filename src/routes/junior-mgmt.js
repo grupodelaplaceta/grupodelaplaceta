@@ -19,10 +19,10 @@ function generarIbanGdlp(seed) {
   // Seed único: DIP + timestamp + random para evitar colisiones
   const uniqueSeed = `${seed || '0000'}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
   const normalized = uniqueSeed.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 20);
-  let body = 17;
-  for (const ch of normalized) body = (body * 31 + ch.charCodeAt(0)) % 1000;
-  const control = ((body * 97) + 13) % 100;
-  return `GDLP-AP${String(control).padStart(2, '0')}-${String(body).padStart(3, '0')}`;
+  let ibanAcc = 17;
+  for (const ch of normalized) ibanAcc = (ibanAcc * 31 + ch.charCodeAt(0)) % 1000;
+  const ibanCtrl = ((ibanAcc * 97) + 13) % 100;
+  return `GDLP-AP${String(ibanCtrl).padStart(2, '0')}-${String(ibanAcc).padStart(3, '0')}`;
 }
 
 async function apiBanco(action, data = {}) {
@@ -127,19 +127,13 @@ router.post('/vincular', async (req, res) => {
       });
 
       // ── GUARDAR IBAN Y CUENTA en junior_menores ─────────────────
-      // Usamos formato oficial GDLP-AP, NO el CAPI-XXXX que devuelve el banco
-      const ibanCorrecto = generarIbanGdlp(junior.dip || juniorNombre);
-      if (cuentaInfo?.accountId) {
-        await sbUpdateJunior(junior.id, {
-          cuenta_banco: cuentaInfo.accountId,
-          iban: ibanCorrecto
-        });
-      } else {
-        await sbUpdateJunior(junior.id, {
-          cuenta_banco: `u-${junior.dip?.toLowerCase().replace(/-/g, '')}`,
-          iban: ibanCorrecto
-        });
-      }
+      // Usamos el IBAN que devuelve el banco (ahora en formato GDLP-AP)
+      const ibanDelBanco = cuentaInfo?.iban || generarIbanGdlp(junior.dip || juniorNombre);
+      const accountId = cuentaInfo?.accountId || `u-${junior.dip?.toLowerCase().replace(/-/g, '')}`;
+      await sbUpdateJunior(junior.id, {
+        cuenta_banco: accountId,
+        iban: ibanDelBanco
+      });
 
       // ── Dar bono de bienvenida de 750 Pz (AGLDP → menor) ──────────
       try {
