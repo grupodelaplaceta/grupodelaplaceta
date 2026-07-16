@@ -141,6 +141,55 @@ data class FirmaResponse(
     @SerializedName("error") val error: String?
 )
 
+// ── Multi-identidad ──────────────────────────────────────────────────────────
+
+data class MultiAuthRequestResponse(
+    @SerializedName("_id") val id: String?,
+    @SerializedName("identidad") val identidad: String?,
+    @SerializedName("codigo") val codigo: String?,
+    @SerializedName("servicio") val servicio: String?,
+    @SerializedName("servicioUrl") val servicioUrl: String?,
+    @SerializedName("plataforma") val plataforma: String?,
+    @SerializedName("creadoEn") val creadoEn: String?,
+    @SerializedName("estado") val estado: String?
+)
+
+data class MultiVotacionResponse(
+    @SerializedName("id") val id: String?,
+    @SerializedName("identidad") val identidad: String?,
+    @SerializedName("identidadNombre") val identidadNombre: String?,
+    @SerializedName("titulo") val titulo: String?,
+    @SerializedName("grupo") val grupo: String?,
+    @SerializedName("quorum") val quorum: Int?,
+    @SerializedName("aFavor") val aFavor: Int?,
+    @SerializedName("enContra") val enContra: Int?,
+    @SerializedName("abstenciones") val abstenciones: Int?,
+    @SerializedName("estado") val estado: String?,
+    @SerializedName("resultado") val resultado: String?
+)
+
+data class MultiDocumentoResponse(
+    @SerializedName("id") val id: String?,
+    @SerializedName("identidad") val identidad: String?,
+    @SerializedName("identidadNombre") val identidadNombre: String?,
+    @SerializedName("titulo") val titulo: String?,
+    @SerializedName("tipo") val tipo: String?,
+    @SerializedName("entidad") val entidad: String?,
+    @SerializedName("csv") val csv: String?,
+    @SerializedName("estado") val estado: String?,
+    @SerializedName("creadoEn") val creadoEn: String?
+)
+
+data class DocumentoContenidoResponse(
+    @SerializedName("id") val id: String?,
+    @SerializedName("titulo") val titulo: String?,
+    @SerializedName("tipo") val tipo: String?,
+    @SerializedName("csv") val csv: String?,
+    @SerializedName("contenido") val contenido: Any?,
+    @SerializedName("estado") val estado: String?,
+    @SerializedName("destinatarios") val destinatarios: List<DestinatarioDto>?
+)
+
 // ── Notificaciones ────────────────────────────────────────────────────────────
 
 data class NotificacionResponse(

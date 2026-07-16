@@ -75,6 +75,34 @@ interface PlacetaIDApi {
         @Body body: Map<String, String>
     ): Response<FirmaResponse>
 
+    // ── Multi-identidad (varios DIPs a la vez) ──────────────────────────
+
+    @POST("mobil/multi/pending")
+    suspend fun getMultiPending(
+        @Body body: Map<String, List<String>>
+    ): Response<List<MultiAuthRequestResponse>>
+
+    @POST("mobil/multi/votaciones")
+    suspend fun getMultiVotaciones(
+        @Body body: Map<String, List<String>>
+    ): Response<List<MultiVotacionResponse>>
+
+    @POST("mobil/multi/documentos")
+    suspend fun getMultiDocumentos(
+        @Body body: Map<String, List<String>>
+    ): Response<List<MultiDocumentoResponse>>
+
+    @POST("mobil/multi/notificaciones")
+    suspend fun getMultiNotificaciones(
+        @Body body: Map<String, List<String>>
+    ): Response<List<NotificacionResponse>>
+
+    @POST("mobil/multi/documentos/{id}/contenido")
+    suspend fun getDocumentoContenido(
+        @Path("id") id: String,
+        @Body body: Map<String, List<String>>
+    ): Response<DocumentoContenidoResponse>
+
     // ── Notificaciones ──────────────────────────────────────────────────
 
     @GET("mobil/notificaciones/{dip}")
