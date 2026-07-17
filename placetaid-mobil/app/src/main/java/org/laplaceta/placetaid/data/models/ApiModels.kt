@@ -193,6 +193,7 @@ data class DocumentoContenidoResponse(
 // ── Notificaciones ────────────────────────────────────────────────────────────
 
 data class NotificacionResponse(
+    @SerializedName("_id") val id: String?,
     @SerializedName("tipo") val tipo: String?,
     @SerializedName("dip") val dip: String?,
     @SerializedName("titulo") val titulo: String?,

@@ -73,7 +73,7 @@ fun LegalDocsSigningScreen(
         try {
             isLoading = true
             val url = if (modoGeneral) {
-                "${ApiClient.getAdminUrl()}/api/admin/junior/documentos"
+                "${ApiClient.getAdminUrl()}/api/documentos/pendientes?dip=${tutorDip}"
             } else {
                 "${ApiClient.getAdminUrl()}/api/junior/documentos-pendientes/$juniorId"
             }

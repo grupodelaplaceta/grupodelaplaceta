@@ -52,7 +52,7 @@ fun HistoryScreen(
             isLoading = true
             try {
                 val json = withContext(Dispatchers.IO) {
-                    URL("${ApiClient.getAdminUrl()}/api/admin/junior/documentos").readText()
+                    URL("${ApiClient.getAdminUrl()}/api/documentos/pendientes?dip=${selectedDip}").readText()
                 }
                 val arr = JSONArray(json)
                 val list = mutableListOf<JSONObject>()
