@@ -79,17 +79,21 @@ fun LegalDocsSigningScreen(
             }
             val json = withContext(Dispatchers.IO) { URL(url).readText() }
             if (modoGeneral) {
-                // Parse general documents display
-                val arr = JSONArray(json)
+                // Parse general documents display (robusto: puede ser array u objeto con error)
                 val docs = mutableListOf<DocumentoPendiente>()
-                for (i in 0 until arr.length()) {
-                    val d = arr.getJSONObject(i)
-                    docs.add(DocumentoPendiente(
-                        codigo = d.optString("codigo", ""),
-                        nombre = d.optString("nombre", d.optString("codigo", "Documento")),
-                        orden = i,
-                        firmado = d.optInt("firmado", 0) == 1 || d.optString("estado", "") == "firmado"
-                    ))
+                try {
+                    val arr = JSONArray(json)
+                    for (i in 0 until arr.length()) {
+                        val d = arr.getJSONObject(i)
+                        docs.add(DocumentoPendiente(
+                            codigo = d.optString("codigo", ""),
+                            nombre = d.optString("nombre", d.optString("codigo", "Documento")),
+                            orden = i,
+                            firmado = d.optInt("firmado", 0) == 1 || d.optString("estado", "") == "firmado"
+                        ))
+                    }
+                } catch (_: Exception) {
+                    // Si no es array (error u objeto), mostrar vacío
                 }
                 firmaState = FirmaState(
                     juniorId = 0,
