@@ -77,9 +77,6 @@ fun PlacetaIDsScreen(
                 item {
                     Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Text(text = "Mis Identidades", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = PlacetaidTextPrimary)
-                        TextButton(onClick = { showGeneralSigning = true }, colors = ButtonDefaults.textButtonColors(contentColor = PlacetaidAccent)) {
-                            Text("✍️ Firmar doc.", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                        }
                     }
                 }
 
