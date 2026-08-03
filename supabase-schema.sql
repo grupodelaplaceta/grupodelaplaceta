@@ -387,6 +387,7 @@ CREATE TABLE IF NOT EXISTS junior_menores (
   dip_digital_generado_en TIMESTAMPTZ,
   placetas_saldo INTEGER DEFAULT 0,
   nivel_academia INTEGER DEFAULT 1,
+  rbu_ultima TEXT, -- fecha (YYYY-MM-DD) del último reclamo de RBU (anti doble reclamo)
   firma_hash TEXT,
   documentos_firmados JSONB,
   firmado_en TIMESTAMPTZ,
@@ -438,7 +439,7 @@ CREATE INDEX IF NOT EXISTS idx_junior_academia_junior ON junior_academia(junior_
 CREATE TABLE IF NOT EXISTS junior_transacciones (
   id BIGSERIAL PRIMARY KEY,
   junior_id BIGINT NOT NULL REFERENCES junior_menores(id) ON DELETE CASCADE,
-  tipo TEXT NOT NULL CHECK (tipo IN ('ganar', 'gastar', 'bonus', 'ajuste')),
+  tipo TEXT NOT NULL CHECK (tipo IN ('ganar', 'gastar', 'bonus', 'ajuste', 'rbu', 'transferencia', 'canje', 'premium')),
   concepto TEXT NOT NULL,
   cantidad INTEGER NOT NULL,
   saldo_resultante INTEGER NOT NULL,
