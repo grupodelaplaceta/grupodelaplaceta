@@ -212,6 +212,12 @@ router.post('/registrar-saldo-diario', verificarSesion, verificarRol('administra
 // GET /api/fiscal/impuestos-irm/:usuario_id - Historial IRM de un usuario
 router.get('/impuestos-irm/:usuario_id', verificarSesion, (req, res) => {
   const db = getDb();
+  // Seguridad: solo el propio usuario (o gestor admin/junta/fiscal) puede ver su IRM.
+  const esPropio = String(req.session.usuario.id) === String(req.params.usuario_id);
+  const esGestor = ['administrador', 'junta', 'fiscal'].includes(req.session.usuario.rol);
+  if (!esPropio && !esGestor) {
+    return res.status(403).json({ error: 'Acceso denegado: solo puedes consultar tus propios datos' });
+  }
   const irm = db.prepare('SELECT * FROM impuestos_irm WHERE usuario_id = ? ORDER BY periodo DESC').all(req.params.usuario_id);
   res.json(irm);
 });
