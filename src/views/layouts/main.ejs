@@ -108,7 +108,7 @@
       </div>
       <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
         <button class="compact-toggle-btn" onclick="toggleCompactMode()" title="Modo compacto">📐</button>
-        <a href="/admin/audit-bancario" style="position:relative;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.7);padding:6px 10px;border-radius:10px;text-decoration:none;font-size:14px" title="Notificaciones">🔔 <span id="notifBadge" style="display:none;background:var(--red);color:#fff;border-radius:50%;padding:1px 5px;font-size:10px;position:absolute;top:-4px;right:-4px">0</span></a>
+        <a href="/admin/dashboard" style="position:relative;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.7);padding:6px 10px;border-radius:10px;text-decoration:none;font-size:14px" title="Notificaciones">🔔 <span id="notifBadge" style="display:none;background:var(--red);color:#fff;border-radius:50%;padding:1px 5px;font-size:10px;position:absolute;top:-4px;right:-4px">0</span></a>
         <form action="/api/auth/logout" method="POST">
           <button type="submit" class="sidebar-logout" title="Cerrar sesión">🚪 Salir</button>
         </form>
@@ -124,7 +124,7 @@
       <button class="hamburger" onclick="document.getElementById('sidebar').classList.toggle('open')" aria-label="Abrir menú">☰</button>
       <span class="topbar-mobile-title">🏛️ GDLP CRM</span>
       <div style="display:flex;gap:6px;align-items:center">
-        <button class="btn btn-sm btn-glass" style="color:white;border-color:rgba(255,255,255,0.2);position:relative" onclick="window.location.href='/admin/audit-bancario'" title="Notificaciones">
+        <button class="btn btn-sm btn-glass" style="color:white;border-color:rgba(255,255,255,0.2);position:relative" onclick="window.location.href='/admin/dashboard'" title="Notificaciones">
           🔔 <span id="notifBadgeMobile" style="display:none;background:var(--red);color:#fff;border-radius:50%;padding:1px 5px;font-size:10px;position:absolute;top:-2px;right:-4px">0</span>
         </button>
         <form action="/api/auth/logout" method="POST" class="topbar-mobile-logout">

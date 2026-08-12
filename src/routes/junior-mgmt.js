@@ -11,7 +11,7 @@ import {
 import { supabase } from '../config/supabase.js';
 
 const BANCO_API = (process.env.BANCO_API_URL || 'https://api.banco.laplaceta.org').replace(/\/+$/, '');
-const CRM_KEY = process.env.CRM_READ_KEY || 'crm-gdlp-shared-key-2026';
+const CRM_KEY = process.env.CRM_READ_KEY;
 
 // Genera IBAN formato oficial app: GDLP-AP{control:2d}-{body:3d}
 // Mismo algoritmo que capitalia-app y banco-web

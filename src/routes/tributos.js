@@ -316,7 +316,7 @@ router.get('/contributors/calcular/todas', verificarSesion, verificarRol('admini
       let patrimonio = 0;
       try {
         const r = await fetch(`${BANCO_API}/api/account/${c.placeta_id}/balance`, {
-          headers: { 'X-CRM-Key': process.env.CRM_READ_KEY || 'crm-gdlp-shared-key-2026' },
+          headers: { 'X-CRM-Key': process.env.CRM_READ_KEY },
           signal: AbortSignal.timeout(5000)
         });
         if (r.ok) { const d = await r.json(); patrimonio = d.balancePz || 0; }
@@ -350,7 +350,7 @@ router.get('/contributors/:placetaId/calcular', verificarSesion, verificarRol('a
     try {
       const r = await fetch(`${BANCO_API}/api/crm-state`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CRM-Key': process.env.CRM_READ_KEY || 'crm-gdlp-shared-key-2026' },
+        headers: { 'Content-Type': 'application/json', 'X-CRM-Key': process.env.CRM_READ_KEY },
         body: JSON.stringify({ action: 'get-state' }),
         signal: AbortSignal.timeout(8000)
       });
@@ -428,7 +428,7 @@ router.post('/contributors/:placetaId/detectar-tipo', verificarSesion, verificar
       let patrimonio = 0;
       try {
         const r = await fetch(`${BANCO_API}/api/account/${c.placeta_id}/balance`, {
-          headers: { 'X-CRM-Key': process.env.CRM_READ_KEY || 'crm-gdlp-shared-key-2026' },
+          headers: { 'X-CRM-Key': process.env.CRM_READ_KEY },
           signal: AbortSignal.timeout(5000)
         });
         if (r.ok) { const d = await r.json(); patrimonio = d.balancePz || 0; }
@@ -470,7 +470,7 @@ router.get('/contributors/:placetaId/cuentas', verificarSesion, verificarRol('ad
     try {
       const r = await fetch(`${BANCO_API}/api/crm-state`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CRM-Key': process.env.CRM_READ_KEY || 'crm-gdlp-shared-key-2026' },
+        headers: { 'Content-Type': 'application/json', 'X-CRM-Key': process.env.CRM_READ_KEY },
         body: JSON.stringify({ action: 'get-state' }),
         signal: AbortSignal.timeout(8000)
       });
@@ -693,7 +693,7 @@ router.put('/declarations/:id/emit', verificarSesion, verificarRol('administrado
     // Intentar pago al banco
     if (totalCuota > 0 && dec.placeta_id) {
       try {
-        const CRM_KEY = process.env.CRM_READ_KEY || 'crm-gdlp-shared-key-2026';
+        const CRM_KEY = process.env.CRM_READ_KEY;
         const payR = await fetch(`${BANCO_API}/api/admin/transfer`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-CRM-Key': CRM_KEY },
@@ -767,7 +767,7 @@ router.put('/declarations/bulk/:accion', verificarSesion, verificarRol('administ
           let txId = null;
           if (totalCuota > 0 && dec.placeta_id) {
             try {
-              const CRM_KEY = process.env.CRM_READ_KEY || 'crm-gdlp-shared-key-2026';
+              const CRM_KEY = process.env.CRM_READ_KEY;
               const pr = await fetch(`${BANCO_API}/api/admin/transfer`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CRM-Key': CRM_KEY },
                 body: JSON.stringify({
@@ -975,7 +975,7 @@ router.post('/reconcile/:placetaId', verificarSesion, verificarRol('administrado
     let bankSaldoTotal = 0;
     let cuentasDelTitular = [];
     try {
-      const CRM_KEY = process.env.CRM_READ_KEY || 'crm-gdlp-shared-key-2026';
+      const CRM_KEY = process.env.CRM_READ_KEY;
       const r = await fetch(`${BANCO_API}/api/crm-state`, {
         headers: { 'X-CRM-Key': CRM_KEY },
         signal: AbortSignal.timeout(8000)

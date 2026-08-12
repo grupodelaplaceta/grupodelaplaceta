@@ -10,7 +10,7 @@ import { supabase } from '../config/supabase.js';
 import { generarCuestionarios, COSTO_DESBLOQUEO_POR_NIVEL, getRangoEdad } from '../data/cuestionarios.js';
 
 const BANCO_API = (process.env.BANCO_API_URL || 'https://api.banco.laplaceta.org').replace(/\/+$/, '');
-const CRM_KEY = process.env.CRM_READ_KEY || 'crm-gdlp-shared-key-2026';
+const CRM_KEY = process.env.CRM_READ_KEY;
 
 // ── Notificar al tutor vía PlacetaID ─────────────────────────
 async function notificarTutor(junior, concepto, detalles, monto = 0) {

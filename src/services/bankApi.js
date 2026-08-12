@@ -1,5 +1,5 @@
 const BANK_API_BASE = process.env.BANK_API_URL || 'https://api.banco.laplaceta.org';
-const CRM_KEY = process.env.CRM_READ_KEY || 'crm-gdlp-shared-key-2026';
+const CRM_KEY = process.env.CRM_READ_KEY;
 
 async function bankFetch(endpoint, token) {
   const url = `${BANK_API_BASE}${endpoint}`;

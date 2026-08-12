@@ -241,7 +241,7 @@ router.post('/junior/:id/crear-cuenta-bancaria', verificarSesion, verificarRol('
     const junior = db.prepare("SELECT * FROM junior_menores WHERE id = ?").get(id);
     if (!junior) return res.status(404).json({ error: 'Junior no encontrado' });
     const BANCO_API = (process.env.BANCO_API_URL || 'https://api.banco.laplaceta.org').replace(/\/+$/, '');
-    const CRM_KEY = process.env.CRM_READ_KEY || 'crm-gdlp-shared-key-2026';
+    const CRM_KEY = process.env.CRM_READ_KEY;
     const r = await fetch(`${BANCO_API}/api/crm-state`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-CRM-Key': CRM_KEY },
@@ -268,7 +268,7 @@ router.post('/junior/:id/crear-cuenta-bancaria', verificarSesion, verificarRol('
 // ── BACKFILL: Crear cuentas para juniors existentes sin cuenta ──────────────
 router.post('/junior/backfill-cuentas', verificarSesion, verificarRol('administrador', 'junta'), async (req, res) => {
   const BANCO_API = (process.env.BANCO_API_URL || 'https://api.banco.laplaceta.org').replace(/\/+$/, '');
-  const CRM_KEY = process.env.CRM_READ_KEY || 'crm-gdlp-shared-key-2026';
+  const CRM_KEY = process.env.CRM_READ_KEY;
   const resultados = [];
   try {
     const juniors = await s('junior_menores', '*', { eq: { estado: 'activo' } }) || [];

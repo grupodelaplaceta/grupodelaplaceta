@@ -14,7 +14,7 @@ import {
 
 const BANCO_API = (process.env.BANCO_API_URL || 'https://api.banco.laplaceta.org').replace(/\/+$/, '');
 const PLACETAID_API = process.env.PLACETAID_API_URL || 'http://localhost:3000';
-const CRM_KEY = process.env.CRM_READ_KEY || 'crm-gdlp-shared-key-2026';
+const CRM_KEY = process.env.CRM_READ_KEY;
 
 async function apiBanco(action, data = {}) {
   const r = await fetch(`${BANCO_API}/api/crm-state`, {
@@ -216,7 +216,7 @@ router.post('/register', async (req, res) => {
 
         // Crear cuenta bancaria en MongoDB
         const BANCO_API = (process.env.BANCO_API_URL || 'https://api.banco.laplaceta.org').replace(/\/+$/, '');
-        const CRM_KEY = process.env.CRM_READ_KEY || 'crm-gdlp-shared-key-2026';
+        const CRM_KEY = process.env.CRM_READ_KEY;
         const bankResp = await fetch(`${BANCO_API}/api/crm-state`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-CRM-Key': CRM_KEY },
