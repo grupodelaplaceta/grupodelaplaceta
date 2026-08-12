@@ -218,6 +218,13 @@ router.get('/impuestos-irm/:usuario_id', verificarSesion, (req, res) => {
   if (!esPropio && !esGestor) {
     return res.status(403).json({ error: 'Acceso denegado: solo puedes consultar tus propios datos' });
   }
+  // Auditoría de acceso a datos ajenos (FASE 1.6): toda lectura de un tercero queda registrada
+  if (!esPropio) {
+    try {
+      db.prepare('INSERT INTO logs_auditoria (usuario_id, accion, detalle, ip) VALUES (?, ?, ?, ?)')
+        .run(req.session.usuario.id, 'lectura_irm_ajeno', `Lectura del IRM del usuario ${req.params.usuario_id} por gestor`, req.ip || '');
+    } catch {}
+  }
   const irm = db.prepare('SELECT * FROM impuestos_irm WHERE usuario_id = ? ORDER BY periodo DESC').all(req.params.usuario_id);
   res.json(irm);
 });
