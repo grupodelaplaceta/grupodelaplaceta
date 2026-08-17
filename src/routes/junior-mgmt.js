@@ -247,7 +247,7 @@ router.get('/monedero', verificarJunior, async (req, res) => {
 
     // Límites del tutor (o valores por defecto)
     const limites = await sbGetParentalLimits(junior.id);
-    const limitesEfectivos = limites ? {
+    let limitesEfectivos = limites ? {
       gasto_diario: limites.limite_gasto_diario || 10,
       gasto_semanal: limites.limite_gasto_semanal || 50,
       limite_aprobacion_tutor: limites.limite_aprobacion_tutor || 1000,
@@ -293,12 +293,17 @@ router.get('/monedero', verificarJunior, async (req, res) => {
       .reduce((s, t) => s + (t.cantidad || 0), 0);
 
     // ── Obtener cuenta REAL del banco (MongoDB) ────────────────────
+    const titularNombre = `${junior.nombre || ''} ${junior.apellidos || ''}`.trim() || 'Menor';
     let cuentaBanco = {
       id: junior.cuenta_banco || `u-${junior.dip?.toLowerCase().replace(/-/g, '')}`,
       tipo: 'Child',
       iban: '',
       sendLimitPz: limitesEfectivos.gasto_diario,
-      saldo_real: 0
+      saldo_real: 0,
+      titular: titularNombre,
+      cotitular: junior.tutor_nombre || 'Tutor legal',
+      tutorDip: junior.tutor_dip || '',
+      tutorNombre: junior.tutor_nombre || ''
     };
 
     try {
@@ -312,8 +317,17 @@ router.get('/monedero', verificarJunior, async (req, res) => {
             tipo: realAccount.type || 'Child',
             iban: realAccount.iban || '',
             sendLimitPz: realAccount.sendLimitPz || limitesEfectivos.gasto_diario,
-            saldo_real: realAccount.balancePz || 0
+            saldo_real: realAccount.balancePz || 0,
+            titular: titularNombre,
+            cotitular: junior.tutor_nombre || 'Tutor legal',
+            tutorDip: junior.tutor_dip || '',
+            tutorNombre: junior.tutor_nombre || ''
           };
+          // El límite de envío de la cuenta Child es el límite efectivo
+          // con el que el menor actúa sobre su dinero.
+          if (Number(realAccount.sendLimitPz) > 0) {
+            limitesEfectivos.gasto_diario = Number(realAccount.sendLimitPz);
+          }
         }
       }
     } catch (bankErr) {

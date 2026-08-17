@@ -40,6 +40,19 @@ async function apiBanco(action, data = {}) {
   } catch (e) { return { success: false, error: e.message }; }
 }
 
+// Lee el estado completo del banco para conocer la cuenta Child real y su límite
+async function apiBancoGetState() {
+  try {
+    const r = await fetch(`${BANCO_API}/api/crm-state`, {
+      method: 'GET',
+      headers: { 'X-CRM-Key': CRM_KEY },
+      signal: AbortSignal.timeout(10000)
+    });
+    if (!r.ok) return null;
+    return r.json();
+  } catch (_) { return null; }
+}
+
 // Pago bancario via API backend-banco (legacy, kept for reference)
 async function desbloquearNivelBanco({ juniorAccountId, costoPlacetas, juniorDip, tutorDip }) {
   try {
@@ -434,7 +447,7 @@ async function verificarJunior(req, res, next) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 const RBU_DIARIO = 5; // 5 Pz cada día
-const RBU_FUNDACION = 'FUNDACION_BP';
+const RBU_FUNDACION = 'AGLDP'; // Fundación del Banco de La Placeta (RBU)
 
 router.get('/rbu', verificarJunior, async (req, res) => {
   try {
@@ -468,7 +481,8 @@ router.get('/rbu', verificarJunior, async (req, res) => {
     if (!esDemo) {
       try {
         await apiBanco('transferir', {
-          from: RBU_FUNDACION, to: junior.cuenta_banco || junior.dip,
+          from: RBU_FUNDACION,
+          to: junior.cuenta_banco || `u-${junior.dip?.toLowerCase().replace(/-/g, '')}`,
           cantidad, concepto: `RBU día ${streak} — Placeta Junior`, ip
         });
       } catch (e) { console.warn('[RBU] Banco:', e.message); }
@@ -497,6 +511,114 @@ router.get('/rbu', verificarJunior, async (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
+//  TRANSFERENCIA ENTRE JUNIORS — opera sobre la cuenta Child real del banco
+//  y respeta el límite de envío (sendLimitPz) que tiene asignada esa cuenta.
+// ═══════════════════════════════════════════════════════════════════════════
+
+router.post('/transferir', verificarJunior, async (req, res) => {
+  try {
+    const junior = req.juniorData;
+    if (!junior) return res.status(404).json({ error: 'Perfil no encontrado' });
+
+    const { dip_destino, cantidad, concepto } = req.body;
+    const monto = parseInt(cantidad, 10);
+    if (!dip_destino || !Number.isFinite(monto) || monto <= 0) {
+      return res.status(400).json({ success: false, error: 'Destino y cantidad positiva requeridos' });
+    }
+    if (String(dip_destino).trim().toUpperCase() === String(junior.dip).toUpperCase()) {
+      return res.status(400).json({ success: false, error: 'No puedes enviarte placetas a ti mismo' });
+    }
+
+    const destino = await sbFindJuniorByDip(dip_destino);
+    if (!destino) return res.status(404).json({ success: false, error: 'Destinatario no encontrado' });
+
+    const esDemo = junior.tutor_dip === '11111111D' || (junior.dip || '').includes('DEMO') || (dip_destino || '').includes('DEMO');
+
+    // Cuenta bancaria Child del emisor y del destinatario
+    const cuentaOrigenId = junior.cuenta_banco || `u-${junior.dip?.toLowerCase().replace(/-/g, '')}`;
+    const cuentaDestinoId = destino.cuenta_banco || `u-${String(dip_destino).toLowerCase().replace(/-/g, '')}`;
+
+    // Leer la cuenta Child real del banco y su límite de envío
+    let sendLimitPz = null;
+    let saldoReal = null;
+    try {
+      const state = await apiBancoGetState();
+      const realAccount = (state?.accounts || []).find(a => a.id === cuentaOrigenId);
+      if (realAccount) {
+        sendLimitPz = Number(realAccount.sendLimitPz) || null;
+        saldoReal = Number(realAccount.balancePz) || 0;
+      }
+    } catch (_) { /* banco offline: se usan límites parentales como respaldo */ }
+
+    const limites = await sbGetParentalLimits(junior.id);
+
+    // El límite de la cuenta Child manda: sin superar sendLimitPz por operación
+    if (!esDemo && sendLimitPz && monto > sendLimitPz) {
+      return res.status(403).json({
+        success: false,
+        error: `Tu cuenta infantil tiene un límite de envío de ${sendLimitPz} Pz. Para enviar más pide autorización a tu tutor.`,
+        necesita_autorizacion_tutor: true,
+        send_limit_pz: sendLimitPz
+      });
+    }
+
+    const saldoActual = saldoReal != null ? saldoReal : (junior.placetas_saldo || 0);
+    if (!esDemo && saldoActual < monto) {
+      return res.status(400).json({
+        success: false,
+        error: `No tienes suficientes placetas. Tienes ${saldoActual}, intentas enviar ${monto}.`
+      });
+    }
+
+    // Operación real en el banco: cuenta Child → cuenta Child
+    if (!esDemo) {
+      const r = await apiBanco('transferir', {
+        from: cuentaOrigenId,
+        to: cuentaDestinoId,
+        cantidad: monto,
+        concepto: concepto || 'Transferencia Placeta Junior',
+        juniorDip: junior.dip,
+        tutorDip: junior.tutor_dip
+      });
+      if (!r?.success) {
+        return res.status(400).json({ success: false, error: r?.error || 'El banco rechazó la transferencia' });
+      }
+    }
+
+    const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
+    const nuevoSaldoOrigen = Math.max(0, (junior.placetas_saldo || 0) - monto);
+    const nuevoSaldoDestino = (destino.placetas_saldo || 0) + monto;
+
+    await sbUpdatePlacetaBalance(junior.id, nuevoSaldoOrigen);
+    await sbUpdatePlacetaBalance(destino.id, nuevoSaldoDestino);
+    await sbCreatePlacetaTransaction({
+      junior_id: junior.id, tipo: 'transferencia',
+      concepto: concepto || `Enviado a ${destino.nombre}`,
+      cantidad: monto, saldo_resultante: nuevoSaldoOrigen, ip
+    });
+    await sbCreatePlacetaTransaction({
+      junior_id: destino.id, tipo: 'ganar',
+      concepto: concepto || `Recibido de ${junior.nombre}`,
+      cantidad: monto, saldo_resultante: nuevoSaldoDestino, ip
+    });
+    await sbCreateJuniorLog({
+      junior_id: junior.id, accion: 'transferencia_enviada',
+      detalle: `Envió ${monto} Pz a ${destino.nombre} (DIP ${dip_destino}). Límite envío: ${sendLimitPz || 'n/d'} Pz`, ip
+    });
+
+    res.json({
+      success: true,
+      mensaje: `Transferencia de ${monto} Pz a ${destino.nombre} realizada.`,
+      saldo_actual: nuevoSaldoOrigen,
+      es_demo: esDemo
+    });
+  } catch (err) {
+    console.error('[Academy] Error en transferir:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
 //  CONFIRMAR PAGO UPGRADE — Slideup de confirmación
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -518,7 +640,7 @@ router.post('/confirmar-pago', verificarJunior, async (req, res) => {
     if (!esDemo) {
       try {
         await apiBanco('transferir', {
-          from: junior.cuenta_banco || junior.dip,
+          from: junior.cuenta_banco || `u-${junior.dip?.toLowerCase().replace(/-/g, '')}`,
           to: 'CAPITALIA_BANK', cantidad,
           concepto: concepto || 'Upgrade academia', ip,
           iva: Math.ceil(cantidad * 12 / 100)
