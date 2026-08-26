@@ -82,13 +82,14 @@
       html += '<p style="color:var(--text-light);text-align:center;padding:20px">No hay declaraciones registradas.</p>';
     }
 
-    // Facturas recientes
-    const misFacts = Array.isArray(facts) && miContrib ? facts.filter(f => f.emisor_placeta_id === miContrib.placeta_id || f.receptor_placeta_id === miContrib.placeta_id) : [];
+    // Facturas recientes (el servidor ya filtra las propias y las de empresas titulares)
+    const misFacts = Array.isArray(facts) ? facts : [];
     html += '<div class="section-divider" style="margin:24px 0">Facturas Recientes</div>';
     if (misFacts.length > 0) {
-      html += '<div class="table-container"><table class="data-table"><thead><tr><th>Nº</th><th>Concepto</th><th>Base</th><th>IVA</th><th>Total</th><th>CSV</th></tr></thead><tbody>';
+      html += '<div class="table-container"><table class="data-table"><thead><tr><th>Nº</th><th>Concepto</th><th>Base</th><th>IVA</th><th>Total</th><th>CSV</th><th>PDF</th></tr></thead><tbody>';
       misFacts.slice(0, 5).forEach(f => {
-        html += '<tr><td><strong>' + f.numero_factura + '</strong></td><td>' + (f.concepto_producto || '—') + '</td><td>' + (f.base_imponible || 0).toFixed(2) + ' Pz</td><td>' + (f.total_iva || 0).toFixed(2) + ' Pz</td><td><strong>' + (f.total_factura || 0).toFixed(2) + ' Pz</strong></td><td style="font-size:11px;font-family:monospace">' + (f.csv_verificacion || '—').slice(0, 16) + '</td></tr>';
+        html += '<tr><td><strong>' + f.numero_factura + '</strong></td><td>' + (f.concepto_producto || '—') + '</td><td>' + (f.base_imponible || 0).toFixed(2) + ' Pz</td><td>' + (f.total_iva || 0).toFixed(2) + ' Pz</td><td><strong>' + (f.total_factura || 0).toFixed(2) + ' Pz</strong></td><td style="font-size:11px;font-family:monospace">' + (f.csv_verificacion || '—').slice(0, 16) + '</td>' +
+          '<td><a class="btn btn-sm btn-glass" href="/api/tributos/mis-facturas/' + f.id + '/pdf" target="_blank" title="Descargar PDF">📄</a></td></tr>';
       });
       html += '</tbody></table></div>';
     } else {

@@ -768,6 +768,22 @@ export async function sbListTributosInvoices({ limit = 50 } = {}) {
   }
 }
 
+export async function sbGetTributosInvoiceById(id) {
+  const sb = safeSupabase();
+  if (!sb) return null;
+  try {
+    const { data, error } = await sb.from('tributos_facturas')
+      .select('*').eq('id', id).limit(1).single();
+    if (error) return null;
+    const { data: lineData, error: lineError } = await sb.from('tributos_lineas_factura')
+      .select('*').eq('factura_id', data.id);
+    return { ...data, lineas: lineError ? [] : (lineData || []) };
+  } catch (err) {
+    console.error('[Tributos] Supabase query error (invoice by id):', err.message || err);
+    return null;
+  }
+}
+
 export async function sbCreateTributosInvoice(payload) {
   const sb = safeSupabase();
   if (!sb) throw new Error('Supabase no configurado');

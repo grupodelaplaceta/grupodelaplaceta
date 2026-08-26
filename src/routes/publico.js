@@ -3,7 +3,9 @@ import { getDb } from '../config/db.js';
 import crypto from 'crypto';
 import path from 'path';
 import fs from 'fs';
+import { fileURLToPath } from 'url';
 import PDFDocument from 'pdfkit';
+import PDFGenerator from '../services/pdfGenerator.js';
 import { generarPDFDIP, generarPDFPlacetaID, generarPDFQueja, generarPDFControlParental, generarPDFEntidad } from '../services/tramitePDFs.js';
 import {
   sbFindSolicitante, sbFindSolicitanteByDip, sbFindSolicitanteById,
@@ -15,8 +17,12 @@ import {
   sbFindEntidadByEip, sbCreateEntidad,
   sbCreateDocumentoTramite, sbFindDocumentosByUsuario,
   sbCreateLog, sbFindLogsByUsuario,
-  sbListDocumentosFirmadosPendientes
+  sbListDocumentosFirmadosPendientes,
+  sbListEntidades, sbGetTributosContributorByEip, sbGetTributosInvoiceById
 } from '../config/db-supabase.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const LOGO_TRIBUTOS = path.join(__dirname, '..', '..', 'public', 'img', 'tributos.png');
 
 const router = Router();
 
@@ -501,6 +507,27 @@ router.post('/tramites/alta-tributos', async (req, res) => {
   }
 });
 
+// Resuelve los PlacetaIDs del usuario: su propio PLID + los de las entidades
+// de las que es titular/representante (para facturas de empresas de titulares).
+async function placetaIdsDelUsuario(usuario) {
+  const ids = new Set();
+  if (usuario.placeid) ids.add(usuario.placeid);
+  if (usuario.dip) ids.add(`PLID-${usuario.dip}`);
+  if (usuario.alias) ids.add(`PID-${String(usuario.alias).toUpperCase()}`);
+  try {
+    const entidades = await sbListEntidades().catch(() => []);
+    const mias = (entidades || []).filter((e) => e.representante &&
+      (e.representante.dip === usuario.dip || (usuario.email && e.representante.email === usuario.email)));
+    for (const e of mias) {
+      if (e.eip) {
+        const c = await sbGetTributosContributorByEip(e.eip).catch(() => null);
+        if (c && c.placeta_id) ids.add(c.placeta_id);
+      }
+    }
+  } catch (_) { /* sin empresas: no pasa nada */ }
+  return [...ids].filter(Boolean);
+}
+
 // ── API Pública de Tributos (consulta para usuarios autenticados) ──────────
 router.get('/api/tributos/mi-perfil', async (req, res) => {
   const usuario = req.session.usuario;
@@ -535,12 +562,36 @@ router.get('/api/tributos/mis-facturas', async (req, res) => {
   if (!usuario) return res.status(401).json({ error: 'No autenticado' });
   try {
     const { sbListTributosInvoices } = await import('../config/db-supabase.js');
-    const todas = await sbListTributosInvoices(parseInt(req.query.limit) || 20);
-    const placetaId = usuario.placeid || `PLID-${usuario.dip}`;
-    const misFacts = todas.filter(f => f.emisor_placeta_id === placetaId || f.receptor_placeta_id === placetaId);
+    const todas = await sbListTributosInvoices(parseInt(req.query.limit) || 50);
+    const ids = await placetaIdsDelUsuario(usuario);
+    const misFacts = todas.filter(f => ids.includes(f.emisor_placeta_id) || ids.includes(f.receptor_placeta_id));
     res.json(misFacts);
   } catch (err) {
     res.json([]);
+  }
+});
+
+// Descarga de factura en PDF por un ciudadano (propia o de una empresa de la que es titular)
+router.get('/api/tributos/mis-facturas/:id/pdf', async (req, res) => {
+  const usuario = req.session.usuario;
+  if (!usuario) return res.status(401).json({ error: 'No autenticado' });
+  try {
+    const invoice = await sbGetTributosInvoiceById(req.params.id);
+    if (!invoice) return res.status(404).json({ error: 'Factura no encontrada' });
+    const ids = await placetaIdsDelUsuario(usuario);
+    const propio = ids.includes(invoice.emisor_placeta_id) || ids.includes(invoice.receptor_placeta_id);
+    if (!propio) return res.status(403).json({ error: 'No tienes acceso a esta factura' });
+
+    const generator = new PDFGenerator({ accentColor: '#4e396f', logo: LOGO_TRIBUTOS, tipo: 'tributos' });
+    const doc = generator.generarFacturaTributaria(invoice);
+    const filename = `TLP-FACTURA-${invoice.numero_factura || invoice.id}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    doc.pipe(res);
+    doc.end();
+  } catch (err) {
+    console.error('[Tributos] Error PDF factura ciudadano:', err);
+    res.status(500).json({ error: 'Error generando el documento PDF' });
   }
 });
 
