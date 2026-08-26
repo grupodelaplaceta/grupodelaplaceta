@@ -10,24 +10,26 @@ const router = Router();
 // POST /api/rgpd/consentimiento - Registrar consentimiento
 router.post('/consentimiento', verificarSesion, (req, res) => {
   const db = getDb();
-  const { tipo, aceptado } = req.body;
+  const { tipo, aceptado, version, documento } = req.body;
   const usuarioId = req.session.usuario.id;
 
   if (!tipo) return res.status(400).json({ error: 'Tipo de consentimiento requerido' });
 
   const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
+  const versionDoc = String(version || '1.0');
+  const documentoDoc = String(documento || '');
 
   // Si ya existe, actualizar; si no, insertar
   const existente = db.prepare('SELECT id FROM consentimientos WHERE usuario_id = ? AND tipo = ?').get(usuarioId, tipo);
   if (existente) {
-    db.prepare('UPDATE consentimientos SET aceptado = ?, fecha_aceptacion = datetime(\'now\'), ip_aceptacion = ? WHERE id = ?')
-      .run(aceptado ? 1 : 0, ip, existente.id);
+    db.prepare('UPDATE consentimientos SET aceptado = ?, fecha_aceptacion = datetime(\'now\'), ip_aceptacion = ?, version = ?, documento = ? WHERE id = ?')
+      .run(aceptado ? 1 : 0, ip, versionDoc, documentoDoc, existente.id);
   } else {
-    db.prepare('INSERT INTO consentimientos (usuario_id, tipo, aceptado, ip_aceptacion) VALUES (?, ?, ?, ?)')
-      .run(usuarioId, tipo, aceptado ? 1 : 0, ip);
+    db.prepare('INSERT INTO consentimientos (usuario_id, tipo, aceptado, ip_aceptacion, fecha_aceptacion, version, documento) VALUES (?, ?, ?, ?, datetime(\'now\'), ?, ?)')
+      .run(usuarioId, tipo, aceptado ? 1 : 0, ip, versionDoc, documentoDoc);
   }
 
-  res.json({ success: true, message: `Consentimiento ${aceptado ? 'aceptado' : 'rechazado'} para: ${tipo}` });
+  res.json({ success: true, message: `Consentimiento ${aceptado ? 'aceptado' : 'rechazado'} para: ${tipo}`, version: versionDoc });
 });
 
 // POST /api/rgpd/solicitar-arco - [Solicitar Supresión de Datos / Derechos ARCO+]
