@@ -34,6 +34,12 @@ router.get('/', (req, res) => {
   res.render('public/index', { titulo: 'Inicio', layout: 'layouts/publico', pathActual: '/' });
 });
 
+router.get('/actualidad/placeta-junior', (req, res) => {
+  res.render('public/actualidad-placeta-junior', {
+    titulo: 'Presentamos Placeta Junior', layout: 'layouts/publico', pathActual: '/actualidad'
+  });
+});
+
 router.get('/contenidos', (req, res) => {
   res.render('public/contenidos', { titulo: 'Contenidos', layout: 'layouts/publico', pathActual: '/contenidos' });
 });
@@ -408,7 +414,7 @@ router.get('/voley-club', (req, res) => { res.redirect('/proyectos'); });
 
 // ══ PLACETA JUNIOR ═══════════════════════════════════════════
 router.get('/junior', (req, res) => {
-  res.render('public/junior', { titulo: 'Placeta Junior', layout: 'layouts/publico', pathActual: '/junior' });
+  res.redirect('https://junior.laplaceta.org');
 });
 router.get('/junior/legal', (req, res) => {
   res.render('public/junior-legal', { titulo: 'Textos Legales Junior', layout: 'layouts/publico', pathActual: '/junior' });
