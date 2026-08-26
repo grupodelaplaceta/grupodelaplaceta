@@ -391,3 +391,26 @@ html { background: #f7f7fb; } body { overflow-x: hidden; } main { min-height: 50
 @keyframes juniorRenderFloat { 50% { transform: translateY(-3px) rotate(1deg); } }
 @media (prefers-reduced-motion: reduce) { .junior-activity-render { animation: none; } }
 @media (max-width: 520px) { .junior-activity-render { grid-template-columns: 1fr; max-width: 300px; }.junior-render-main, .junior-render-main img { min-height: 0; }.junior-render-thumbs { gap: 7px; } }
+.junior-render-main img { opacity: 1; transition: opacity .18s ease; }
+.junior-render-main img.is-changing { opacity: .15; }
+.junior-render-thumbs figure { transition: transform .2s, opacity .2s; opacity: .72; }
+.junior-render-thumbs figure.is-active { opacity: 1; transform: scale(1.06); }
+
+/* Mapa visual del ecosistema */
+.ecosystem-lead { max-width: 450px; margin-top: 22px; color: var(--tm); line-height: 1.7; }
+.ecosystem-map { position: relative; min-height: 340px; display: grid; place-items: center; overflow: hidden; border-radius: 28px; background: radial-gradient(circle at center, #f5f0ff 0, #fff 48%, #f8f6fc 100%); }
+.eco-orbit { position: absolute; border: 1px solid #ded5f8; border-radius: 50%; pointer-events: none; }
+.eco-orbit-one { width: 270px; height: 270px; animation: ecosystemSpin 24s linear infinite; }
+.eco-orbit-two { width: 205px; height: 205px; border-style: dashed; border-color: #f2c76c; animation: ecosystemSpinReverse 18s linear infinite; }
+.eco-connector { position: absolute; top: 50%; width: 24%; border-top: 1px dashed #bdb0e9; }
+.eco-connector-left { left: 6%; }.eco-connector-right { right: 6%; }
+.eco-core, .eco-node { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+.eco-core { width: 126px; height: 126px; border-radius: 50%; color: #fff; background: linear-gradient(145deg, #5c2bc2, #9a40c5); box-shadow: 0 14px 28px rgba(89,42,180,.25); }
+.eco-core img { width: 28px; height: 28px; margin-bottom: 6px; filter: brightness(0) invert(1); }
+.eco-core strong { font-size: 17px; }.eco-core small, .eco-node small { font-size: 10px; opacity: .72; }
+.eco-node { position: absolute; width: 142px; min-height: 84px; padding: 12px 10px; border: 1px solid #e5def7; border-radius: 15px; background: rgba(255,255,255,.9); box-shadow: 0 9px 22px rgba(53,31,115,.08); }
+.eco-node strong { margin-top: 5px; color: #28213b; font-size: 12px; }.eco-node-mark { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 9px; background: #eee8ff; color: var(--p); font-size: 9px; font-weight: 900; }
+.eco-association-node { left: 5%; top: 50%; transform: translateY(-50%); }.eco-projects-node { right: 5%; top: 50%; transform: translateY(-50%); }.eco-projects-node .eco-node-mark { background: #fff1d0; color: #a26a0b; font-size: 18px; }
+@keyframes ecosystemSpin { to { transform: rotate(360deg); } } @keyframes ecosystemSpinReverse { to { transform: rotate(-360deg); } }
+@media (prefers-reduced-motion: reduce) { .junior-render-main img, .junior-render-thumbs figure { transition: none; }.eco-orbit-one, .eco-orbit-two { animation: none; } }
+@media (max-width: 700px) { .ecosystem-map { min-height: 300px; }.eco-node { width: 116px; }.eco-association-node { left: 2%; }.eco-projects-node { right: 2%; }.eco-connector { width: 18%; } }
