@@ -44,6 +44,26 @@ router.get('/contenidos', (req, res) => {
   res.render('public/contenidos', { titulo: 'Contenidos', layout: 'layouts/publico', pathActual: '/contenidos' });
 });
 
+router.get('/proyectos/placetaedu', (req, res) => {
+  res.render('public/placetaedu', { titulo: 'PlacetaEDU', layout: 'layouts/publico', pathActual: '/proyectos' });
+});
+
+router.get('/proyectos/audiovisual', (req, res) => {
+  res.render('public/audiovisual', { titulo: 'Producciones audiovisuales', layout: 'layouts/publico', pathActual: '/proyectos' });
+});
+
+router.get('/proyectos/archivo', (req, res) => {
+  res.render('public/archivo', { titulo: 'Archivo', layout: 'layouts/publico', pathActual: '/proyectos' });
+});
+
+router.get('/colabora', (req, res) => {
+  res.render('public/colabora', { titulo: 'Colabora', layout: 'layouts/publico', pathActual: '/colabora' });
+});
+
+router.get('/asociacion', (req, res) => {
+  res.render('public/asociacion', { titulo: 'La asociación', layout: 'layouts/publico', pathActual: '/asociacion' });
+});
+
 router.get('/galeria', (req, res) => {
   res.render('public/galeria', { titulo: 'Galería', layout: 'layouts/publico', pathActual: '/galeria' });
 });
@@ -414,7 +434,7 @@ router.get('/voley-club', (req, res) => { res.redirect('/proyectos'); });
 
 // ══ PLACETA JUNIOR ═══════════════════════════════════════════
 router.get('/junior', (req, res) => {
-  res.redirect('https://junior.laplaceta.org');
+  res.render('public/junior', { titulo: 'Placeta Junior', layout: 'layouts/publico', pathActual: '/junior' });
 });
 router.get('/junior/legal', (req, res) => {
   res.render('public/junior-legal', { titulo: 'Textos Legales Junior', layout: 'layouts/publico', pathActual: '/junior' });
