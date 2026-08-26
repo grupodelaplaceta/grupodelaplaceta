@@ -279,11 +279,17 @@ app.get('/admin/dashboard', verificarAuth, async (req, res) => {
     }
   } catch (e) { /* fallback */ }
 
-  // SQLite: stats bancarias/fiscal/justicia
-  const db = getDb();
-  const totalCuentas = db.prepare('SELECT COUNT(*) as total FROM cuentas_bancarias').get();
-  const masaMonetaria = db.prepare("SELECT COALESCE(SUM(saldo),0) as total FROM cuentas_bancarias WHERE tipo_cuenta NOT IN ('Tesoro','Administracion')").get();
-  const expedientesAbiertos = db.prepare("SELECT COUNT(*) as total FROM expedientes_disciplinarios WHERE estado NOT IN ('firme','archivado')").get();
+  // SQLite: stats bancarias/fiscal/justicia. Estas métricas no deben impedir
+  // abrir el dashboard si un despliegue todavía no tiene alguna tabla creada.
+  let totalCuentas = { total: 0 }, masaMonetaria = { total: 0 }, expedientesAbiertos = { total: 0 };
+  try {
+    const db = getDb();
+    totalCuentas = db.prepare('SELECT COUNT(*) as total FROM cuentas_bancarias').get();
+    masaMonetaria = db.prepare("SELECT COALESCE(SUM(saldo),0) as total FROM cuentas_bancarias WHERE tipo_cuenta NOT IN ('Tesoro','Administracion')").get();
+    expedientesAbiertos = db.prepare("SELECT COUNT(*) as total FROM expedientes_disciplinarios WHERE estado NOT IN ('firme','archivado')").get();
+  } catch (e) {
+    console.warn('⚠️ Dashboard: estadísticas SQLite no disponibles:', e.message);
+  }
   res.render('admin/dashboard', {
     titulo: 'Panel de Administración - GDLP CRM',
     totalUsuarios, activos, pendientes,
