@@ -24,6 +24,7 @@ import {
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const LOGO_TRIBUTOS = path.join(__dirname, '..', '..', 'public', 'img', 'tributos.png');
 const RSP_URL = process.env.RSP_URL || 'https://rsp.laplaceta.org';
+const BOP_URL = process.env.BOP_URL || 'https://bop.laplaceta.org';
 
 const router = Router();
 
@@ -60,6 +61,23 @@ router.get('/api/tramites/catalogo', async (_req, res) => {
     }
   } catch (_) { /* RSP no disponible: la web mantiene los trámites fijos */ }
   res.json([]);
+});
+
+// Normativa del BOP (fuente única). GDLP Web no duplica textos normativos:
+// consulta el BOP por API y, si no está disponible, devuelve lista vacía.
+router.get('/api/normativa', async (req, res) => {
+  try {
+    const codigo = String(req.query.codigo || '').trim();
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 4000);
+    const url = `${BOP_URL}/api/normativa${codigo ? `?codigo=${encodeURIComponent(codigo)}` : ''}`;
+    const r = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeout);
+    if (!r.ok) return res.status(r.status).json({ error: 'bop_error' });
+    res.json(await r.json());
+  } catch (_) {
+    res.json({ total: 0, documentos: [] });
+  }
 });
 
 // ── TRÁMITES LEGALES (Asociación) ───────────────────────────────────────────
