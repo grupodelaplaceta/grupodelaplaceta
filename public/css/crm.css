@@ -2,7 +2,7 @@
    GDLP CRM — Diseño Premium v2.0
    Basado en Código Normativo Interno — Paleta Púrpura
    ═══════════════════════════════════════════════════════════════════════════ */
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 :root {
   --p900: #1c005f;
@@ -52,7 +52,7 @@
   --sidebar-width: 270px;
   --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
-  --font: 'Outfit', system-ui, -apple-system, sans-serif;
+  --font: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
 }
 
 /* ── Reset & Base ─────────────────────────────────────────────────────────── */
