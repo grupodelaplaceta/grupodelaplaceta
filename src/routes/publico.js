@@ -48,6 +48,15 @@ router.get('/proyectos/placetaedu', (req, res) => {
   res.render('public/placetaedu', { titulo: 'PlacetaEDU', layout: 'layouts/publico', pathActual: '/proyectos', departamento: { label: 'Educación', slug: 'educacion', color: '#6240cf' } });
 });
 
+router.get('/proyectos/banco', (req, res) => {
+  res.render('public/banco', {
+    titulo: 'Banco de La Placeta',
+    layout: 'layouts/publico',
+    pathActual: '/proyectos',
+    departamento: { label: 'Economía', slug: 'economia', color: '#087b8b' }
+  });
+});
+
 router.get('/proyectos/audiovisual', (req, res) => {
   res.render('public/audiovisual', { titulo: 'Producciones audiovisuales', layout: 'layouts/publico', pathActual: '/proyectos', departamento: { label: 'Contenidos', slug: 'contenidos', color: '#c83d65' } });
 });
@@ -431,7 +440,12 @@ router.get('/proyectos', (req, res) => {
   res.render('public/proyectos', { titulo: 'Proyectos', layout: 'layouts/publico', pathActual: '/proyectos', usuario: req.session.usuario || null });
 });
 
-router.get('/voley-club', (req, res) => { res.redirect('/proyectos'); });
+router.get('/voley-club', (req, res) => {
+  res.render('public/voley-club', {
+    titulo: 'Voley Club La Placeta', layout: 'layouts/publico', pathActual: '/proyectos',
+    departamento: { label: 'Deportes', slug: 'deportes', color: '#c83d65' }
+  });
+});
 
 // ══ PLACETA JUNIOR ═══════════════════════════════════════════
 router.get('/junior', (req, res) => {

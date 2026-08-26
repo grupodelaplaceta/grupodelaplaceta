@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<% const departamentoActual = departamento || null; %>
+<% const departamentoActual = typeof departamento !== 'undefined' ? departamento : null; %>
+<% const usuarioActual = typeof usuario !== 'undefined' ? usuario : null; %>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -24,7 +25,7 @@
         <a href="https://junior.laplaceta.org" class="nav-item nav-item-junior" target="_blank" rel="noopener">Placeta Junior</a>
         <a href="/tramites" class="nav-item <%= pathActual.startsWith('/tramites') ? 'active' : '' %>">Trámites</a>
         <a href="/junta" class="nav-item <%= pathActual === '/junta' ? 'active' : '' %>">Asociación</a>
-        <% if (usuario) { %>
+        <% if (usuarioActual) { %>
         <a href="/ciudadano" class="nav-item <%= pathActual.startsWith('/ciudadano') ? 'active' : '' %>">Mi Área</a>
         <a href="/api/auth/logout" class="nav-item nav-item-outline">Salir</a>
         <% } else { %>
