@@ -41,23 +41,23 @@ router.get('/actualidad/placeta-junior', (req, res) => {
 });
 
 router.get('/contenidos', (req, res) => {
-  res.render('public/contenidos', { titulo: 'Contenidos', layout: 'layouts/publico', pathActual: '/contenidos' });
+  res.render('public/contenidos', { titulo: 'Contenidos', layout: 'layouts/publico', pathActual: '/contenidos', departamento: { label: 'Contenidos', slug: 'contenidos', color: '#c83d65' } });
 });
 
 router.get('/proyectos/placetaedu', (req, res) => {
-  res.render('public/placetaedu', { titulo: 'PlacetaEDU', layout: 'layouts/publico', pathActual: '/proyectos' });
+  res.render('public/placetaedu', { titulo: 'PlacetaEDU', layout: 'layouts/publico', pathActual: '/proyectos', departamento: { label: 'Educación', slug: 'educacion', color: '#6240cf' } });
 });
 
 router.get('/proyectos/audiovisual', (req, res) => {
-  res.render('public/audiovisual', { titulo: 'Producciones audiovisuales', layout: 'layouts/publico', pathActual: '/proyectos' });
+  res.render('public/audiovisual', { titulo: 'Producciones audiovisuales', layout: 'layouts/publico', pathActual: '/proyectos', departamento: { label: 'Contenidos', slug: 'contenidos', color: '#c83d65' } });
 });
 
 router.get('/proyectos/archivo', (req, res) => {
-  res.render('public/archivo', { titulo: 'Archivo', layout: 'layouts/publico', pathActual: '/proyectos' });
+  res.render('public/archivo', { titulo: 'Archivo', layout: 'layouts/publico', pathActual: '/proyectos', departamento: { label: 'Cultura', slug: 'cultura', color: '#a26a0b' } });
 });
 
 router.get('/colabora', (req, res) => {
-  res.render('public/colabora', { titulo: 'Colabora', layout: 'layouts/publico', pathActual: '/colabora' });
+  res.render('public/colabora', { titulo: 'Colabora', layout: 'layouts/publico', pathActual: '/colabora', departamento: { label: 'Colaboración', slug: 'colaboracion', color: '#4768ab' } });
 });
 
 router.get('/asociacion', (req, res) => {
@@ -260,10 +260,11 @@ router.get('/tramites/alta-placetid', (req, res) => {
   if (usuario) {
     return res.render('public/tramites/alta-placetid', {
       titulo: 'Alta PlacetaID', layout: 'layouts/publico', pathActual: '/tramites',
-      resultado: null, usuario, dipSugerido: usuario.dip
+      resultado: null, usuario, dipSugerido: usuario.dip,
+      departamento: { label: 'Innovación', slug: 'innovacion', color: '#087b8b' }
     });
   }
-  res.render('public/tramites/alta-placetid', { titulo: 'Alta PlacetaID', layout: 'layouts/publico', pathActual: '/tramites', resultado: null, usuario: null, dipSugerido: '' });
+  res.render('public/tramites/alta-placetid', { titulo: 'Alta PlacetaID', layout: 'layouts/publico', pathActual: '/tramites', resultado: null, usuario: null, dipSugerido: '', departamento: { label: 'Innovación', slug: 'innovacion', color: '#087b8b' } });
 });
 
 // ── Completar registro (página pública con QR + 2FA) ──────────────────────
@@ -434,7 +435,7 @@ router.get('/voley-club', (req, res) => { res.redirect('/proyectos'); });
 
 // ══ PLACETA JUNIOR ═══════════════════════════════════════════
 router.get('/junior', (req, res) => {
-  res.render('public/junior', { titulo: 'Placeta Junior', layout: 'layouts/publico', pathActual: '/junior' });
+  res.render('public/junior', { titulo: 'Placeta Junior', layout: 'layouts/publico', pathActual: '/junior', departamento: { label: 'Educación', slug: 'educacion', color: '#6240cf' } });
 });
 router.get('/junior/legal', (req, res) => {
   res.render('public/junior-legal', { titulo: 'Textos Legales Junior', layout: 'layouts/publico', pathActual: '/junior' });

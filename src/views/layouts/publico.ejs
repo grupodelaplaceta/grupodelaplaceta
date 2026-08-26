@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<% const departamentoActual = departamento || null; %>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -7,15 +8,15 @@
   <meta name="description" content="Grupo de La Placeta: asociación española sin ánimo de lucro que desarrolla proyectos educativos, digitales, audiovisuales y culturales.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="/css/publico.css?v=20260826-10">
+  <link rel="stylesheet" href="/css/publico.css?v=20260826-11">
   <link rel="icon" href="/img/favicon.png" type="image/png">
 </head>
-<body>
+<body class="<%= departamentoActual ? `department-page department-${departamentoActual.slug}` : '' %>" style="<%= departamentoActual ? `--department-color: ${departamentoActual.color};` : '' %>">
   <header class="topbar">
     <div class="topbar-inner">
       <a href="/" class="brand">
         <img src="/img/favicon.png" alt="Grupo de La Placeta" class="brand-logo">
-        <span class="brand-text">Grupo de La Placeta<small class="brand-sub">Asociación</small></span>
+        <span class="brand-text">Grupo de La Placeta<small class="brand-sub"><%= departamentoActual ? `Departamento de ${departamentoActual.label}` : 'Asociación' %></small></span>
       </a>
       <nav class="topnav" id="site-navigation" aria-label="Navegación principal">
         <a href="/" class="nav-item <%= pathActual === '/' ? 'active' : '' %>">Inicio</a>
@@ -40,6 +41,7 @@
         <div class="footer-col footer-brand-col">
           <h4>Grupo de La Placeta<span class="footer-dot">.</span></h4>
           <p>Una asociación española sin ánimo de lucro que crea proyectos para construir comunidad.</p>
+          <% if (departamentoActual) { %><small class="footer-department">Departamento de <%= departamentoActual.label %></small><% } %>
         </div>
         <div class="footer-col">
           <h4>La Placeta</h4>

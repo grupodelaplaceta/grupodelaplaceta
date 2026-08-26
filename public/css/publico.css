@@ -415,3 +415,20 @@ html { background: #f7f7fb; } body { overflow-x: hidden; } main { min-height: 50
 @keyframes ecosystemSpin { to { transform: rotate(360deg); } } @keyframes ecosystemSpinReverse { to { transform: rotate(-360deg); } }
 @media (prefers-reduced-motion: reduce) { .junior-render-main img, .junior-render-thumbs figure { transition: none; }.eco-orbit-one, .eco-orbit-two { animation: none; } }
 @media (max-width: 700px) { .ecosystem-map { min-height: 300px; }.eco-node { width: 116px; }.eco-association-node { left: 2%; }.eco-projects-node { right: 2%; }.eco-connector { width: 18%; } }
+
+/* Identidad cromática por departamento */
+.department-page { --p: var(--department-color); }
+.department-page .topbar { border-bottom: 3px solid var(--department-color); }
+.department-page .brand-sub { color: var(--department-color); }
+.department-page .topnav .nav-item.active, .department-page .topnav .nav-item:hover { color: var(--department-color); }
+.department-page .eyebrow, .department-page .section h2 .a, .department-page .text-link, .department-page .accent, .department-page .media-label { color: var(--department-color); }
+.department-page .btn-p { background: var(--department-color); }
+.department-page .btn-p:hover { filter: brightness(.88); }
+.department-page .footer { border-top: 3px solid var(--department-color); }
+.department-page .footer-dot, .department-page .footer-department { color: var(--department-color); }
+.department-page .footer-col a:hover { color: var(--department-color); }
+.footer-department { display: block; margin-top: 14px; font-size: 11px; font-weight: 800; letter-spacing: .4px; }
+.department-educacion .subpage-hero { background: linear-gradient(120deg,#241548,#6240cf); }
+.department-contenidos .subpage-hero { background: linear-gradient(120deg,#512044,#c83d65); }
+.department-cultura .subpage-hero { background: linear-gradient(120deg,#54330b,#a26a0b); }
+.department-colaboracion .subpage-hero { background: linear-gradient(120deg,#24365f,#4768ab); }
