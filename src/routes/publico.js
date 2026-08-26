@@ -23,6 +23,7 @@ import {
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const LOGO_TRIBUTOS = path.join(__dirname, '..', '..', 'public', 'img', 'tributos.png');
+const RSP_URL = process.env.RSP_URL || 'https://rsp.laplaceta.org';
 
 const router = Router();
 
@@ -43,6 +44,22 @@ router.get('/galeria', (req, res) => {
 router.get('/tramites', (req, res) => {
   const usuario = req.session.usuario || null;
   res.render('public/tramites', { titulo: 'Trámites', layout: 'layouts/publico', pathActual: '/tramites', usuario });
+});
+
+// Catálogo de trámites administrado desde RSP (fuente de verdad).
+// GDLP Web consume este endpoint para renderizar el panel público.
+router.get('/api/tramites/catalogo', async (_req, res) => {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3500);
+    const r = await fetch(`${RSP_URL}/publico/tramites/catalogo`, { signal: controller.signal });
+    clearTimeout(timeout);
+    if (r.ok) {
+      const data = await r.json();
+      if (Array.isArray(data)) return res.json(data);
+    }
+  } catch (_) { /* RSP no disponible: la web mantiene los trámites fijos */ }
+  res.json([]);
 });
 
 // ── TRÁMITES LEGALES (Asociación) ───────────────────────────────────────────

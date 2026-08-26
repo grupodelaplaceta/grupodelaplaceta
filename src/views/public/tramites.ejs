@@ -31,7 +31,7 @@
     </div>
     <h2>⚖️ Trámites <span class="a">Legales</span></h2>
     <p class="section-subtitle">Gestiones oficiales de la Asociación con plena validez jurídica real.</p>
-    <div class="tramite-grid">
+    <div class="tramite-grid" id="grid-legales">
       <div class="tramite-group-label">📋 Documentación y registro</div>
       <a class="tramite-card" href="javascript:void(0)" onclick="abrirTramite('control-parental')">
         <div class="tramite-icon">👨‍👩‍👧‍👦</div>
@@ -66,7 +66,7 @@
     </div>
     <h2>🆔 Identidad y <span class="a">Acceso</span></h2>
     <p class="section-subtitle">Gestiona tu identidad digital y credenciales en La Placeta.</p>
-    <div class="tramite-grid">
+    <div class="tramite-grid" id="grid-identidad">
       <a class="tramite-card" href="javascript:void(0)" onclick="abrirTramite('alta-dip')">
         <div class="tramite-icon">🪪</div>
         <h3>Alta DIP</h3>
@@ -100,7 +100,7 @@
     </div>
     <h2>🧾 Fiscal y <span class="a">Tributos</span></h2>
     <p class="section-subtitle">Gestiona tus obligaciones fiscales en el ecosistema: censo, facturación e impuestos.</p>
-    <div class="tramite-grid">
+    <div class="tramite-grid" id="grid-fiscal">
       <a class="tramite-card" href="javascript:void(0)" onclick="abrirTramite('alta-tributos')">
         <div class="tramite-icon">🧾</div>
         <h3>Alta en Tributos</h3>
@@ -218,4 +218,53 @@ async function enviarForm(tramite, form) {
   btn.disabled = false; btn.textContent = 'Enviar';
   return false;
 }
+
+// ── Catálogo de trámites administrado desde RSP ──────────────────────────────
+// Sustituye las tarjetas fijas por el catálogo oficial cuando RSP está
+// disponible (requisitos, documentación y plazos incluidos).
+(function() {
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) {
+      return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+    });
+  }
+  function lista(items) {
+    return (items || []).map(function(i) { return '<li>' + esc(i) + '</li>'; }).join('');
+  }
+  function tarjeta(t) {
+    const href = t.tipoEnlace === 'ruta' ? esc(t.ruta || '') : 'javascript:void(0)';
+    const onclick = t.tipoEnlace === 'ruta' ? '' : ' onclick="abrirTramite(\'' + esc(t.accion || t.id) + '\')"';
+    const tag = t.ambito === 'legal'
+      ? '<span class="tag tag-legal">⚖️ Asociación</span>'
+      : (t.seccion === 'fiscal' ? '<span class="tag tag-eco">💰 TLP</span>' : '<span class="tag tag-eco">🎭 Ecosistema</span>');
+    const req = lista(t.requisitos);
+    const doc = lista(t.documentacion);
+    const extras = (req ? '<div style="font-size:11px;opacity:.78;margin-top:8px"><strong>Requisitos:</strong><ul style="margin:4px 0 0 16px;padding:0">' + req + '</ul></div>' : '') +
+      (doc ? '<div style="font-size:11px;opacity:.78;margin-top:6px"><strong>Documentación:</strong><ul style="margin:4px 0 0 16px;padding:0">' + doc + '</ul></div>' : '') +
+      (t.plazo ? '<span style="display:inline-block;margin-top:8px;background:rgba(0,0,0,.06);padding:2px 8px;border-radius:8px;font-size:11px">⏱ Plazo: ' + esc(t.plazo) + ' días</span>' : '');
+    return '<a class="tramite-card" href="' + href + '"' + onclick + '>' +
+      '<div class="tramite-icon">' + esc(t.icono || '📋') + '</div>' +
+      '<h3>' + esc(t.nombre) + '</h3>' +
+      '<p>' + esc(t.descripcion || '') + '</p>' + tag + extras + '</a>';
+  }
+  try {
+    fetch('/api/tramites/catalogo')
+      .then(function(r) { return r.ok ? r.json() : []; })
+      .then(function(cat) {
+        if (!Array.isArray(cat) || !cat.length) return;
+        const grids = {
+          legales: document.getElementById('grid-legales'),
+          identidad: document.getElementById('grid-identidad'),
+          fiscal: document.getElementById('grid-fiscal')
+        };
+        Object.keys(grids).forEach(function(sec) {
+          const grid = grids[sec];
+          if (!grid) return;
+          const items = cat.filter(function(t) { return t.seccion === sec; });
+          if (!items.length) return;
+          grid.innerHTML = items.map(tarjeta).join('');
+        });
+      });
+  } catch (e) { /* sin catálogo: se mantienen las tarjetas fijas */ }
+})();
 </script>
