@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><%= titulo %> | Grupo de La Placeta</title>
+  <meta name="description" content="Grupo de La Placeta: asociación española sin ánimo de lucro que desarrolla proyectos educativos, digitales, audiovisuales y culturales.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,Cantarell,sans-serif}</style>
@@ -17,13 +18,12 @@
         <img src="https://i.postimg.cc/RZYKzdmX/Diseno-sin-titulo-76.png" alt="Grupo de La Placeta" class="brand-logo">
         <span class="brand-text">Grupo de La Placeta<small class="brand-sub">Asociación</small></span>
       </a>
-      <nav class="topnav">
+      <nav class="topnav" id="site-navigation" aria-label="Navegación principal">
         <a href="/" class="nav-item <%= pathActual === '/' ? 'active' : '' %>">Inicio</a>
-        <a href="/tramites" class="nav-item <%= pathActual.startsWith('/tramites') ? 'active' : '' %>">Trámites</a>
-        <a href="/junta" class="nav-item <%= pathActual === '/junta' ? 'active' : '' %>">Junta</a>
         <a href="/proyectos" class="nav-item <%= pathActual === '/proyectos' ? 'active' : '' %>">Proyectos</a>
-        <a href="/normativas" class="nav-item <%= pathActual === '/normativas' ? 'active' : '' %>">Normativa</a>
-        <a href="/junior" class="nav-item <%= pathActual.startsWith('/junior') ? 'active' : '' %>" style="color:#FF6600">Junior</a>
+        <a href="/junior" class="nav-item nav-item-junior <%= pathActual.startsWith('/junior') ? 'active' : '' %>">Placeta Junior</a>
+        <a href="/tramites" class="nav-item <%= pathActual.startsWith('/tramites') ? 'active' : '' %>">Trámites</a>
+        <a href="/junta" class="nav-item <%= pathActual === '/junta' ? 'active' : '' %>">Asociación</a>
         <% if (usuario) { %>
         <a href="/ciudadano" class="nav-item <%= pathActual.startsWith('/ciudadano') ? 'active' : '' %>">Mi Área</a>
         <a href="/api/auth/logout" class="nav-item nav-item-outline">Salir</a>
@@ -31,31 +31,39 @@
         <a href="/login" class="nav-item nav-item-outline">Acceder</a>
         <% } %>
       </nav>
-      <button class="menu-toggle" onclick="document.querySelector('.topnav').classList.toggle('open')" aria-label="Menú">☰</button>
+      <button class="menu-toggle" onclick="document.querySelector('.topnav').classList.toggle('open')" aria-controls="site-navigation" aria-label="Abrir menú">☰</button>
     </div>
   </header>
   <main><%- body %></main>
   <footer class="footer">
     <div class="footer-inner">
       <div class="footer-grid">
-        <div class="footer-col">
-          <h4>Grupo de La Placeta</h4>
-          <p>Asociación española que fomenta la imaginación, asociación y trabajo en equipo creando un ecosistema ficticio.</p>
+        <div class="footer-col footer-brand-col">
+          <h4>Grupo de La Placeta<span class="footer-dot">.</span></h4>
+          <p>Una asociación española sin ánimo de lucro que crea proyectos para construir comunidad.</p>
         </div>
         <div class="footer-col">
-          <h4>Trámites</h4>
+          <h4>La Placeta</h4>
+          <a href="/proyectos">El ecosistema</a>
+          <a href="/normativas">Normativa</a>
+          <a href="/tramites">Trámites</a>
+        </div>
+        <div class="footer-col">
+          <h4>Participa</h4>
           <a href="/tramites">Todos los trámites</a>
-          <a href="/tramites">Quejas y Sugerencias</a>
-          <a href="/tramites">Control Parental</a>
+          <a href="/tramites">Colaboraciones</a>
+          <a href="/junior">Placeta Junior</a>
         </div>
         <div class="footer-col">
-          <h4>Junta Directiva</h4>
-          <a href="/junta">Gobierno y transparencia</a>
+          <h4>Proyectos</h4>
+          <a href="/junior">Placeta Junior</a>
+          <a href="/proyectos">Todos los proyectos</a>
+          <a href="/galeria">Galería</a>
         </div>
         <div class="footer-col">
           <h4>Más información</h4>
-          <a href="/junta">Junta Directiva</a>
-          <a href="/proyectos">Proyectos</a>
+          <a href="/junta">Quiénes somos</a>
+          <a href="/junta">Transparencia</a>
           <a href="/tramites">Contacto</a>
         </div>
       </div>

@@ -1,111 +1,19 @@
-<section class="hero">
-  <h1>Donde la imaginación <span class="hl">construye</span> una nación</h1>
-  <p>Grupo de La Placeta es una asociación española sin ánimo de lucro que ha creado un ecosistema virtual único: un país simulado con su propia economía, gobierno, justicia y cultura.</p>
-  <div class="hero-actions">
-    <a href="/tramites/alta-dip" class="btn btn-go">🪪 Obtén tu DIP</a>
-    <a href="/tramites" class="btn btn-ol">Ver Trámites</a>
+<section class="home-hero">
+  <div class="home-hero-glow" aria-hidden="true"></div>
+  <div class="section-inner home-hero-grid">
+    <div class="home-hero-copy">
+      <p class="eyebrow eyebrow-light"><span class="eyebrow-dot"></span> Grupo de La Placeta · Asociación</p>
+      <h1>Creamos proyectos para <span class="hero-highlight">construir comunidad.</span></h1>
+      <p class="hero-lead">Desarrollamos proyectos educativos, digitales, audiovisuales y culturales dentro del universo de La Placeta.</p>
+      <div class="hero-actions hero-actions-left"><a href="/proyectos" class="btn btn-go">Descubrir proyectos <span aria-hidden="true">→</span></a><a href="/junta" class="btn btn-ol">Conocer la asociación</a></div>
+      <p class="hero-note"><span aria-hidden="true">●</span> Una asociación real · Un universo creativo</p>
+    </div>
+    <div class="hero-orbit" aria-label="Áreas del ecosistema La Placeta"><div class="orbit-ring orbit-ring-one"></div><div class="orbit-ring orbit-ring-two"></div><div class="orbit-core"><span>LP</span><small>ecosistema</small></div><span class="orbit-node node-top">Educación</span><span class="orbit-node node-right">Tecnología</span><span class="orbit-node node-bottom">Comunidad</span><span class="orbit-node node-left">Contenidos</span></div>
   </div>
 </section>
-
-<section class="section bop-publico-section">
-  <div class="section-inner">
-    <div class="bop-publico-heading">
-      <div><h2>Novedades del <span class="a">BOP</span></h2><p class="section-subtitle">Normativa oficial publicada y actualizada desde el Boletín Oficial de La Placeta.</p></div>
-      <a href="/normativas" class="btn btn-ol">Ver toda la normativa</a>
-    </div>
-    <div id="bopNovedades" class="bop-publico-grid"><p class="bop-publico-loading">Cargando novedades…</p></div>
-  </div>
-</section>
-
-<section class="section">
-  <div class="section-inner">
-    <h2>Tu viaje en <span class="a">hexágonos</span></h2>
-    <p class="section-subtitle">Cada paso te acerca a ser ciudadano en La Placeta.</p>
-    <div class="hex-wrap">
-      <div class="hex-item gold"><span class="h-icon">🪪</span>DIP</div>
-      <div class="hex-item"><span class="h-icon">🔑</span>PlacetaID</div>
-      <div class="hex-item gold"><span class="h-icon">🏦</span>Banca</div>
-      <div class="hex-item"><span class="h-icon">⚖️</span>Justicia</div>
-      <div class="hex-item gold"><span class="h-icon">🎮</span>Ocio</div>
-      <div class="hex-item"><span class="h-icon">🏢</span>Entidad</div>
-    </div>
-  </div>
-</section>
-
-<script>
-  (async function () {
-    const root = document.getElementById('bopNovedades');
-    try {
-      const r = await fetch('/api/normativa');
-      const payload = await r.json();
-      const docs = (payload.documentos || []).filter(d => d.estado === 'vigente').sort((a, b) => String(b.updated_at || b.fecha_aprobacion_junta || b.fecha_aplicacion || '').localeCompare(String(a.updated_at || a.fecha_aprobacion_junta || a.fecha_aplicacion || ''))).slice(0, 6);
-      root.innerHTML = docs.length ? docs.map(d => `
-        <a class="card bop-publico-card" href="<%= typeof BOP_URL !== 'undefined' ? BOP_URL : 'https://bop.laplaceta.org' %>/documento?codigo=${encodeURIComponent(d.codigo)}">
-          <span class="bop-publico-code">${d.codigo}</span><h3>${d.titulo}</h3><p>${d.tipo || 'Normativa'} · v${d.version || 1}</p>
-        </a>`).join('') : '<p class="bop-publico-loading">No hay novedades publicadas.</p>';
-    } catch (_) { root.innerHTML = '<p class="bop-publico-loading">El BOP no está disponible temporalmente.</p>'; }
-  }());
-</script>
-
-<!-- ══ PLACETA JUNIOR ══════════════════════════════════════════ -->
-<section style="background:linear-gradient(135deg,#1a1030,#1d1238,#170d2e);padding:48px 0;margin:0;border-top:3px solid #FF6600;border-bottom:3px solid #FF6600">
-  <div class="section-inner">
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
-      <h2 style="color:#fff;margin:0">Placeta <span style="color:#FF6600">Junior</span></h2>
-      <span style="background:#FF6600;color:#fff;padding:4px 12px;border-radius:999px;font-size:.7rem;font-weight:700">NUEVO</span>
-    </div>
-    <p class="section-subtitle" style="color:rgba(255,255,255,.6)">La app educativa del ecosistema para menores de 6 a 15 años. Academia, monedero y control parental.</p>
-    <div class="hex-wrap" style="margin-top:24px">
-      <div class="hex-item" style="border-color:#FF6600"><span class="h-icon">🎓</span><strong>Academia</strong><small>5 materias × 35 niveles</small></div>
-      <div class="hex-item gold" style="border-color:#D6CE52"><span class="h-icon">💰</span><strong>Monedero</strong><small>RBU 5 Pz/día</small></div>
-      <div class="hex-item" style="border-color:#FF3333"><span class="h-icon">🛡️</span><strong>Control Parental</strong><small>Desde PlacetaID</small></div>
-      <div class="hex-item gold" style="border-color:#3A00E1"><span class="h-icon">👥</span><strong>Amigos QR</strong><small>+50 Pz = tutor</small></div>
-    </div>
-    <div style="text-align:center;margin-top:24px">
-      <a href="/junior" class="btn" style="background:#FF6600;color:#fff;min-height:48px;padding:0 28px;font-weight:800;border-radius:999px;display:inline-flex;align-items:center;gap:8px;text-decoration:none">🎓 Descubrir Placeta Junior</a>
-    </div>
-  </div>
-</section>
-
-<section class="section" style="margin-top:0;padding-top:24px">
-  <div class="section-inner">
-    <h2>Galería del <span class="a">ecosistema</span></h2>
-    <p class="section-subtitle">Instantáneas del universo Grupo de La Placeta.</p>
-    <div class="scroll-x">
-      <div class="gallery-img-wrap"><img class="lb-img gallery-img" src="https://i.postimg.cc/8kK3wPN6/uve.jpg" alt="UVE" loading="lazy" style="border:2px solid rgba(255,255,255,0.15);height:160px;width:auto" onclick="abrirLightbox('img','https://i.postimg.cc/8kK3wPN6/uve.jpg')"><button class="like-btn" data-foto="https://i.postimg.cc/8kK3wPN6/uve.jpg" onclick="toggleLike(this)"><span class="like-icon">❤️</span><span class="like-count">0</span></button></div>
-      <div class="gallery-img-wrap"><img class="lb-img gallery-img" src="https://i.postimg.cc/fWv4QVJx/vlcsnap-2026-02-06-00h47m04s050.png" alt="Universo" loading="lazy" style="border:2px solid rgba(255,255,255,0.15);height:160px;width:auto" onclick="abrirLightbox('img','https://i.postimg.cc/fWv4QVJx/vlcsnap-2026-02-06-00h47m04s050.png')"><button class="like-btn" data-foto="https://i.postimg.cc/fWv4QVJx/vlcsnap-2026-02-06-00h47m04s050.png" onclick="toggleLike(this)"><span class="like-icon">❤️</span><span class="like-count">0</span></button></div>
-      <div class="gallery-img-wrap"><img class="lb-img gallery-img" src="https://i.postimg.cc/Wp7Rcdhr/vlcsnap-2026-02-06-00h46m42s029.png" alt="Entorno" loading="lazy" style="border:2px solid rgba(255,255,255,0.15);height:160px;width:auto" onclick="abrirLightbox('img','https://i.postimg.cc/Wp7Rcdhr/vlcsnap-2026-02-06-00h46m42s029.png')"><button class="like-btn" data-foto="https://i.postimg.cc/Wp7Rcdhr/vlcsnap-2026-02-06-00h46m42s029.png" onclick="toggleLike(this)"><span class="like-icon">❤️</span><span class="like-count">0</span></button></div>
-      <div class="gallery-img-wrap"><img class="lb-img gallery-img" src="https://i.postimg.cc/Hndf7gP3/vlcsnap-2026-02-06-00h46m12s002.png" alt="Escenario" loading="lazy" style="border:2px solid rgba(255,255,255,0.15);height:160px;width:auto" onclick="abrirLightbox('img','https://i.postimg.cc/Hndf7gP3/vlcsnap-2026-02-06-00h46m12s002.png')"><button class="like-btn" data-foto="https://i.postimg.cc/Hndf7gP3/vlcsnap-2026-02-06-00h46m12s002.png" onclick="toggleLike(this)"><span class="like-icon">❤️</span><span class="like-count">0</span></button></div>
-      <div class="gallery-img-wrap"><img class="lb-img gallery-img" src="https://i.postimg.cc/264s66Tb/vlcsnap-2026-02-06-00h42m54s541.png" alt="Vista ecosistema" loading="lazy" style="border:2px solid rgba(255,255,255,0.15);height:160px;width:auto" onclick="abrirLightbox('img','https://i.postimg.cc/264s66Tb/vlcsnap-2026-02-06-00h42m54s541.png')"><button class="like-btn" data-foto="https://i.postimg.cc/264s66Tb/vlcsnap-2026-02-06-00h42m54s541.png" onclick="toggleLike(this)"><span class="like-icon">❤️</span><span class="like-count">0</span></button></div>
-    </div>
-  </div>
-</section>
-
-<section class="section">
-  <div class="section-inner">
-    <h2>Contenidos <span class="a">originales</span></h2>
-    <p class="section-subtitle">Producciones audiovisuales de la comunidad.</p>
-    <div class="scroll-x">
-      <div class="video-card" onclick="abrirLightbox('yt','iUmWdUgtVes')" style="cursor:pointer">
-        <img class="video-thumb" src="https://img.youtube.com/vi/iUmWdUgtVes/maxresdefault.jpg" alt="Especial Navidad 2025" loading="lazy">
-        <div class="video-info"><h3>🎄 Especial Navidad 2025</h3><p>Producido por la comunidad.</p></div>
-      </div>
-      <div class="video-card" onclick="abrirLightbox('yt','kbx2hkwFwjE')" style="cursor:pointer">
-        <img class="video-thumb" src="https://img.youtube.com/vi/kbx2hkwFwjE/maxresdefault.jpg" alt="Capítulo Piloto Fluyendo" loading="lazy">
-        <div class="video-info"><h3>🎬 "Fluyendo"</h3><p>Podcast original de Uve.</p></div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section class="section section-dark">
-  <div class="section-inner" style="text-align:center">
-    <h2>Comienza tu <span class="g">historia</span></h2>
-    <p class="section-subtitle" style="margin-bottom:28px">Obtén tu DIP, activa tu PlacetaID y forma parte de La Placeta.</p>
-    <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap">
-      <a href="/tramites/alta-dip" class="btn btn-go">🪪 Solicitar DIP</a>
-      <a href="/tramites/alta-placetid" class="btn btn-ol">🔑 Activar PlacetaID</a>
-      <a href="/tramites" class="btn btn-ol">📋 Todos los Trámites</a>
-    </div>
-  </div>
-</section>
+<section class="section home-intro"><div class="section-inner intro-grid"><div><p class="eyebrow">La idea central</p><h2>Una asociación. <span class="a">Muchas formas</span> de participar.</h2></div><div><p class="section-subtitle">Grupo de La Placeta es una asociación española sin ánimo de lucro. La Placeta es el universo y ecosistema creativo que utilizamos para dar forma a nuestros proyectos, servicios y experiencias.</p><a href="/proyectos" class="text-link">Ver cómo lo hacemos <span aria-hidden="true">↗</span></a></div></div></section>
+<section class="section section-soft"><div class="section-inner"><div class="section-heading-row"><div><p class="eyebrow">Áreas de actividad</p><h2>Qué hacemos</h2></div><span class="section-index">01 — 06</span></div><div class="activity-grid"><article class="activity-card"><span class="activity-icon">✦</span><h3>Educación</h3><p>Actividades, recursos y experiencias para aprender juntos.</p></article><article class="activity-card"><span class="activity-icon">⌘</span><h3>Tecnología</h3><p>Herramientas digitales que conectan el ecosistema.</p></article><article class="activity-card"><span class="activity-icon">◉</span><h3>Contenidos</h3><p>Historias, producciones audiovisuales y formatos propios.</p></article><article class="activity-card"><span class="activity-icon">◎</span><h3>Comunidad</h3><p>Proyectos participativos, encuentros y experiencias.</p></article><article class="activity-card"><span class="activity-icon">✳</span><h3>Cultura</h3><p>Creatividad aplicada a nuevas formas de expresión.</p></article><article class="activity-card"><span class="activity-icon">↗</span><h3>Colaboración</h3><p>Trabajo conjunto con empresas, centros y entidades.</p></article></div></div></section>
+<section class="section projects-section"><div class="section-inner"><div class="section-heading-row"><div><p class="eyebrow">En movimiento</p><h2>Proyectos destacados</h2><p class="section-subtitle">Iniciativas que ya están construyendo el presente de La Placeta.</p></div><a href="/proyectos" class="btn btn-p btn-sm">Ver todos <span aria-hidden="true">→</span></a></div><div class="project-grid"><a class="project-card project-card-junior" href="/junior"><div class="project-card-top"><span class="project-mark">PJ</span><span class="status status-active">Activo</span></div><div class="project-card-body"><p class="project-kicker">Educación · Experiencias</p><h3>Placeta Junior</h3><p>Un espacio para que niños y niñas puedan aprender, jugar, crear y descubrir.</p><span class="card-arrow">Conocer el proyecto <b>↗</b></span></div></a><a class="project-card project-card-id" href="/tramites/alta-placetid"><div class="project-card-top"><span class="project-mark">ID</span><span class="status status-beta">En desarrollo</span></div><div class="project-card-body"><p class="project-kicker">Servicios digitales</p><h3>PlacetaID</h3><p>La identidad digital que conecta a las personas con el ecosistema.</p><span class="card-arrow">Saber más <b>↗</b></span></div></a><a class="project-card project-card-edu" href="/proyectos"><div class="project-card-top"><span class="project-mark">EDU</span><span class="status status-next">Próximamente</span></div><div class="project-card-body"><p class="project-kicker">Colaboración educativa</p><h3>PlacetaEDU</h3><p>Una línea de colaboración con centros educativos y entidades.</p><span class="card-arrow">Explorar proyectos <b>↗</b></span></div></a></div></div></section>
+<section class="junior-feature"><div class="section-inner junior-feature-grid"><div><p class="eyebrow eyebrow-orange">Proyecto destacado</p><h2>Aprender también puede ser <span>una aventura.</span></h2><p>Placeta Junior reúne academia, actividades, contenidos y retos en una experiencia pensada para aprender jugando, con la seguridad de las familias en el centro.</p><a href="/junior" class="btn btn-junior">Descubrir Placeta Junior <span aria-hidden="true">→</span></a></div><div class="junior-pills" aria-label="Elementos de Placeta Junior"><span>Academia</span><span>Actividades</span><span>Contenidos</span><span>Studio</span><span>Familias</span><span>Centros</span></div></div></section>
+<section class="section ecosystem-section"><div class="section-inner ecosystem-grid"><div><p class="eyebrow">Dos realidades conectadas</p><h2>La Placeta es el <span class="a">universo.</span><br>Grupo de La Placeta, la asociación.</h2></div><div class="ecosystem-panel"><div class="eco-line"><span class="eco-badge eco-association">GDLP</span><div><h3>Grupo de La Placeta</h3><p>La asociación real que impulsa y gestiona los proyectos.</p></div></div><div class="eco-line"><span class="eco-badge eco-world">LP</span><div><h3>La Placeta</h3><p>El universo ficticio y ecosistema donde conviven experiencias y servicios.</p></div></div><a href="/proyectos" class="text-link">Conocer el ecosistema <span aria-hidden="true">↗</span></a></div></div></section>
+<section class="section cta-section"><div class="section-inner cta-inner"><div><p class="eyebrow eyebrow-light">¿Hablamos?</p><h2>Tu idea puede ser<br><span>el próximo proyecto.</span></h2></div><div><p>Colaboramos con empresas, comercios, centros educativos y entidades que quieran construir algo con nosotros.</p><a href="/tramites" class="btn btn-go">Quiero colaborar <span aria-hidden="true">→</span></a></div></div></section>
