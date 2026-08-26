@@ -7,6 +7,16 @@
   </div>
 </section>
 
+<section class="section bop-publico-section">
+  <div class="section-inner">
+    <div class="bop-publico-heading">
+      <div><h2>Novedades del <span class="a">BOP</span></h2><p class="section-subtitle">Normativa oficial publicada y actualizada desde el Boletín Oficial de La Placeta.</p></div>
+      <a href="/normativas" class="btn btn-ol">Ver toda la normativa</a>
+    </div>
+    <div id="bopNovedades" class="card-grid bop-publico-grid"><p class="bop-publico-loading">Cargando novedades…</p></div>
+  </div>
+</section>
+
 <section class="section">
   <div class="section-inner">
     <h2>Tu viaje en <span class="a">hexágonos</span></h2>
@@ -21,6 +31,21 @@
     </div>
   </div>
 </section>
+
+<script>
+  (async function () {
+    const root = document.getElementById('bopNovedades');
+    try {
+      const r = await fetch('/api/normativa');
+      const payload = await r.json();
+      const docs = (payload.documentos || []).filter(d => d.estado === 'vigente').slice(0, 6);
+      root.innerHTML = docs.length ? docs.map(d => `
+        <a class="card bop-publico-card" href="<%= typeof BOP_URL !== 'undefined' ? BOP_URL : 'https://bop.laplaceta.org' %>/documento?codigo=${encodeURIComponent(d.codigo)}">
+          <span class="bop-publico-code">${d.codigo}</span><h3>${d.titulo}</h3><p>${d.tipo || 'Normativa'} · v${d.version || 1}</p>
+        </a>`).join('') : '<p class="bop-publico-loading">No hay novedades publicadas.</p>';
+    } catch (_) { root.innerHTML = '<p class="bop-publico-loading">El BOP no está disponible temporalmente.</p>'; }
+  }());
+</script>
 
 <!-- ══ PLACETA JUNIOR ══════════════════════════════════════════ -->
 <section style="background:linear-gradient(135deg,#1a1030,#1d1238,#170d2e);padding:48px 0;margin:0;border-top:3px solid #FF6600;border-bottom:3px solid #FF6600">

@@ -46,6 +46,14 @@ body { font-family: 'Outfit', system-ui, sans-serif; background: var(--bg); colo
 .section h2 .a { color: var(--p); }
 .section h2 .g { color: var(--go); }
 .section-subtitle { color: var(--tm); font-size: 16px; max-width: 640px; margin-bottom: 36px; line-height: 1.7; }
+.bop-publico-section { background: #f7f5fb; }
+.bop-publico-heading { display:flex; align-items:flex-end; justify-content:space-between; gap:20px; }
+.bop-publico-heading .section-subtitle { margin-bottom:0; }
+.bop-publico-card { text-decoration:none; color:var(--t); padding:22px; }
+.bop-publico-card h3 { margin:8px 0 4px; }
+.bop-publico-card p { margin:0; }
+.bop-publico-code { color:var(--p); font-size:12px; font-weight:800; }
+.bop-publico-loading { color:var(--tm); padding:22px 0; }
 .section-dark .section-subtitle { opacity: .8; }
 
 /* ── Hexágonos con SVG como máscara ─────────────────────────────────── */
@@ -245,6 +253,7 @@ img { -webkit-user-drag: none; user-select: none; -moz-user-select: none; -webki
   .form-row { grid-template-columns: 1fr; }
   .hero { padding: 50px 20px 40px; }
   .section { padding: 36px 20px; }
+  .bop-publico-heading { align-items:flex-start; flex-direction:column; }
   .form-card { padding: 24px; }
   .hex-item { width: 90px; height: 100px; font-size: 8px; padding: 22px 8px 12px; }
   .hex-item .h-icon { font-size: 22px; }

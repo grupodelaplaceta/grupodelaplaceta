@@ -1,32 +1,29 @@
 <section class="hero hero-sm">
-  <h1>Normativa <span class="hl">Placeta Junior</span></h1>
-  <p>Normativa completa de la modalidad educativa para menores del ecosistema Grupo de La Placeta. v1.0 — 13 julio 2026.</p>
-  <div class="hero-actions">
-    <a href="/junior/legal" class="btn btn-go">Textos legales</a>
-    <a href="mailto:junior@laplaceta.org" class="btn btn-ol">Soporte</a>
-  </div>
+  <h1>Normativa oficial del <span class="hl">BOP</span></h1>
+  <p>Consulta la normativa vigente, subvenciones, bonos, programas y políticas publicadas por el Boletín Oficial de La Placeta.</p>
+  <div class="hero-actions"><a href="https://bop.laplaceta.org/normativa" class="btn btn-go">Abrir BOP</a><a href="/junior/legal" class="btn btn-ol">Textos legales Junior</a></div>
 </section>
 
 <section class="section">
-  <div class="section-inner" style="line-height:1.65;color:#374151">
-    <h2 style="color:#4E3B70">1. Definición y ámbito</h2>
-    <p>Placeta Junior es la modalidad del ecosistema GDLP para menores de <strong>6 a 15 años</strong>. App educativa con academia gamificada, monedero con Placetas ficticias y control parental total.</p>
-
-    <h2 style="color:#4E3B70">2. Alta y registro</h2>
-    <ol><li>El tutor registra sus datos y los del menor en la app</li><li>Se genera un <strong>DIP</strong> para el menor</li><li>El tutor firma 3 documentos desde PlacetaID Móvil</li><li>Cuenta activada al completar las firmas</li></ol>
-
-    <h2 style="color:#4E3B70">3. Academia GDLP</h2>
-    <ul><li>5 materias × 35 niveles con dificultad progresiva</li><li>Rangos de edad: 6-8, 9-11, 12-15</li><li>Recompensa: 5-20 Pz por acierto</li><li>Aprobado (≥60%) notifica al tutor</li><li>Niveles 2-10: pago en Placetas</li></ul>
-
-    <h2 style="color:#4E3B70">4. Monedero y finanzas</h2>
-    <ul><li>RBU Junior: 5 Pz/día</li><li>Transferencias sin comisión (Capitalia paga)</li><li>+50 Pz requieren aprobación del tutor</li><li>IVA (12%) pagado por Capitalia → TGLP</li></ul>
-
-    <h2 style="color:#4E3B70">5. Control parental</h2>
-    <p>El tutor configura: gasto diario/semanal, umbral de aprobación, tiempo de uso, gestión de amistades.</p>
-
-    <h2 style="color:#4E3B70">6. Privacidad y seguridad</h2>
-    <ul><li>Datos mínimos: nombre, DIP, edad, tutor</li><li>Sin terceros. Derechos ARCO. Cifrado AES-256</li><li>Firma digital SHA-256 conforme a eIDAS</li></ul>
-
-    <p style="margin-top:24px;color:#6b7280;font-size:.88rem">📧 <a href="mailto:junior@laplaceta.org" style="color:#FF6600;font-weight:700">junior@laplaceta.org</a> · v1.0 · 13 julio 2026</p>
+  <div class="section-inner">
+    <div class="bop-publico-heading"><div><h2>Normativa <span class="a">vigente</span></h2><p class="section-subtitle">Esta página consulta el catálogo oficial del BOP en tiempo real.</p></div><input id="filtroBop" class="input" style="max-width:300px" placeholder="Buscar por código o título…" aria-label="Buscar normativa"></div>
+    <div id="catalogoBop" class="card-grid"><p class="bop-publico-loading">Cargando normativa…</p></div>
   </div>
 </section>
+
+<script>
+  (async function () {
+    const root = document.getElementById('catalogoBop');
+    const filtro = document.getElementById('filtroBop');
+    let docs = [];
+    const esc = s => String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    function pintar() {
+      const q = filtro.value.toLowerCase().trim();
+      const lista = docs.filter(d => `${d.codigo} ${d.titulo} ${d.tipo}`.toLowerCase().includes(q));
+      root.innerHTML = lista.length ? lista.map(d => `<a class="card bop-publico-card" href="https://bop.laplaceta.org/documento?codigo=${encodeURIComponent(d.codigo)}"><span class="bop-publico-code">${esc(d.codigo)}</span><h3>${esc(d.titulo)}</h3><p>${esc(d.tipo || 'Normativa')} · versión ${esc(d.version || 1)}</p></a>`).join('') : '<p class="bop-publico-loading">No hay documentos que coincidan.</p>';
+    }
+    filtro.addEventListener('input', pintar);
+    try { const r = await fetch('/api/normativa'); const payload = await r.json(); docs = (payload.documentos || []).filter(d => d.estado === 'vigente'); pintar(); }
+    catch (_) { root.innerHTML = '<p class="bop-publico-loading">No se pudo cargar el catálogo del BOP.</p>'; }
+  }());
+</script>
