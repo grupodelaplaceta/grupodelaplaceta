@@ -13,7 +13,7 @@
       <div><h2>Novedades del <span class="a">BOP</span></h2><p class="section-subtitle">Normativa oficial publicada y actualizada desde el Boletín Oficial de La Placeta.</p></div>
       <a href="/normativas" class="btn btn-ol">Ver toda la normativa</a>
     </div>
-    <div id="bopNovedades" class="card-grid bop-publico-grid"><p class="bop-publico-loading">Cargando novedades…</p></div>
+    <div id="bopNovedades" class="bop-publico-grid"><p class="bop-publico-loading">Cargando novedades…</p></div>
   </div>
 </section>
 
@@ -38,7 +38,7 @@
     try {
       const r = await fetch('/api/normativa');
       const payload = await r.json();
-      const docs = (payload.documentos || []).filter(d => d.estado === 'vigente').slice(0, 6);
+      const docs = (payload.documentos || []).filter(d => d.estado === 'vigente').sort((a, b) => String(b.updated_at || b.fecha_aprobacion_junta || b.fecha_aplicacion || '').localeCompare(String(a.updated_at || a.fecha_aprobacion_junta || a.fecha_aplicacion || ''))).slice(0, 6);
       root.innerHTML = docs.length ? docs.map(d => `
         <a class="card bop-publico-card" href="<%= typeof BOP_URL !== 'undefined' ? BOP_URL : 'https://bop.laplaceta.org' %>/documento?codigo=${encodeURIComponent(d.codigo)}">
           <span class="bop-publico-code">${d.codigo}</span><h3>${d.titulo}</h3><p>${d.tipo || 'Normativa'} · v${d.version || 1}</p>
