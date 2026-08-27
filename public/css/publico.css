@@ -292,17 +292,18 @@ body { background: var(--bg); color: #211d32; }
 .orbit-core { width: 132px; height: 132px; border-radius: 50%; display: grid; place-content: center; text-align: center; background: linear-gradient(145deg, #7d51eb, #3d1a92); box-shadow: 0 0 0 11px rgba(255,255,255,.06), 0 20px 60px rgba(0,0,0,.25); }
 .orbit-core span { font-weight: 900; font-size: 34px; letter-spacing: -2px; }
 .orbit-core small { color: rgba(255,255,255,.64); font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+.hero-orbit .orbit-core small { display: none; }
 .orbit-nodes { position: absolute; inset: 0; animation: orbitNodes 32s linear infinite; }
-.orbit-node { position: absolute; display: flex; align-items: center; gap: 7px; padding: 5px 9px 5px 5px; border: 1px solid rgba(255,255,255,.2); background: rgba(255,255,255,.08); backdrop-filter: blur(8px); border-radius: 99px; font-size: 10px; font-weight: 700; }
-.orbit-node small { color: #fff; font-size: 10px; white-space: nowrap; }
-.gdlp-department { display: grid; place-items: center; width: 38px; height: 42px; flex: 0 0 38px; color: #fff; background: var(--department-color); filter: drop-shadow(0 4px 8px color-mix(in srgb, var(--department-color) 48%, transparent)); -webkit-mask: url('/img/exagono.png') center/contain no-repeat; mask: url('/img/exagono.png') center/contain no-repeat; }
-.gdlp-department svg { display: block; width: 19px; height: 19px; }
+.orbit-node { position: absolute; display: block; padding: 0; border: 0; background: transparent; line-height: 0; }
+.orbit-node small { display: none; }
+.gdlp-department { display: grid; place-items: center; width: 58px; height: 64px; color: #fff; background: var(--department-color); filter: drop-shadow(0 5px 10px rgba(0,0,0,.3)); -webkit-mask: url('/img/exagono.png') center/contain no-repeat; mask: url('/img/exagono.png') center/contain no-repeat; }
+.gdlp-department svg { display: block; width: 28px; height: 28px; filter: drop-shadow(0 1px 2px rgba(0,0,0,.3)); }
 .gdlp-education { --department-color: #6240cf; } /* Educación */
 .gdlp-innovation { --department-color: #087b8b; } /* Innovación */
 .gdlp-community { --department-color: #347b55; } /* Comunidad */
 .gdlp-content { --department-color: #c83d65; } /* Contenidos */
 .gdlp-junior { --department-color: #e98d25; } /* Placeta Junior */
-.gdlp-junior img { display: block; width: 29px; height: auto; max-width: none; object-fit: contain; }
+.gdlp-junior img { display: block; width: 43px; height: auto; max-width: none; object-fit: contain; }
 .orbit-nodes { animation: orbitNodes 32s linear infinite; }
 .orbit-node { animation: none; }
 @keyframes orbitNodes { to { transform: rotate(360deg); } }
