@@ -447,3 +447,44 @@ html { background: #f7f7fb; } body { overflow-x: hidden; } main { min-height: 50
 .department-contenidos .subpage-hero { background: linear-gradient(120deg,#512044,#c83d65); }
 .department-cultura .subpage-hero { background: linear-gradient(120deg,#54330b,#a26a0b); }
 .department-colaboracion .subpage-hero { background: linear-gradient(120deg,#24365f,#4768ab); }
+
+/* Refinamiento visual de departamentos: color, contraste y jerarquía. */
+.activity-card {
+  background: linear-gradient(145deg, #fff 0%, var(--activity-tint, #f8f7fc) 100%);
+  border-top: 3px solid var(--activity-color, var(--p));
+}
+.activity-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 5px;
+  height: 100%;
+  background: var(--activity-color, var(--p));
+  opacity: .8;
+}
+.activity-card:hover {
+  background: linear-gradient(145deg, var(--activity-tint, #f8f7fc), #fff);
+  box-shadow: inset 0 0 0 1px var(--activity-color, var(--p)), 0 10px 22px rgba(34,19,78,.08);
+}
+.activity-icon {
+  margin-bottom: 18px;
+  filter: drop-shadow(0 5px 8px color-mix(in srgb, var(--activity-color, var(--p)) 24%, transparent));
+}
+.activity-link { letter-spacing: .4px; }
+
+/* Hero orbital más sobrio: movimiento lento, pausado al interactuar y con
+   los nodos siempre legibles mientras giran alrededor del centro. */
+.hero-orbit:hover .orbit-nodes,
+.hero-orbit:focus-within .orbit-nodes { animation-play-state: paused; }
+.orbit-nodes { animation: orbitNodes 42s cubic-bezier(.45,.05,.55,.95) infinite; will-change: transform; }
+.orbit-node { transition: filter .2s ease, transform .2s ease; }
+.orbit-node:hover { filter: brightness(1.16) drop-shadow(0 8px 14px rgba(0,0,0,.22)); }
+.gdlp-department { transition: transform .2s ease, filter .2s ease; }
+.orbit-node:hover .gdlp-department { transform: scale(1.08); filter: drop-shadow(0 8px 14px rgba(0,0,0,.38)); }
+.orbit-ring-one { animation-duration: 34s; }
+.orbit-ring-two { animation-duration: 46s; }
+@media (prefers-reduced-motion: reduce) {
+  .orbit-nodes, .orbit-ring-one, .orbit-ring-two { animation: none; }
+  .orbit-node, .gdlp-department { transition: none; }
+}

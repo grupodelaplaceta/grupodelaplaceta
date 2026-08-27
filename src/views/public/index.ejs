@@ -24,17 +24,36 @@
     const thumbs = [...render.querySelectorAll('.junior-render-thumbs img')];
     if (!main || thumbs.length < 2) return;
     let active = 0;
-    const changeActivity = () => {
-      active = (active + 1) % thumbs.length;
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const selectActivity = (index) => {
+      active = index;
       main.classList.add('is-changing');
       window.setTimeout(() => {
         main.src = thumbs[active].src;
         main.alt = thumbs[active].alt;
         main.classList.remove('is-changing');
-      }, 180);
-      thumbs.forEach((thumb, index) => thumb.closest('figure')?.classList.toggle('is-active', index === active));
+      }, 220);
+      thumbs.forEach((thumb, thumbIndex) => {
+        const figure = thumb.closest('figure');
+        figure?.classList.toggle('is-active', thumbIndex === active);
+        figure?.setAttribute('aria-current', thumbIndex === active ? 'true' : 'false');
+      });
     };
-    window.setInterval(changeActivity, 5000);
+    const changeActivity = () => {
+      selectActivity((active + 1) % thumbs.length);
+    };
+    thumbs.forEach((thumb, index) => {
+      const figure = thumb.closest('figure');
+      if (!figure) return;
+      figure.tabIndex = 0;
+      figure.setAttribute('role', 'button');
+      figure.addEventListener('click', () => selectActivity(index));
+      figure.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); selectActivity(index); }
+      });
+    });
+    selectActivity(0);
+    if (!reducedMotion) window.setInterval(changeActivity, 6500);
   })();
 </script>
 <section class="section cta-section"><div class="section-inner cta-inner"><div><p class="eyebrow eyebrow-light">¿Hablamos?</p><h2>Tu idea puede ser<br><span>el próximo proyecto.</span></h2></div><div><p>Colaboramos con empresas, comercios, centros educativos y entidades que quieran construir algo con nosotros.</p><a href="/tramites" class="btn btn-go">Quiero colaborar <span aria-hidden="true">→</span></a></div></div></section>
