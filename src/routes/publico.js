@@ -25,6 +25,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const LOGO_TRIBUTOS = path.join(__dirname, '..', '..', 'public', 'img', 'tributos.png');
 const RSP_URL = process.env.RSP_URL || 'https://rsp.laplaceta.org';
 const BOP_URL = process.env.BOP_URL || 'https://bop.laplaceta.org';
+const GDLP_RSP_KEY = process.env.GDLP_RSP_API_KEY || '';
 
 const router = Router();
 
@@ -274,6 +275,46 @@ router.get('/tramites/alta-placetid', (req, res) => {
     });
   }
   res.render('public/tramites/alta-placetid', { titulo: 'Alta PlacetaID', layout: 'layouts/publico', pathActual: '/tramites', resultado: null, usuario: null, dipSugerido: '', departamento: { label: 'Innovación', slug: 'innovacion', color: '#087b8b' } });
+});
+
+// Oportunidades y envíos se leen/escriben siempre en RSP. GDLP no mantiene
+// una copia local de bonos, subvenciones ni expedientes.
+router.get('/api/rsp/oportunidades', async (_req, res) => {
+  try {
+    const r = await fetch(`${RSP_URL}/publico/oportunidades`, { signal: AbortSignal.timeout(5000) });
+    if (!r.ok) return res.status(502).json({ error: 'RSP no disponible' });
+    res.json(await r.json());
+  } catch { res.status(502).json({ error: 'No se pudo conectar con RSP' }); }
+});
+
+router.get('/api/rsp/contexto', async (req, res) => {
+  if (!req.session.usuario) return res.status(401).json({ error: 'Inicia sesión con PlacetaID' });
+  const usuario = req.session.usuario;
+  const db = getDb();
+  let cuentas = [];
+  try {
+    cuentas = db.prepare('SELECT id, iban, tipo_cuenta, saldo, estado FROM cuentas_bancarias WHERE usuario_id = ? AND estado = ?').all(usuario.id, 'activa');
+  } catch {}
+  let empresas = [];
+  try {
+    const filas = await sbListEntidades();
+    empresas = (filas || []).filter((e) => String(e.representante_dip || '') === String(usuario.dip || '')).map((e) => ({ eip: e.eip, nombre: e.nombre }));
+  } catch {}
+  res.json({ identidad: [{ id: usuario.dip, tipo: 'DIP', nombre: usuario.alias }, ...empresas.map((e) => ({ id: e.eip, tipo: 'EIP', nombre: e.nombre }))], cuentas: cuentas.map((c) => ({ ...c, iban: c.iban || c.id })) });
+});
+
+router.post('/api/rsp/submit', async (req, res) => {
+  if (!req.session.usuario) return res.status(401).json({ error: 'Inicia sesión con PlacetaID' });
+  if (!GDLP_RSP_KEY) return res.status(503).json({ error: 'Integración GDLP-RSP no configurada' });
+  try {
+    const d = req.body || {};
+    const usuario = req.session.usuario;
+    const r = await fetch(`${RSP_URL}/publico/tramites`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-GDLP-API-Key': GDLP_RSP_KEY }, body: JSON.stringify({ ...d, dip: usuario.dip, nombre: usuario.alias }) });
+    const data = await r.json();
+    if (!r.ok) return res.status(r.status).json(data);
+    if (data.pdf_url && data.pdf_url.startsWith('/')) data.pdf_url = `${RSP_URL}${data.pdf_url}`;
+    res.status(201).json(data);
+  } catch { res.status(502).json({ error: 'No se pudo enviar el trámite a RSP' }); }
 });
 
 // ── Completar registro (página pública con QR + 2FA) ──────────────────────

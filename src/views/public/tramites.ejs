@@ -55,6 +55,8 @@
   </div>
 </section>
 
+<section class="section" id="oportunidades-rsp"><div class="section-inner"><div class="aviso aviso-info"><span class="aviso-icon">📣</span><div><strong>Convocatorias abiertas.</strong> Bonos y subvenciones publicadas en RSP, con comprobación automática de tu identidad y cuentas.</div></div><h2>Bonos y <span class="a">subvenciones</span></h2><p class="section-subtitle">Oportunidades publicadas por RSP.</p><div class="tramite-grid" id="grid-oportunidades"><p style="opacity:.65">Cargando convocatorias…</p></div></div></section>
+
 <!-- ═══════════════════════════════════════════════════════════════════════════
      SECCIÓN: IDENTIDAD Y ACCESO (Ecosistema)
      ═══════════════════════════════════════════════════════════════════════════ -->
@@ -218,6 +220,21 @@ async function enviarForm(tramite, form) {
   btn.disabled = false; btn.textContent = 'Enviar';
   return false;
 }
+
+function escR(v) { return String(v || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function abrirRSPTramite(id, titulo, tipo) {
+  document.getElementById('modalOverlay').classList.add('open');
+  document.getElementById('modalContent').innerHTML = '<h2>' + escR(titulo) + '</h2><p>La identidad se incorpora desde PlacetaID.</p><form onsubmit="return enviarRSP(this)"><input type="hidden" name="tipo" value="' + escR(tipo) + '"><input type="hidden" name="titulo" value="' + escR(titulo) + '"><input type="hidden" name="oportunidadId" value="' + escR(id) + '"><div class="form-group"><label>Solicitante (DIP/EIP)</label><select name="sujeto" id="rspSujeto"><option>Cargando identidades…</option></select></div><div class="form-group"><label>Cuenta IBAN</label><select name="iban" id="rspIban"><option value="">Cargando cuentas…</option></select></div><div class="form-group"><label>Información adicional</label><textarea name="observaciones" rows="4"></textarea></div><button class="btn btn-p btn-bl" type="submit">Enviar a RSP</button></form>';
+  fetch('/api/rsp/contexto').then(r => r.json()).then(c => { const i = document.getElementById('rspSujeto'); i.innerHTML = (c.identidad || []).map(x => '<option value="' + escR(x.id) + '">' + escR(x.tipo + ' · ' + x.nombre + ' · ' + x.id) + '</option>').join(''); const s = document.getElementById('rspIban'); s.innerHTML = '<option value="">Sin cuenta</option>' + (c.cuentas || []).map(x => '<option value="' + escR(x.iban) + '">' + escR(x.iban) + ' · ' + escR(x.tipo_cuenta || '') + '</option>').join(''); }).catch(() => {});
+}
+async function enviarRSP(form) {
+  const fd = new FormData(form); const d = Object.fromEntries(fd.entries());
+  d.datos = { sujeto: d.sujeto || null, iban: d.iban || null, observaciones: d.observaciones || '' }; delete d.sujeto; delete d.iban; delete d.observaciones;
+  const r = await fetch('/api/rsp/submit', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(d) }); const out = await r.json();
+  if (!r.ok) { mostrarToast('e', out.error || 'No se pudo enviar'); return false; }
+  document.getElementById('modalContent').innerHTML = '<div class="alert alert-s">Solicitud enviada a RSP: ' + escR(out.tramite.id) + '</div><a class="btn btn-go" target="_blank" href="' + escR(out.pdf_url) + '">📄 Descargar justificante PDF</a>'; return false;
+}
+(function() { fetch('/api/rsp/oportunidades').then(r => r.ok ? r.json() : Promise.reject()).then(data => { const a = [...(data.bonos || []).map(x => ({...x,t:'bono',i:'🎁',l:'Bono'})), ...(data.subvenciones || []).map(x => ({...x,t:'subvencion',i:'🤝',l:'Subvención'}))]; const g = document.getElementById('grid-oportunidades'); if (!a.length) { g.innerHTML = '<p style="opacity:.65">No hay convocatorias abiertas.</p>'; return; } g.innerHTML = a.map(x => '<a class="tramite-card" href="javascript:void(0)" onclick="abrirRSPTramite(\'' + escR(x.id) + '\',\'' + escR(x.nombre || x.concepto || x.id) + '\',\'' + x.t + '\')"><div class="tramite-icon">' + x.i + '</div><h3>' + escR(x.nombre || x.concepto || x.id) + '</h3><p>' + escR(x.concepto || '') + '</p><span class="tag tag-eco">' + x.l + ' · RSP</span></a>').join(''); }).catch(() => { document.getElementById('grid-oportunidades').innerHTML = '<p style="opacity:.65">RSP no está disponible temporalmente.</p>'; }); })();
 
 // ── Catálogo de trámites administrado desde RSP ──────────────────────────────
 // Sustituye las tarjetas fijas por el catálogo oficial cuando RSP está
